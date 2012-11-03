@@ -1,0 +1,29 @@
+{
+	"name": "simples",
+	"version": "0.1",
+	"description": "Simple server",
+	"keywords": [
+		"http",
+		"server",
+		"web",
+		"websocket"
+	],
+	"homepage": "https://github.com/micnic/simples",
+	"bugs": {
+		"url": "https://github.com/micnic/simples/issues",
+		"email": "micnic90@gmail.com"
+	},
+	"author": {
+		"name": "Micleusanu Nicu",
+		"email": "micnic90@gmail.com",
+		"url": "https://github.com/micnic/"
+	},
+	"main": "index",
+	"repository": {
+		"type": "git",
+		"url": "http://github.com/micnic/simples"
+	},
+	"engines": {
+		"node": ">=0.8"
+	}
+}

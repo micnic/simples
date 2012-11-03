@@ -1,4 +1,4 @@
-var simples = require('../simples.js');
+var simples = require('../index.js');
 
 i = 0;
 
