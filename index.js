@@ -88,8 +88,9 @@ function simples(port) {
 		};
 
 		// Change configuration
+		var _cacheHasOwnProperty = Object.prototype.hasOwnProperty;
 		for (var i in config) {
-			if (server.wsHosts[url].config[i]) {
+			if (_cacheHasOwnProperty.call(config, i) && server.wsHosts[url].config[i]) {
 				server.wsHosts[url].config[i] = config[i];
 			}
 		}
