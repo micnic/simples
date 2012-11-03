@@ -3,7 +3,6 @@ var simples = require('../index.js');
 i = 0;
 
 simples(80)
-	.start(2000)
 	.get('/', function (request, response) {
 		console.log(request.url);
 		response.end('get Root');
