@@ -10,6 +10,8 @@ simpleS is a simple http server for node.js that has some special features:
 
 *THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED*
 
+##[Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
+
 # Instalation
 
     npm install simples
