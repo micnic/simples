@@ -1,4 +1,4 @@
-# simpleS 0.0.1
+# simpleS 0.0.2
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -12,46 +12,54 @@ simpleS is a simple http server for node.js that has some special features:
 
 ##[Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
 
-# Instalation
+## Instalation
 
-    npm install simples
+	npm install simples
 
-# Usage
+## Usage
 
-    var simples = require('simples');
+```javascript
+var simples = require('simples');
 
-    var server = simples(12345); // Your server is set up
+var server = simples(12345); // Your server is set up on port 12345
+```
 
-# Routing
+## Routing
 
-    server.get('/', function (request, response) {
-        response.end('root');
-    });
+```javascript
+server.get('/', function (request, response) {
+	response.end('root');
+});
 
-    server.getStatic('static_files'); // Route for static files located in the folder "static_files"
+server.getStatic('static_files'); // Route for static files located in the folder "static_files"
 
-    server.notFound(function (request, response) {
-        response.end('404');
-    });
+server.notFound(function (request, response) {
+	response.end('404');
+});
+```
 
-# WebSocket
+## WebSocket
 
-    server.ws('/', {
-        messageMaxLength: 1024, // The maximum size of a message
-        origins: ['null'], // The accepted origins
-        protocols: ['chat'] // The accepted protocols
-    }, function (connection) {
-        console.log('New connection');
+```javascript
+server.ws('/', {
+	messageMaxLength: 1024, // The maximum size of a message
+	origins: ['null'], // The accepted origins
+	protocols: ['chat'] // The accepted protocols
+}, function (connection) {
+	console.log('New connection');
 
-        connection.on('message', function (message) {
-            console.log(message.toString());
-        });
+	connection.on('message', function (message) {
+		console.log(message.toString());
+	});
 
-        connection.on('close', function () {
-            console.log('Connection closed');
-        });
-    });
+	connection.on('close', function () {
+		console.log('Connection closed');
+	});
+});
+```
 
 On client:
 
-    var socket = new WebSocket('ws://localhost:12345/', 'chat'); // Enjoy the real-time connection
+```javascript
+var socket = new WebSocket('ws://localhost:12345/', 'chat'); // Enjoy the real-time connection
+```

@@ -14,6 +14,7 @@ function simples(port) {
 
 	// Start server listening on specific port
 	server.listen(port);
+	var started = true;
 
 	// Route all king of requests
 	this.all = function (path, callback) {
@@ -47,7 +48,13 @@ function simples(port) {
 
 	// Start simples server
 	this.start = function (port, callback) {
-		server.listen(port, callback);
+		if (started) {
+			server.close(function () {
+				server.listen(port, callback);
+			});
+		} else {
+			server.listen(port, callback);
+		}
 		return this;
 	}
 
