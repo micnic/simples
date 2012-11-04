@@ -1,4 +1,4 @@
-# simpleS 0.0.3
+# simpleS 0.0.4
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -7,6 +7,8 @@ simpleS is a simple http server for node.js that has some special features:
 - WebSocket implementation (version 13, RFC 6455)
 - Automatic response compression (deflate and gzip)
 - Easy to use interfaces for requests and responses
+
+Use with node.js 0.8+
 
 *THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED*
 

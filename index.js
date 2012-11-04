@@ -70,7 +70,7 @@ function simples(port) {
 	this.ws = function (url, config, callback) {
 
 		// Check for WebSockets listening
-		if (!server.listeners('upgrade').length) {
+		if (server.listeners('upgrade').length === 0) {
 			server.on('upgrade', function (request, socket, head) {
 
 				// Handle for WebSocket requests
@@ -78,7 +78,7 @@ function simples(port) {
 			});
 		}
 
-		// Loading configuration for the WebSocket host
+		// Configuration for the WebSocket host
 		server.wsHosts[url] = {
 			config: {
 				messageMaxLength: config.messageMaxLength || 1048575,
