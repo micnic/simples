@@ -1,9 +1,18 @@
 var simples = require('../index.js');
+var server = require('../lib/server.js');
 
 i = 0;
 
-simples(80)
-	.get('/', function (request, response) {
+var a = simples(80).get('/', function (request, response) {
+	response.end('80');
+});
+/*a.listen(80);
+a.routes.get = {
+	'/80': function (request, response) {
+		response.end('80');
+	}
+};*/
+	/*.get('/', function (request, response) {
 		console.log(request.url);
 		response.end('get Root');
 	})
@@ -32,4 +41,20 @@ simples(80)
 		connection.on('close', function () {
 			console.log('connection closed');
 		})
-	});
+	});*/
+
+
+
+var b = simples(1025).get('/', function (request, response) {
+	response.end('1025');
+});;
+/*b.listen(1025);
+b.routes.get = {
+	'/1025': function (request, response) {
+		response.end('1025');
+	}
+};*/
+//console.log(a.routes, b.routes)
+/*.get('/', function (request, response) {
+	response.end('root on 1025');
+});*/
