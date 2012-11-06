@@ -15,88 +15,89 @@ function simples(port) {
 		return new simples(port);
 	}
 
-	var HTTPServer = server();
-	var routes = HTTPServer.routes;
-	var started = true;
+	// Initialize server and start listen on the specific port
+	this._server = server();
+	this._server.listen(port);
+	this._started = true;
 
-	// Start server listening on specific port
-	HTTPServer.listen(port);
-
-	// Route all kind of requests
-	this.all = function (path, callback) {
-		routes.all[url.parse(path).pathname] = callback;
-		return this;
-	};
-
-	// Route get requests
-	this.get = function (path, callback) {
-		routes.get[url.parse(path).pathname] = callback;
-		return this;
-	};
-
-	// Route static files from specific local path
-	this.getStatic = function (path) {
-		routes.getStatic = path;
-		return this;
-	};
-
-	// Route not found requests
-	this.notFound = function (callback) {
-		routes.notFound = callback;
-		return this;
-	};
-
-	// Route post requests
-	this.post = function (path, callback) {
-		routes.post[url.parse(path).pathname] = callback;
-		return this;
-	};
-
-	// Start simples server
-	this.start = function (port, callback) {
-		if (started) {
-			HTTPServer.close(function () {
-				HTTPServer.listen(port, callback);
-			});
-		} else {
-			started = true;
-			HTTPServer.listen(port, callback);
-		}
-		return this;
-	};
-
-	// Stop simples server
-	this.stop = function (callback) {
-		started = false;
-		HTTPServer.close(callback);
-		return this;
-	};
-
-	// New WebSocket host
-	this.ws = function (url, config, callback) {
-
-		// Check for WebSockets listening
-		if (HTTPServer.listeners('upgrade').length === 0) {
-			HTTPServer.on('upgrade', function (request, socket, head) {
-
-				// Handle for WebSocket requests
-				ws(request, socket, server.wsHosts[request.url]);
-			});
-		}
-
-		// Configuration for the WebSocket host
-		HTTPServer.wsHosts[url] = {
-			config: {
-				messageMaxLength: config.messageMaxLength || 1048575,
-				origins: config.origins || [''],
-				protocols: config.protocols || ['']
-			},
-			connections: [],
-			callback: callback
-		};
-
-		return this;
-	};
+	// Shortcut routes
+	this._routes = this._server.routes;
 }
+
+// Route all kind of requests
+simples.prototype.all = function (path, callback) {
+	this._routes.all[url.parse(path).pathname] = callback;
+	return this;
+};
+
+// Route get requests
+simples.prototype.get = function (path, callback) {
+	this._routes.get[url.parse(path).pathname] = callback;
+	return this;
+};
+
+// Route static files from a specific local path
+simples.prototype.getStatic = function (path) {
+	this._routes.getStatic = path;
+	return this;
+};
+
+// Route not found requests
+simples.prototype.notFound = function (callback) {
+	this._routes.notFound = callback;
+	return this;
+};
+
+// Route post requests
+simples.prototype.post = function (path, callback) {
+	this._routes.post[url.parse(path).pathname] = callback;
+	return this;
+};
+
+// Start simples server
+simples.prototype.start = function (port, callback) {
+	if (this._started) {
+		this._server.close(function () {
+			this._server.listen(port, callback);
+		});
+	} else {
+		this._started = true;
+		this._server.listen(port, callback);
+	}
+	return this;
+};
+
+// Stop simples server
+simples.prototype.stop = function (callback) {
+	this._started = false;
+	this._server.close(callback);
+	return this;
+};
+
+// New WebSocket host
+simples.prototype.ws = function (url, config, callback) {
+
+	// Check for WebSockets listening
+	if (this._server.listeners('upgrade').length === 0) {
+		this._server.on('upgrade', function (request, socket, head) {
+
+			// Handle for WebSocket requests
+			ws(request, socket, server.wsHosts[request.url]);
+		});
+	}
+
+	// Configuration for the WebSocket host
+	this._server.wsHosts[url] = {
+		config: {
+			messageMaxLength: config.messageMaxLength || 1048575,
+			origins: config.origins || [''],
+			protocols: config.protocols || ['']
+		},
+		connections: [],
+		callback: callback
+	};
+
+	return this;
+};
 
 module.exports = simples;
