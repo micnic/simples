@@ -15,7 +15,7 @@ function simples(port) {
 		return new simples(port);
 	}
 
-	// Initialize server and start listen on the specific port
+	// Initialize the HTTP server and start listen on the specific port
 	this._server = server();
 	this._server.listen(port);
 	this._started = true;
@@ -56,6 +56,8 @@ simples.prototype.post = function (path, callback) {
 
 // Start simples server
 simples.prototype.start = function (port, callback) {
+
+	// If the server is already started, restart it now the provided port
 	if (this._started) {
 		this._server.close(function () {
 			this._server.listen(port, callback);
@@ -77,12 +79,19 @@ simples.prototype.stop = function (callback) {
 // New WebSocket host
 simples.prototype.ws = function (url, config, callback) {
 
-	// Check for WebSockets listening
+	// Check if the upgrade event is not listened
 	if (this._server.listeners('upgrade').length === 0) {
+
+		// Link to this context
+		var that = this;
+
+		// Add listener for upgrade event to make the WebSocket handshake
 		this._server.on('upgrade', function (request, socket, head) {
 
+			request.socket = socket;
+
 			// Handle for WebSocket requests
-			ws(request, socket, server.wsHosts[request.url]);
+			ws(request, that._server.wsHosts[request.url]);
 		});
 	}
 

@@ -1,22 +1,7 @@
 var assert = require('assert');
 var http = require('http');
 
-//var server = require('../lib/server.js');
 var simples = require('../index.js');
-
-/*var s = server();
-s.listen(80);
-s.routes.get['/'] = function (request, response) {
-	response.write('Hello');
-	response.end('World');
-}
-
-var t = server();
-t.listen(1111);
-t.routes.get['/'] = function (request, response) {
-	response.write('Hello');
-	response.end('World2');
-}*/
 
 // First server
 var first = simples(80).get('/', function (request, response) {
@@ -38,12 +23,61 @@ http.request({
 	path: '/',
 	port: 80,
 }, function (response) {
-	console.log('Testing response on :80/');
-	assert(response.statusCode === 200, 'Status code is ' + response.statusCode + ' [200]');
-	assert(response.httpVersion === '1.1', 'HTTP version is ' + response.httpVersion + ' [1.1]');
-	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type'] + ' [text/html;charset=utf-8]');
-	assert(response.headers['transfer-encoding'] === 'chunked', 'Content type is ' + response.headers['transfer-encoding'] + ' [chunked]');
+	var content = '';
+
+	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
+
+	response.on('data', function (data) {
+		content += data.toString();
+	});
+
+	response.on('end', function () {
+		assert(content === 'HelloWorld', 'Response content is ' + content);
+	})
+
 	first.stop();
 	second.stop();
 	third.stop();
 }).end();
+
+/*http.request({
+	host: 'localhost',
+	method: 'GET',
+	path: '/',
+	port: 11111,
+}, function (response) {
+	var content = '';
+
+	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
+
+	response.on('data', function (data) {
+		content += data.toString();
+	});
+
+	response.on('end', function () {
+		assert(content === 'HelloWorld2', 'Response content is ' + content);
+	})
+
+	second.stop();
+}).end();*/
+
+/*http.request({
+	host: 'localhost',
+	method: 'GET',
+	path: '/',
+	port: 22222,
+}, function (response) {
+	var content = '';
+
+	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
+
+	response.on('data', function (data) {
+		content += data.toString();
+	});
+
+	response.on('end', function () {
+		assert(content === 'HelloWorld2', 'Response content is ' + content);
+	})
+
+	third.stop();
+}).end();*/
