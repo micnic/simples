@@ -5,6 +5,7 @@ var simples = require('../index.js');
 
 // First server
 var first = simples(80).get('/', function (request, response) {
+	console.log(require('util').inspect(request.body, true, null, true));
 	response.write('Hello');
 	response.end('World');
 });
@@ -32,7 +33,8 @@ http.request({
 	});
 
 	response.on('end', function () {
-		assert(content === 'HelloWorld', 'Response content is ' + content);
+		console.log(require('util').inspect(response.headers, true, null, true));
+		//assert(content === 'HelloWorld', 'Response content is ' + content);
 	})
 
 	first.stop();
