@@ -1,10 +1,7 @@
 var url = require('url');
 
-var server = require('./lib/server.js');
-var ws = require('./lib/ws.js');
-
-// Shortcut for server.routes
-var routes = server.routes;
+var server = require('./lib/server');
+var ws = require('./lib/ws');
 
 function simples(port) {
 
