@@ -5,7 +5,7 @@ var simples = require('../index.js');
 
 // First server
 var first = simples(80).get('/', function (request, response) {
-	console.log(require('util').inspect(request.body, true, null, true));
+	//console.log(require('util').inspect(request.body, true, null, true));
 	response.write('Hello');
 	response.end('World');
 });
@@ -16,9 +16,12 @@ var second = simples(1111).get('/', function (request, response) {
 });
 
 // Third server to be sure we can create more than 2 servers
-var third = simples(2222);
+var third = simples(2222).all('/', function (request, response) {
+	console.log(require('util').inspect(request, true, null, true));
+	response.end();
+});
 
-http.request({
+/*var req = http.request({
 	host: 'localhost',
 	method: 'GET',
 	path: '/',
@@ -33,14 +36,16 @@ http.request({
 	});
 
 	response.on('end', function () {
-		console.log(require('util').inspect(response.headers, true, null, true));
+		console.log(response.statusCode);
+		console.log(content);
+		//console.log(require('util').inspect(response.headers, true, null, true));
 		//assert(content === 'HelloWorld', 'Response content is ' + content);
 	})
 
 	first.stop();
 	second.stop();
 	third.stop();
-}).end();
+}).end();*/
 
 /*http.request({
 	host: 'localhost',
