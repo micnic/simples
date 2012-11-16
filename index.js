@@ -5,6 +5,7 @@ var ws = require('./lib/ws');
 
 function simples(port) {
 
+	// ES5 strict syntax
 	'use strict';
 
 	// Ignore new keyword
@@ -21,11 +22,17 @@ function simples(port) {
 	this._routes = this._server.routes;
 }
 
-// Route all kind of requests
+// Route both GET and POST requests
 simples.prototype.all = function (path, callback) {
 	this._routes.all[url.parse(path).pathname] = callback;
 	return this;
 };
+
+// Route errors, possible values: 400, 404, 405 and 500
+simples.prototype.error = function (code, callback) {
+	this._routes.error[code] = callback;
+	return this;
+}
 
 // Route get requests
 simples.prototype.get = function (path, callback) {
@@ -36,12 +43,6 @@ simples.prototype.get = function (path, callback) {
 // Route static files from a specific local path
 simples.prototype.getStatic = function (path) {
 	this._routes.getStatic = path;
-	return this;
-};
-
-// Route not found requests
-simples.prototype.notFound = function (callback) {
-	this._routes.notFound = callback;
 	return this;
 };
 

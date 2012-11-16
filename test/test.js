@@ -6,6 +6,7 @@ var simples = require('../index.js');
 // First server
 var first = simples(80).get('/', function (request, response) {
 	//console.log(require('util').inspect(request.body, true, null, true));
+	a.a=a;
 	response.write('Hello');
 	response.end('World');
 });
@@ -22,14 +23,17 @@ var third = simples(2222).all('/', function (request, response) {
 });
 
 /*var req = http.request({
+	headers: {
+		'Content-Type': '123'
+	},
 	host: 'localhost',
-	method: 'GET',
+	method: 'post',
 	path: '/',
 	port: 80,
 }, function (response) {
 	var content = '';
 
-	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
+	//assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
 
 	response.on('data', function (data) {
 		content += data.toString();
