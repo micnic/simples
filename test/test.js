@@ -6,10 +6,9 @@ var simples = require('../index.js');
 // First server
 var first = simples(80).get('/', function (request, response) {
 	//console.log(require('util').inspect(request.body, true, null, true));
-	a.a=a;
 	response.write('Hello');
 	response.end('World');
-});
+}).serve('root');
 
 // Second server
 var second = simples(1111).get('/', function (request, response) {
@@ -18,7 +17,7 @@ var second = simples(1111).get('/', function (request, response) {
 
 // Third server to be sure we can create more than 2 servers
 var third = simples(2222).all('/', function (request, response) {
-	console.log(require('util').inspect(request, true, null, true));
+	console.log(require('util').inspect(request.cookies, true, null, true));
 	response.end();
 });
 
@@ -33,7 +32,7 @@ var third = simples(2222).all('/', function (request, response) {
 }, function (response) {
 	var content = '';
 
-	//assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
+	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
 
 	response.on('data', function (data) {
 		content += data.toString();

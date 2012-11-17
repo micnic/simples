@@ -40,15 +40,15 @@ simples.prototype.get = function (path, callback) {
 	return this;
 };
 
-// Route static files from a specific local path
-simples.prototype.getStatic = function (path) {
-	this._routes.getStatic = path;
-	return this;
-};
-
 // Route post requests
 simples.prototype.post = function (path, callback) {
 	this._routes.post[url.parse(path).pathname] = callback;
+	return this;
+};
+
+// Route static files from a specific local path
+simples.prototype.serve = function (path) {
+	this._routes.serve = path;
 	return this;
 };
 
@@ -86,6 +86,7 @@ simples.prototype.ws = function (url, config, callback) {
 		// Add listener for upgrade event to make the WebSocket handshake
 		this._server.on('upgrade', function (request, socket, head) {
 
+			// Link to the socket, for low level interaction
 			request.socket = socket;
 
 			// Handle for WebSocket requests
