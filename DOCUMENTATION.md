@@ -234,6 +234,13 @@ If data is provided it calls the `.write()` method and ends the response. Exampl
 ```javascript
 response.end('World');
 ```
+#### .send(data)
+data: any value except undefined
+
+Writes preformatted data to the response stream and ends the response. Will stringify objects, arrays, booleans and numbers. Should not be used with `.write()` or `.end()` methods. Should be used only once. Example:
+```javascript
+response.send(['Hello', 'World']);
+```
 ## WebSocket
 ### WebSocket host
 `.ws(path, config, callback)`
