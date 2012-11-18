@@ -1,108 +1,44 @@
-var assert = require('assert');
-var http = require('http');
-
+var fs = require('fs');
 var simples = require('../index');
 
-var server = simples(80).ws('/', {
-	messageMaxLength: 1024,
-    origins: ['null'],
-    protocols: ['protocolOne']
-}, function (connection) {
-	connection.on('message', function (message) {
-		console.log(message.data.toString());
-	});
-});
-
-/*setTimeout(function () {
-	server.start(1111, function () {
-		console.log(this.constructor);
-	});
-}, 1000);*/
-
-// First server
-/*var first = simples(80).get('/', function (request, response) {
-	//console.log(require('util').inspect(request.body, true, null, true));
-	response.send({first:'Hello',second:'World'});
-}).serve('root');
-
-// Second server
-var second = simples(1111).get('/', function (request, response) {
-	response.end('HelloWorld2');
-});
-
-// Third server to be sure we can create more than 2 servers
-var third = simples(2222).all('/', function (request, response) {
-	console.log(require('util').inspect(request.cookies, true, null, true));
-	response.end();
-});*/
-
-/*var req = http.request({
-	headers: {
-		'Content-Type': '123'
-	},
-	host: 'localhost',
-	method: 'post',
-	path: '/',
-	port: 80,
-}, function (response) {
-	var content = '';
-
-	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
-
-	response.on('data', function (data) {
-		content += data.toString();
-	});
-
-	response.on('end', function () {
-		console.log(response.statusCode);
-		console.log(content);
-		//console.log(require('util').inspect(response.headers, true, null, true));
-		//assert(content === 'HelloWorld', 'Response content is ' + content);
+var server = simples(80)
+	.serve('root')
+	.get('/', function (request, response) {
+		fs.createReadStream('root/index.html').pipe(response);
 	})
-
-	first.stop();
-	second.stop();
-	third.stop();
-}).end();*/
-
-/*http.request({
-	host: 'localhost',
-	method: 'GET',
-	path: '/',
-	port: 11111,
-}, function (response) {
-	var content = '';
-
-	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
-
-	response.on('data', function (data) {
-		content += data.toString();
-	});
-
-	response.on('end', function () {
-		assert(content === 'HelloWorld2', 'Response content is ' + content);
+	.get('/get', function (request, response) {
+		response.write('body: ' + request.body + '\n');
+		response.write('connection.ip: ' + request.connection.ip + '\n');
+		response.write('connection.port: ' + request.connection.port + '\n');
+		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
+		response.write('headers: ' + JSON.stringify(request.headers) + '\n');
+		response.write('langs: ' + JSON.stringify(request.langs) + '\n');
+		response.write('method: ' + request.method + '\n');
+		response.write('query: ' + JSON.stringify(request.query) + '\n');
+		response.write('url: ' + JSON.stringify(request.url) + '\n');
+		response.end();
 	})
-
-	second.stop();
-}).end();*/
-
-/*http.request({
-	host: 'localhost',
-	method: 'GET',
-	path: '/',
-	port: 22222,
-}, function (response) {
-	var content = '';
-
-	assert(response.headers['content-type'] === 'text/html;charset=utf-8', 'Content type is ' + response.headers['content-type']);
-
-	response.on('data', function (data) {
-		content += data.toString();
-	});
-
-	response.on('end', function () {
-		assert(content === 'HelloWorld2', 'Response content is ' + content);
+	.post('/post', function (request, response) {console.log(request);
+		response.write('body: ' + request.body + '\n');
+		response.write('connection.ip: ' + request.connection.ip + '\n');
+		response.write('connection.port: ' + request.connection.port + '\n');
+		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
+		response.write('files: ' + JSON.stringify(request.files) + '\n');
+		response.write('headers: ' + JSON.stringify(request.headers) + '\n');
+		response.write('langs: ' + JSON.stringify(request.langs) + '\n');
+		response.write('method: ' + request.method + '\n');
+		response.write('query: ' + JSON.stringify(request.query) + '\n');
+		response.write('url: ' + JSON.stringify(request.url) + '\n');
+		response.end();
 	})
-
-	third.stop();
-}).end();*/
+	.ws('/', {
+		origins: ['http://localhost'],
+		protocols: ['echo']
+	}, function (connection) {
+		connection.on('message', function (message) {
+			var data = message.data.toString();
+			console.log(data);
+			this.send(data);
+			this.close();
+		});
+	});

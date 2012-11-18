@@ -1,12 +1,21 @@
+<!doctype html>
 <html>
 	<head>
-		<script src="ejs.min.js"></script>
-		<script>
-			console.log(ejs.render('<%=code%>', {code:123}));
-		</script>
+		<link rel="stylesheet" href="style.css">
+		<script src="script.js"></script>
 	</head>
 	<body>
-		<div id="content">
-		</div>
+		<span>s</span><span>i</span><span>m</span><span>p</span><span>l</span><span>e</span><span>S</span>
+		<span>w</span><span>o</span><span>r</span><span>k</span><span>s</span>
+		<span>f</span><span>i</span><span>n</span><span>e</span><span>!</span>
+		<br>
+		<button id="get">GET</button>
+		<button id="post">POST</button>
+		<button id="ws">WS</button>
+		<br>
+		<input id="textinput" placeholder="textinput" type="text" value="textinput"/>
+		<button id="filebutton">File Upload</button>
+		<input id="fileinput" type="file">
+		<div id="result"></div>
 	</body>
 </html>

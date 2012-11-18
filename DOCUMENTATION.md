@@ -54,7 +54,7 @@ route: string
 
 callback: function(2)
 
-Listen for get requests and uses the callback function with request and response as parameters.
+Listen for get requests and uses the callback function with request and response as parameters. Warning: `route` is case sensitive.
 
 ```javascript
 server.get('/', function (request, response) {
@@ -69,7 +69,7 @@ route: string
 
 callback: function(2)
 
-Listen for post requests and uses the callback function with request and response as parameters.
+Listen for post requests and uses the callback function with request and response as parameters. Warning: `route` is case sensitive.
 
 ```javascript
 server.post('/', function (request, response) {
@@ -84,7 +84,7 @@ route: string
 
 callback: function(2)
 
-Listen for both GET and POST requests and uses the callback function with request and response as parameters.
+Listen for both GET and POST requests and uses the callback function with request and response as parameters. Warning: `route` is case sensitive.
 
 ```javascript
 server.all('/', function (request, response) {
@@ -97,7 +97,7 @@ server.all('/', function (request, response) {
 
 path: string
 
-`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to server static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory.
+`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to server static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. Warning: the names of static files are case sensitive.
 
 ```javascript
 server.serve('root');

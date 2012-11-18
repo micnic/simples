@@ -34,7 +34,7 @@ simples.prototype.error = function (code, callback) {
 		this._routes.error[code] = callback;
 	}
 	return this;
-}
+};
 
 // Route get requests
 simples.prototype.get = function (path, callback) {
@@ -61,14 +61,14 @@ simples.prototype.start = function (port, callback) {
 
 		// If the server is already started, restart it with the provided port
 		if (this._started) {
-				var that = this;
-				this._server.close(function () {
-					this.listen(port, function () {
-						if (callback) {
-							callback.call(that);
-						}
-					});
+			var that = this;
+			this._server.close(function () {
+				this.listen(port, function () {
+					if (callback) {
+						callback.call(that);
+					}
 				});
+			});
 		} else {
 			this._started = true;
 			this._server.listen(port, callback);
@@ -89,7 +89,9 @@ simples.prototype.stop = function (callback) {
 			var that = this;
 			this._started = false;
 			this._server.close(function () {
-				callback.call(that);
+				if (callback) {
+					callback.call(that);
+				}
 			});
 		}
 	} catch (error) {
