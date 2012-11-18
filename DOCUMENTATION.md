@@ -27,7 +27,7 @@ port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port, if the server is already started, simpleS will restart the server and will listen on the new provided port.
+Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Warning: this method is asynchronous, do not call it in a `.start()` or `.stop()` method synchronous sequence.
 
 ```javascript
 server.start(80, function () {
@@ -39,7 +39,7 @@ server.start(80, function () {
 
 callback: function(0)
 
-Stop the server and uses the callback function when server is stopped.
+Stop the server. Warning: this method is asynchronous, do not call it in a `.start()` or `.stop()` method synchronous sequence.
 
 ```javascript
 server.stop(function () {

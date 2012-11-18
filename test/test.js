@@ -1,13 +1,28 @@
 var assert = require('assert');
 var http = require('http');
 
-var simples = require('../index.js');
+var simples = require('../index');
+
+var server = simples(80).ws('/', {
+	messageMaxLength: 1024,
+    origins: ['null'],
+    protocols: ['protocolOne']
+}, function (connection) {
+	connection.on('message', function (message) {
+		console.log(message.data.toString());
+	});
+});
+
+/*setTimeout(function () {
+	server.start(1111, function () {
+		console.log(this.constructor);
+	});
+}, 1000);*/
 
 // First server
-var first = simples(80).get('/', function (request, response) {
+/*var first = simples(80).get('/', function (request, response) {
 	//console.log(require('util').inspect(request.body, true, null, true));
-	response.write('Hello');
-	response.end('World');
+	response.send({first:'Hello',second:'World'});
 }).serve('root');
 
 // Second server
@@ -19,7 +34,7 @@ var second = simples(1111).get('/', function (request, response) {
 var third = simples(2222).all('/', function (request, response) {
 	console.log(require('util').inspect(request.cookies, true, null, true));
 	response.end();
-});
+});*/
 
 /*var req = http.request({
 	headers: {

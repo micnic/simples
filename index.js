@@ -18,7 +18,7 @@ function simples(port) {
 	this._server.listen(port);
 	this._started = true;
 
-	// Shortcut routes
+	// Shortcut for routes
 	this._routes = this._server.routes;
 }
 
@@ -30,7 +30,9 @@ simples.prototype.all = function (path, callback) {
 
 // Route errors, possible values: 400, 404, 405 and 500
 simples.prototype.error = function (code, callback) {
-	this._routes.error[code] = callback;
+	if (this._routes.error.hasOwnProperty(code)) {
+		this._routes.error[code] = callback;
+	}
 	return this;
 }
 
@@ -55,22 +57,44 @@ simples.prototype.serve = function (path) {
 // Start simples server
 simples.prototype.start = function (port, callback) {
 
-	// If the server is already started, restart it now the provided port
-	if (this._started) {
-		this._server.close(function () {
+	try {
+
+		// If the server is already started, restart it with the provided port
+		if (this._started) {
+				var that = this;
+				this._server.close(function () {
+					this.listen(port, function () {
+						if (callback) {
+							callback.call(that);
+						}
+					});
+				});
+		} else {
+			this._started = true;
 			this._server.listen(port, callback);
-		});
-	} else {
-		this._started = true;
-		this._server.listen(port, callback);
+		}
+	} catch (error) {
+		console.log('\nsimpleS: Can not restart server\n' + error.message + '\n');
 	}
 	return this;
 };
 
 // Stop simples server
 simples.prototype.stop = function (callback) {
-	this._started = false;
-	this._server.close(callback);
+
+	try {
+
+		// Stop the server only if it is running
+		if (this._started) {
+			var that = this;
+			this._started = false;
+			this._server.close(function () {
+				callback.call(that);
+			});
+		}
+	} catch (error) {
+		console.log('\nsimpleS: Can not stop server\n' + error.message + '\n');
+	}
 	return this;
 };
 
@@ -80,9 +104,6 @@ simples.prototype.ws = function (url, config, callback) {
 	// Check if the upgrade event is not listened
 	if (this._server.listeners('upgrade').length === 0) {
 
-		// Link to this context
-		var that = this;
-
 		// Add listener for upgrade event to make the WebSocket handshake
 		this._server.on('upgrade', function (request, socket, head) {
 
@@ -90,7 +111,7 @@ simples.prototype.ws = function (url, config, callback) {
 			request.socket = socket;
 
 			// Handle for WebSocket requests
-			ws(request, that._server.wsHosts[request.url]);
+			ws(request, this.wsHosts[request.url]);
 		});
 	}
 

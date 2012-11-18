@@ -1,4 +1,4 @@
-# simpleS 0.1.2
+# simpleS 0.1.3
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -33,7 +33,7 @@ server.get('/', function (request, response) {
 	response.end('root');
 });
 
-server.getStatic('static_files'); // Route for static files located in the folder "static_files"
+server.serve('static_files'); // Route for static files located in the folder "static_files"
 
 server.error(404, function (request, response) {
 	response.end('404');
