@@ -2,6 +2,7 @@ var fs = require('fs');
 var simples = require('../index');
 
 var server = simples(80)
+	.accept(['null'])
 	.serve('root')
 	.get('/', function (request, response) {
 		response.lang('en');
@@ -68,3 +69,12 @@ var server = simples(80)
 			this.close();
 		});
 	});
+
+/*require('http').request({
+	host: 'localhost',
+	method: 'OPTIONS'
+}, function (response) {
+	console.log(response.statusCode)
+	console.log(response.headers);
+	server.stop();
+}).end();*/

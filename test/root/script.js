@@ -1,7 +1,7 @@
 window.onload = function () {
 	document.getElementById('get').onclick = function () {
 		var xhr = XMLHttpRequest();
-		xhr.open('GET', '/get?' + 'textinput=' + document.getElementById('textinput').value, true);
+		xhr.open('GET', '/get?textinput=' + document.getElementById('textinput').value, true);
 		xhr.onreadystatechange = function() {
 			if(xhr.readyState === 4 && xhr.status === 200) {
 				document.getElementById('result').innerHTML = 'Result:<br><br>' + xhr.responseText.replace(/\n/g, '<br>');

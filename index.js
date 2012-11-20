@@ -3,7 +3,12 @@ var url = require('url');
 var server = require('./lib/server');
 var ws = require('./lib/ws');
 
-function simples(port) {
+var errors = [
+	'\nsimpleS: Can not restart server\n',
+	'\nsimpleS: Can not stop server\n'
+];
+
+module.exports = simples = function (port) {
 
 	// ES5 strict syntax
 	'use strict';
@@ -14,13 +19,21 @@ function simples(port) {
 	}
 
 	// Initialize the HTTP server and start listen on the specific port
+	var that = this;
 	this._server = server();
-	this._server.listen(port);
-	this._started = true;
+	this._server.listen(port, function () {
+		that._started = true;
+	});
 
 	// Shortcut for routes
 	this._routes = this._server.routes;
 }
+
+// Accept request from other origins
+simples.prototype.accept = function (origins) {
+	this._server.origins = origins;
+	return this;
+};
 
 // Route both GET and POST requests
 simples.prototype.all = function (path, callback) {
@@ -74,7 +87,7 @@ simples.prototype.start = function (port, callback) {
 			this._server.listen(port, callback);
 		}
 	} catch (error) {
-		console.log('\nsimpleS: Can not restart server\n' + error.message + '\n');
+		console.log(errors[0] + error.message + '\n');
 	}
 	return this;
 };
@@ -95,7 +108,7 @@ simples.prototype.stop = function (callback) {
 			});
 		}
 	} catch (error) {
-		console.log('\nsimpleS: Can not stop server\n' + error.message + '\n');
+		console.log(errors[1] + error.message + '\n');
 	}
 	return this;
 };
@@ -130,5 +143,3 @@ simples.prototype.ws = function (url, config, callback) {
 
 	return this;
 };
-
-module.exports = simples;

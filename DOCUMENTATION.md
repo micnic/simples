@@ -46,6 +46,15 @@ server.stop(function () {
     // Application logic
 });
 ```
+## CORS configuration
+`.accept(origins)`
+
+origins: array of strings
+
+simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host origin. To accept requests from any origin use `['*']`. Example:
+```javascript
+server.accept(['null', 'localhost', 'http://www.example.com:80']);
+```
 ## Routing
 ### GET requests
 `.get(route, callback)`
@@ -230,7 +239,7 @@ response.end('World');
 #### .send(data)
 data: any value except undefined
 
-Writes preformatted data to the response stream and ends the response. Will stringify objects, arrays, booleans and numbers. Should not be used with `.write()` or `.end()` methods. Should be used only once. Example:
+Writes preformatted data to the response stream and ends the response, usually very useful for sending file content or JSON format. Arrays, booleans, numbers and objects are stringified. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once. Example:
 ```javascript
 response.send(['Hello', 'World']);
 ```
@@ -268,9 +277,9 @@ Return the HTTP request made by the client to create this WebSocket connection.
 #### .getSocket()
 Return the TCP socket used to maintain this WebSocket connection.
 #### .send(data)
-data: string or buffer
+data: any value except undefined
 
-Sends a message to the client. If `data` is a buffer then the sent message will be of binary type, else - text type, objects, arrays and numbers are stringified.
+Sends a message to the client. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
 #### .broadcast(data, filter)
 data: string or buffer
 
