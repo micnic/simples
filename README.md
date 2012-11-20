@@ -1,4 +1,4 @@
-# simpleS 0.1.4
+# simpleS 0.1.5
 
 simpleS is a simple http server for node.js that has some special features:
 

@@ -1,0 +1,15 @@
+body :nth-child(3n) {
+	color: #7f0000;
+}
+
+body :nth-child(3n+1) {
+	color: #007f00;
+}
+
+body :nth-child(3n+2) {
+	color: #00007f;
+}
+
+#fileinput {
+	display: none;
+}

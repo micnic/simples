@@ -192,13 +192,6 @@ response.cookie('user', 'me', {
     httpOnly: false, // Default is true
 });
 ```
-#### .download(filename)
-filename: string
-
-Redirects the client to download the provided path. Should not be used with other methods. Example:
-```javascript
-response.download('attachement.html');
-```
 #### .lang(language)
 language: string
 
