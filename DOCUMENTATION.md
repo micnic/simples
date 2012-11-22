@@ -1,5 +1,5 @@
 ```javascript
-var simpleS = require('simples');
+var simples = require('simples');
 ```
 
 ## New simpleS instance
@@ -119,7 +119,7 @@ code: number
 
 callback: function(2)
 
-Use the callback function with request and response as parameters for errors that can have place. Only one callback function can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 400 (Bad Request), 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error).
+Use the callback function with request and response as parameters for errors that can have place. Only one callback function can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error).
 
 ```javascript
 server.error(404, function (request, response) {
@@ -155,6 +155,7 @@ The first parameter provided in callbacks for routing requests is an object that
     ],
     method: 'GET',
     query: {},
+    session: {},
     url: {
         search: '',
         query: {},
@@ -181,6 +182,8 @@ An array of strings that represents languages accepted by the client in the orde
 The HTTP method of the request.
 #### query
 The object that contains queries from both GET and POST methods.
+#### session
+A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie.
 #### url
 The url of the request split in components like href, path, pathname, query as object and query as string.
 ### Response interface

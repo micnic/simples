@@ -5,10 +5,12 @@ var server = simples(80)
 	.accept(['null'])
 	.serve('root')
 	.get('/', function (request, response) {
+		request.session.name = 'HELLO WORLD';
 		response.lang('en');
 		fs.createReadStream('root/index.html').pipe(response);
 	})
 	.get('/get', function (request, response) {
+		console.log(request.session.name);
 		response.write('body: ' + request.body + '\n');
 		response.write('connection.ip: ' + request.connection.ip + '\n');
 		response.write('connection.port: ' + request.connection.port + '\n');

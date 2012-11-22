@@ -1,4 +1,4 @@
-# simpleS 0.1.6
+# simpleS 0.1.7
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -6,6 +6,7 @@ simpleS is a simple http server for node.js that has some special features:
 - Routing for http GET and POST requests, static files and errors
 - WebSocket implementation (version 13, RFC 6455)
 - CORS support
+- Sessions
 - Automatic response compression (deflate and gzip)
 - Easy to use interfaces for requests and responses
 

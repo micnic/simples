@@ -29,7 +29,7 @@ module.exports = simples = function (port) {
 	this._routes = this._server.routes;
 }
 
-// Accept request from other origins
+// Accept requests from other origins
 simples.prototype.accept = function (origins) {
 	this._server.origins = origins;
 	return this;
