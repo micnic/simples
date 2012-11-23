@@ -167,7 +167,7 @@ The first parameter provided in callbacks for routing requests is an object that
 ```
 
 #### body
-The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, if you need an object representing this query use `request.query.post`.
+The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, parsed data is contained in `request.query`.
 #### connection
 Data about the current connection, object containing the remote ip address and the port.
 #### cookies
@@ -185,7 +185,7 @@ The object that contains queries from both GET and POST methods.
 #### session
 A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie.
 #### url
-The url of the request split in components like href, path, pathname, query as object and query as string.
+The url of the request split in components like href, path, pathname, query as object and query as string (search).
 ### Response interface
 The second parameter provided in callbacks for routing requests is a writable stream that defines the data sent to the client. It has the next methods:
 #### .cookie(name, value, config)
@@ -269,16 +269,14 @@ server.ws('/', {
 ```
 ### WebSocket connection
 The object that represents the current WebSocket connection. The WebSocket connection is an event emitter. It has the next methods:
-#### .getConnections()
-Return all the connections that exist at the moment.
-#### .getOrigin()
-Return the origin of the WebSocket connection
-#### .getProtocols()
-Return the array of protocols of the WebSocket connection
-#### .getRequest()
-Return the HTTP request made by the client to create this WebSocket connection.
-#### .getSocket()
-Return the TCP socket used to maintain this WebSocket connection.
+#### .origin
+The origin of the WebSocket connection.
+#### .protocols
+The array of protocols of the WebSocket connection.
+#### .request
+The request interface, same as for GET and POST requests, which is described above.
+#### .socket
+The TCP socket used to maintain this WebSocket connection.
 #### .send(data)
 data: any value except undefined
 

@@ -1,7 +1,6 @@
 var url = require('url');
 
 var server = require('./lib/server');
-var ws = require('./lib/ws');
 
 var errors = [
 	'\nsimpleS: Can not restart server\n',
@@ -24,8 +23,6 @@ module.exports = simples = function (port) {
 	this._server.listen(port, function () {
 		that._started = true;
 	});
-
-	// Shortcut for routes
 	this._routes = this._server.routes;
 }
 
@@ -41,7 +38,7 @@ simples.prototype.all = function (path, callback) {
 	return this;
 };
 
-// Route errors, possible values: 400, 404, 405 and 500
+// Route errors, possible values: 404, 405 and 500
 simples.prototype.error = function (code, callback) {
 	if (this._routes.error.hasOwnProperty(code)) {
 		this._routes.error[code] = callback;
@@ -73,8 +70,8 @@ simples.prototype.start = function (port, callback) {
 	try {
 
 		// If the server is already started, restart it with the provided port
+		var that = this;
 		if (this._started) {
-			var that = this;
 			this._server.close(function () {
 				this.listen(port, function () {
 					if (callback) {
@@ -89,6 +86,7 @@ simples.prototype.start = function (port, callback) {
 	} catch (error) {
 		console.log(errors[0] + error.message + '\n');
 	}
+
 	return this;
 };
 
@@ -98,8 +96,8 @@ simples.prototype.stop = function (callback) {
 	try {
 
 		// Stop the server only if it is running
+		var that = this;
 		if (this._started) {
-			var that = this;
 			this._started = false;
 			this._server.close(function () {
 				if (callback) {
@@ -110,25 +108,12 @@ simples.prototype.stop = function (callback) {
 	} catch (error) {
 		console.log(errors[1] + error.message + '\n');
 	}
+
 	return this;
 };
 
 // New WebSocket host
 simples.prototype.ws = function (url, config, callback) {
-
-	// Check if the upgrade event is not listened
-	if (this._server.listeners('upgrade').length === 0) {
-
-		// Add listener for upgrade event to make the WebSocket handshake
-		this._server.on('upgrade', function (request, socket, head) {
-
-			// Link to the socket, for low level interaction
-			request.socket = socket;
-
-			// Handle for WebSocket requests
-			ws(request, this.wsHosts[request.url]);
-		});
-	}
 
 	// Configuration for the WebSocket host
 	this._server.wsHosts[url] = {

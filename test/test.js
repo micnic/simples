@@ -64,6 +64,7 @@ var server = simples(80)
 		origins: ['http://localhost'],
 		protocols: ['echo']
 	}, function (connection) {
+		console.log(connection.request.session.name);
 		connection.on('message', function (message) {
 			var data = message.data.toString();
 			console.log(data);
