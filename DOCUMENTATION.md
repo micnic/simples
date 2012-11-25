@@ -21,13 +21,13 @@ var server = new simples(80);
 
 ## Server management
 ### Starting and restarting
-`.start(port, callback)`
+`.start(port, [callback])`
 
 port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Warning: this method is asynchronous, do not call it in a `.start()` or `.stop()` method synchronous sequence.
+Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback.
 
 ```javascript
 server.start(80, function () {
@@ -35,25 +35,25 @@ server.start(80, function () {
 });
 ```
 ### Stopping
-`.stop(callback)`
+`.stop([callback])`
 
 callback: function(0)
 
-Stop the server. Warning: this method is asynchronous, do not call it in a `.start()` or `.stop()` method synchronous sequence.
+Stop the server. Can have an optional callback.
 
 ```javascript
 server.stop(function () {
     // Application logic
 });
 ```
-## CORS configuration
+### CORS (Cross-Origin Resource Sharing)
 `.accept(origins)`
 
 origins: array of strings
 
-simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host origin. To accept requests from any origin use `['*']`. Example:
+simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `['*']`. These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
 ```javascript
-server.accept(['null', 'localhost', 'http://www.example.com:80']);
+server.accept(['null', 'localhost', 'www.example.com']);
 ```
 ## Routing
 ### GET requests
@@ -199,7 +199,7 @@ Sets the cookies sent to the client, providing a name, a value and an object to 
 ```javascript
 response.cookie('user', 'me', {
     expires: new Date(new Date().valueOf() + 3600000), // or maxAge: 3600000, default is undefined
-    path: '/', // Default is the root of the server
+    path: '/path/', // Default is the root of the server
     domain: 'localhost', // Default is the domain of the server
     httpOnly: false, // Default is true
 });
@@ -226,14 +226,14 @@ Sets the type of the content of the response. Default is 'html'. Should be used 
 response.type('html');
 ```
 #### .write(data)
-data: string or buffer
+data: buffer or string
 
 Writes data to the response stream. Should be ended with `.end()` method. Example:
 ```javascript
 response.write('Hello');
 ```
-#### .end(data)
-data: string or empty
+#### .end([data])
+data: buffer, string or empty
 
 If data is provided it calls the `.write()` method and ends the response. Example:
 ```javascript
@@ -256,32 +256,27 @@ config: object
 
 callback: function(1)
 
-Listen for WebSocket connections. For security reasons origins and protocols should be provided in the config parameter, the length of the message can be limited, default is 1MB. The callback function comes with the connection as parameter.
+Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the config parameter, by default no protocols are required, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The callback function comes with the connection as parameter.
 
 ```javascript
 server.ws('/', {
-    messageMaxLength: 1024,
-    origins: ['null'],
-    protocols: ['chat']
+    length: 1024,
+    protocols: ['', 'echo']
 }, function (connection) {
     // Application logic
 });
 ```
 ### WebSocket connection
-The object that represents the current WebSocket connection. The WebSocket connection is an event emitter. It has the next methods:
-#### .origin
-The origin of the WebSocket connection.
+The object that represents the current WebSocket connection. The WebSocket connection is an event emitter. It has the next attributes and methods:
 #### .protocols
 The array of protocols of the WebSocket connection.
 #### .request
 The request interface, same as for GET and POST requests, which is described above.
-#### .socket
-The TCP socket used to maintain this WebSocket connection.
 #### .send(data)
 data: any value except undefined
 
 Sends a message to the client. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
-#### .broadcast(data, filter)
+#### .broadcast(data, [filter])
 data: string or buffer
 
 filter: function(3)

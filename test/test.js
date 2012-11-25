@@ -2,7 +2,11 @@ var fs = require('fs');
 var simples = require('../index');
 
 var server = simples(80)
-	.accept(['null'])
+	.stop()
+	.start(80)
+	.stop()
+	.start(80)
+	.accept(['*'])
 	.serve('root')
 	.get('/', function (request, response) {
 		request.session.name = 'HELLO WORLD';
@@ -61,8 +65,8 @@ var server = simples(80)
 		0 = infinity;
 	})
 	.ws('/', {
-		origins: ['http://localhost'],
-		protocols: ['echo']
+		origins: ['null'],
+		protocols: ['echo', '']
 	}, function (connection) {
 		console.log(connection.request.session.name);
 		connection.on('message', function (message) {

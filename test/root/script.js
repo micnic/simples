@@ -30,7 +30,7 @@ window.onload = function () {
 	};
 
 	document.getElementById('ws').onclick = function () {
-		var socket = WebSocket('ws://localhost/', 'echo');
+		var socket = WebSocket('ws://localhost/');
 		socket.onmessage = function (message) {
 			document.getElementById('result').innerHTML = 'Result:<br><br>' + message.data;
 		};
