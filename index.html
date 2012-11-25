@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>simpleS by micnic</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>simpleS</h1>
+        <h2>Simple server for node.js</h2>
+        <a href="https://github.com/micnic/simpleS" class="button"><small>View project on</small>GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>simpleS 0.1.9</h1>
+
+<p>simpleS is a simple http server for node.js that has some special features:</p>
+
+<ul>
+<li>Simple structure with minimum configuration</li>
+<li>Routing for http GET and POST requests, static files and errors</li>
+<li>WebSocket implementation (version 13, RFC 6455)</li>
+<li>CORS support</li>
+<li>Sessions</li>
+<li>Automatic response compression (deflate and gzip)</li>
+<li>Easy to use interfaces for requests and responses</li>
+</ul><p>Tested with node.js 0.8+</p>
+
+<p><em>THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED</em></p>
+
+<h3><a href="https://github.com/micnic/simpleS/wiki/Documentation" title="simpleS Documentation">Documentation</a></h3>
+
+<h2>Instalation</h2>
+
+<pre><code>npm install simples
+</code></pre>
+
+<h2>Usage</h2>
+
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">simples</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'simples'</span><span class="p">);</span>
+
+<span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span> <span class="c1">// Your server is set up on port 12345</span>
+</pre></div>
+
+<h2>Routing</h2>
+
+<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="nx">server</span><span class="p">.</span><span class="nx">serve</span><span class="p">(</span><span class="s1">'static_files'</span><span class="p">);</span> <span class="c1">// Route for static files located in the folder "static_files"</span>
+
+<span class="nx">server</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'404'</span><span class="p">);</span>
+<span class="p">});</span>
+</pre></div>
+
+<h2>WebSocket</h2>
+
+<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">messageMaxLength</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
+    <span class="nx">origins</span><span class="o">:</span> <span class="p">[</span><span class="s1">'null'</span><span class="p">],</span> <span class="c1">// The accepted origins</span>
+    <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'chat'</span><span class="p">]</span> <span class="c1">// The accepted protocols</span>
+<span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'New connection'</span><span class="p">);</span>
+
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">toString</span><span class="p">());</span>
+    <span class="p">});</span>
+
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'close'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Connection closed'</span><span class="p">);</span>
+    <span class="p">});</span>
+<span class="p">});</span>
+</pre></div>
+
+<p>On client:</p>
+
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">'ws://localhost:12345/'</span><span class="p">,</span> <span class="s1">'chat'</span><span class="p">);</span> <span class="c1">// Enjoy the real-time connection</span>
+</pre></div>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/micnic/simpleS/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/micnic/simpleS/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/micnic/simpleS"></a> is maintained by <a href="https://github.com/micnic">micnic</a>.</p>
+
+          <p>This page was generated by <a href="pages.github.com">GitHub Pages</a> using the Architect theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
