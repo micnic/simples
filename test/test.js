@@ -2,16 +2,13 @@ var fs = require('fs');
 var simples = require('../index');
 
 var server = simples(80)
-	.stop()
-	.start(80)
-	.stop()
 	.start(80)
 	.accept(['*'])
-	.serve('root')
+	.serve(__dirname + '/root')
 	.get('/', function (request, response) {
 		request.session.name = 'HELLO WORLD';
 		response.lang('en');
-		fs.createReadStream('root/index.html').pipe(response);
+		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
 	})
 	.get('/get', function (request, response) {
 		console.log(request.session.name);

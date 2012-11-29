@@ -4,26 +4,26 @@ var server = require('./lib/server');
 
 module.exports = simples = function (port) {
 	'use strict';
+
 	if (!(this instanceof simples)) {
 		return new simples(port);
 	}
 
-	// Initialize the HTTP server and start listen on the specific port
+	// Initialize the HTTP server
 	Object.defineProperty(this, 'server', {
-		value: server()
+		value: new server()
 	});
 
-	Object.defineProperties(this, {
-		routes: {
-			value: this.server.routes
-		},
-		started: {
-			value: true,
-			writable: true
-		}
+	Object.defineProperty(this, 'routes', {
+		value: this.server.routes
 	});
 
-	this.server.listen(port);
+	this.server.on('error', function (error) {
+		console.log('simpleS: Server Error\n' + error.message + '\n');
+		this.started  = false;
+	});
+	
+	this.start(port);
 }
 
 // Accept requests from other origins
@@ -78,21 +78,25 @@ simples.prototype.start = function (port, callback) {
 	'use strict';
 
 	// If the server is already started, restart it with the provided port
-	if (this.started) {
-		this.server.close(function () {
+	try {
+		if (this.started) {
+			this.server.close(function () {
+				this.server.listen(port, function () {
+					if (callback) {
+						callback.call(this);
+					}
+				}.bind(this));
+			}.bind(this));
+		} else {
+			this.started = true;
 			this.server.listen(port, function () {
 				if (callback) {
 					callback.call(this);
 				}
 			}.bind(this));
-		}.bind(this));
-	} else {
-		this.started = true;
-		this.server.listen(port, function () {
-			if (callback) {
-				callback.call(this);
-			}
-		}.bind(this));
+		}
+	} catch (error) {
+		console.log('simpleS: Can not start server\n' + error.message + '\n');
 	}
 
 	return this;
@@ -103,13 +107,17 @@ simples.prototype.stop = function (callback) {
 	'use strict';
 
 	// Stop the server only if it is running
-	if (this.started) {
-		this.started = false;
-		this.server.close(function () {
-			if (callback) {
-				callback.call(this);
-			}
-		}.bind(this));
+	try {
+		if (this.started) {
+			this.started = false;
+			this.server.close(function () {
+				if (callback) {
+					callback.call(this);
+				}
+			}.bind(this));
+		}
+	} catch (error) {
+		console.log('simpleS: Can not stop server\n' + error.message + '\n');
 	}
 
 	return this;

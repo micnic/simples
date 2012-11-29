@@ -21,7 +21,7 @@ var server = new simples(80);
 
 ## Server management
 ### Starting and restarting
-`.start(port, [callback])`
+`.start(port[, callback])`
 
 port: number
 
@@ -218,10 +218,12 @@ Redirects the client to the provided path. Should not be used with the other met
 ```javascript
 response.redirect('/index');
 ```
-#### .type(type)
+#### .type(type[, override])
 type: string
 
-Sets the type of the content of the response. Default is 'html'. Should be used before the `.write()` method. Should be used only once. Example:
+override: boolean
+
+Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.json](https://github.com/micnic/simpleS/blob/master/utils/mime.json), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value of this method and setting the first parameter as a valid content type. The second parameter is optional. Example:
 ```javascript
 response.type('html');
 ```
