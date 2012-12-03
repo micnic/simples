@@ -4,6 +4,7 @@ simpleS is a simple http server for node.js that has some special features:
 
 - Simple structure with minimum configuration
 - Routing for http GET and POST requests, static files and errors
+- Virtual Hosting
 - WebSocket implementation (version 13, RFC 6455)
 - CORS support
 - Sessions
