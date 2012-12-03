@@ -1,12 +1,14 @@
 {
 	"name": "simples",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Simple Server",
 	"keywords": [
 		"cors",
 		"http",
+		"rest",
 		"simple",
 		"server",
+		"vhost",
 		"web",
 		"websocket"
 	],

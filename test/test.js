@@ -1,8 +1,13 @@
 var fs = require('fs');
 var simples = require('../index');
 
-var server = simples(80)
-	.start(80)
+var server = simples(80);
+
+server.get('/', function (request, response) {
+	response.redirect('http://127.0.0.1');
+});
+
+var host1 = server.host('127.0.0.1')
 	.accept(['*'])
 	.serve(__dirname + '/root')
 	.get('/', function (request, response) {

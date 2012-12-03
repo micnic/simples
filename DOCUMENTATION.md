@@ -1,3 +1,4 @@
+**simpleS is under active development, the API may change from version to version, it is highly recommended to read the documentation of the current version as there may me be some radical changes**
 ```javascript
 var simples = require('simples');
 ```
@@ -54,6 +55,15 @@ origins: array of strings
 simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `['*']`. These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
 ```javascript
 server.accept(['null', 'localhost', 'www.example.com']);
+```
+### Virtual Hosting
+`.host(name)`
+
+name: string
+
+simpleS can serve multiple domains on the same server and port, using `.host()` method it's simple to specify which host should use which routes. By default simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts. Example:
+```javascript
+server.host(['example.com', 'www.example.com']);
 ```
 ## Routing
 ### GET requests
