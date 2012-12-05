@@ -1,4 +1,4 @@
-**simpleS is under active development, the API may change from version to version, it is highly recommended to read the documentation of the current version as there may me be some radical changes**
+***simpleS is under active development, the API may change from version to version, it is highly recommended to read the documentation of the current version as there may me be some radical changes***
 ```javascript
 var simples = require('simples');
 ```
@@ -11,15 +11,12 @@ port: number
 simpleS needs only the port number and it sets up a HTTP server on this port.
 
 ```javascript
-var server = simples(80);
-```
-
-or
-
-```javascript
 var server = new simples(80);
 ```
-
+or
+```javascript
+var server = simples(80); // simpler
+```
 ## Server management
 ### Starting and restarting
 `.start(port[, callback])`
@@ -47,15 +44,6 @@ server.stop(function () {
     // Application logic
 });
 ```
-### CORS (Cross-Origin Resource Sharing)
-`.accept(origins)`
-
-origins: array of strings
-
-simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `['*']`. These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
-```javascript
-server.accept(['null', 'localhost', 'www.example.com']);
-```
 ### Virtual Hosting
 `.host(name)`
 
@@ -63,9 +51,19 @@ name: string
 
 simpleS can serve multiple domains on the same server and port, using `.host()` method it's simple to specify which host should use which routes. By default simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts. Example:
 ```javascript
-server.host(['example.com', 'www.example.com']);
+server.host('example.com');
+```
+### CORS (Cross-Origin Resource Sharing)
+`.accept(origins)`
+
+origins: array of strings
+
+simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on the current or the main host (see Virtual Hosting). These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
+```javascript
+server.accept('null', 'localhost', 'example.com');
 ```
 ## Routing
+All the methods described below are applicable on the current or the main host (see Virtual Hosting).
 ### GET requests
 `.get(route, callback)`
 
@@ -259,6 +257,7 @@ Writes preformatted data to the response stream and ends the response, usually v
 response.send(['Hello', 'World']);
 ```
 ## WebSocket
+The WebSocket host is linked to the current or the main HTTP host (see Virtual Hosting).
 ### WebSocket host
 `.ws(path, config, callback)`
 

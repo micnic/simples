@@ -3,12 +3,12 @@ var simples = require('../index');
 
 var server = simples(80);
 
-server.get('/', function (request, response) {
+server/*.get('/', function (request, response) {
 	response.redirect('http://127.0.0.1');
 });
 
 var host1 = server.host('127.0.0.1')
-	.accept(['*'])
+	.accept('*')*/
 	.serve(__dirname + '/root')
 	.get('/', function (request, response) {
 		request.session.name = 'HELLO WORLD';
