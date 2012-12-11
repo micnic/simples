@@ -1,4 +1,4 @@
-# simpleS 0.2.2
+# simpleS 0.2.3
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -10,6 +10,7 @@ simpleS is a simple http server for node.js that has some special features:
 - Sessions
 - Automatic response compression (deflate and gzip)
 - Easy to use interfaces for requests and responses
+- Client-side simple API for AJAX and WebSocket
 
 Tested with node.js 0.8+
 
@@ -43,18 +44,40 @@ server.error(404, function (request, response) {
 });
 ```
 
+## Virtual Hosting
+
+```javascript
+var mainHost = server; // Main host
+var host1 = server.host('example.com'); // Other hosts
+var host2 = server.host('example2.com');
+
+// Now for each host you can apply individual routing
+mainHost.get('/', function (request, response) {
+	response.end('Main Host');
+});
+
+host1.get('/', function (request, response) {
+	response.end('Host1');
+});
+
+host2.get('/', function (request, response) {
+	response.end('Host2');
+});
+```
+
 ## WebSocket
 
 ```javascript
 server.ws('/', {
-	messageMaxLength: 1024, // The maximum size of a message
-	origins: ['null'], // The accepted origins
-	protocols: ['chat'] // The accepted protocols
+	length: 1024, // The maximum size of a message
+	protocols: ['echo'] // The accepted protocols
 }, function (connection) {
 	console.log('New connection');
 
 	connection.on('message', function (message) {
-		console.log(message.toString());
+		message = message.toString();
+		console.log(message);
+		connection.send(message);
 	});
 
 	connection.on('close', function () {
@@ -66,5 +89,11 @@ server.ws('/', {
 On client:
 
 ```javascript
-var socket = new WebSocket('ws://localhost:12345/', 'chat'); // Enjoy the real-time connection
+var socket = new WebSocket('ws://localhost:12345/', 'echo'); // Enjoy the real-time connection
+
+socket.onmessage = function (event) {
+	console.log(event.data);
+};
+
+socket.send('ECHO');
 ```

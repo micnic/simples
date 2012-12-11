@@ -3,7 +3,7 @@
 var simples = require('simples');
 ```
 
-## New simpleS instance
+## New simpleS Instance
 `simples(port)`
 
 port: number
@@ -17,8 +17,8 @@ or
 ```javascript
 var server = simples(80); // simpler
 ```
-## Server management
-### Starting and restarting
+## Server Management
+### Starting and Restarting
 `.start(port[, callback])`
 
 port: number
@@ -64,7 +64,7 @@ server.accept('null', 'localhost', 'example.com');
 ```
 ## Routing
 All the methods described below are applicable on the current or the main host (see Virtual Hosting).
-### GET requests
+### GET Requests
 `.get(route, callback)`
 
 route: string
@@ -79,7 +79,7 @@ server.get('/', function (request, response) {
 });
 ```
 
-### POST requests
+### POST Requests
 `.post(route, callback)`
 
 route: string
@@ -94,14 +94,14 @@ server.post('/', function (request, response) {
 });
 ```
 
-### All requests
+### All Requests
 `.all(route, callback)`
 
 route: string
 
 callback: function(2)
 
-Listen for both GET and POST requests and uses the callback function with request and response as parameters. Warning: `route` is case sensitive.
+Listen for both GET and POST requests and uses the callback function with request and response as parameters,this is useful for defining general behavior for both types of requests. Warning: `route` is case sensitive.
 
 ```javascript
 server.all('/', function (request, response) {
@@ -109,7 +109,7 @@ server.all('/', function (request, response) {
 });
 ```
 
-### Static files
+### Static Files
 `.serve(path)`
 
 path: string
@@ -120,7 +120,7 @@ path: string
 server.serve('root');
 ```
 
-### Error routes
+### Error Routes
 `.error(code, callback)`
 
 code: number
@@ -135,7 +135,7 @@ server.error(404, function (request, response) {
 });
 ```
 
-### Request interface
+### Request Interface
 The first parameter provided in callbacks for routing requests is an object that contains data about the current request. Example:
 ```javascript
 {
@@ -174,27 +174,27 @@ The first parameter provided in callbacks for routing requests is an object that
 }
 ```
 
-#### body
+#### .body
 The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, parsed data is contained in `request.query`.
-#### connection
+#### .connection
 Data about the current connection, object containing the remote ip address and the port.
-#### cookies
+#### .cookies
 An object that contains the cookies provided by the client.
-#### files
+#### .files
 An object that contains files send using POST method with multipart/form-data content type.
-#### headers
+#### .headers
 An object that contains the HTTP headers of the request.
-#### langs
+#### .langs
 An array of strings that represents languages accepted by the client in the order of their relevance.
-#### method
+#### .method
 The HTTP method of the request.
-#### query
+#### .query
 The object that contains queries from both GET and POST methods.
-#### session
+#### .session
 A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie.
-#### url
+#### .url
 The url of the request split in components like href, path, pathname, query as object and query as string (search).
-### Response interface
+### Response Interface
 The second parameter provided in callbacks for routing requests is a writable stream that defines the data sent to the client. It has the next methods:
 #### .cookie(name, value, config)
 name: string
@@ -258,7 +258,7 @@ response.send(['Hello', 'World']);
 ```
 ## WebSocket
 The WebSocket host is linked to the current or the main HTTP host (see Virtual Hosting).
-### WebSocket host
+### WebSocket Host
 `.ws(path, config, callback)`
 
 path: string
@@ -277,7 +277,7 @@ server.ws('/', {
     // Application logic
 });
 ```
-### WebSocket connection
+### WebSocket Connection
 The object that represents the current WebSocket connection. The WebSocket connection is an event emitter. It has the next attributes and methods:
 #### .protocols
 The array of protocols of the WebSocket connection.
@@ -303,3 +303,42 @@ The WebSocket connection has the next events:
 Emitted when the server receives a message from the client.
 #### close
 Emitted when the connection is closed.
+### Client-Side Simple API
+To have access to the simpleS client-side API it is necessary to add `<script src="/simples/client.js"></script>` in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
+#### AJAX (Asynchronous JavaScript and XML)
+`simples.ajax(url, method, params)`
+
+url: string
+
+method: string
+
+params: object
+
+`simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url and using the provided method and parameters. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. Example:
+```javascript
+simples.ajax('/', 'post', {
+    user: 'me',
+    password: 'ok'
+}).error(function (response) {
+    // Application logic
+}).progress(function (response) {
+    // Application logic
+}).success(function (response) {
+    // Application logic
+});
+```
+#### WS (WebSocket)
+`simples.ws(host, protocols, raw)`
+
+host: string
+
+protocols: array
+
+raw: boolean
+
+`simples.ws()` will return an object which will create an WebSocket connection to the provided host and protocols. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default raw is set to true. This object is an event emitter (has the folowing methods: .emit(), .addListener(), .on(), .once(), .removeAllListeners(), .removeListener()). To receive a message in raw mode `.on('message' function () {/*...*/})` should be used, for advanced mode `.on(EVENT, function () {/*...*/})` is used. To send data to the server the .send() method is used, in raw mode it should have only one parameter, the data, in advanced mode it should have two parameters, the event and the data. .emit() method is used to trigger the events locally, but not on the server, this is useful for triggering instantly the event on the client or for debugging. To close the WebSocket connection `.close()` method is used. Example:
+```javascript
+simples.ws('/', ['echo'], true).on('message', function (message) {
+    this.send('Hello World');
+});
+```

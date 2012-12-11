@@ -3,13 +3,7 @@ var simples = require('../index');
 
 var server = simples(80);
 
-server/*.get('/', function (request, response) {
-	response.redirect('http://127.0.0.1');
-});
-
-var host1 = server.host('127.0.0.1')
-	.accept('*')*/
-	.serve(__dirname + '/root')
+server.serve(__dirname + '/root')
 	.get('/', function (request, response) {
 		request.session.name = 'HELLO WORLD';
 		response.lang('en');
@@ -68,22 +62,14 @@ var host1 = server.host('127.0.0.1')
 	})
 	.ws('/', {
 		origins: ['null'],
-		protocols: ['echo', '']
+		protocols: ['echo', ''],
+		raw: true
 	}, function (connection) {
 		console.log(connection.request.session.name);
 		connection.on('message', function (message) {
-			var data = message.data.toString();
+			var data = message.data.toString();console.log('+' + data)
 			console.log(data);
 			this.send(data);
 			this.close();
 		});
 	});
-
-/*require('http').request({
-	host: 'localhost',
-	method: 'OPTIONS'
-}, function (response) {
-	console.log(response.statusCode)
-	console.log(response.headers);
-	server.stop();
-}).end();*/
