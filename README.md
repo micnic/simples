@@ -1,4 +1,4 @@
-# simpleS 0.2.3
+# simpleS 0.2.4
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -17,6 +17,9 @@ Tested with node.js 0.8+
 *THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED*
 
 ### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
+
+#### More simple modules
+[simpleT](http://micnic.github.com/simpleT/)
 
 ## Instalation
 

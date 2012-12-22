@@ -55,7 +55,7 @@ server.serve(__dirname + '/root')
 		response.send('Error 404 caught');
 	})
 	.error(500, function (request, response) {
-		response.send('Error 500 caught');
+		0 = infinity;
 	})
 	.get('/error', function (request, response) {
 		0 = infinity;

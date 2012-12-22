@@ -114,33 +114,43 @@ var simples = {
 			delete this.queue;
 		}.bind(this);
 	}
-}
+};
 
 // Set the error listener
 simples.ajax.prototype.error = function (listener) {
+	'use strict';
+
 	this.listeners.error = listener;
 	return this;
 };
 
 // Set the progress listener
 simples.ajax.prototype.progress = function (listener) {
+	'use strict';
+
 	this.listeners.progress = listener;
 	return this;
 };
 
 // Set the succes listener
 simples.ajax.prototype.success = function (listener) {
+	'use strict';
+
 	this.listeners.success = listener;
 	return this;
 };
 
 // Close the WebSocket
 simples.ws.prototype.close = function () {
+	'use strict';
+
 	this.socket.close();
-}
+};
 
 // Trigger the event with the data
 simples.ws.prototype.emit = function (event, data) {
+	'use strict';
+
 	if (this.listeners[event]) {
 		this.listeners[event].forEach(function (element) {
 			element(data);
@@ -152,6 +162,8 @@ simples.ws.prototype.emit = function (event, data) {
 
 // Append listener for an event
 simples.ws.prototype.addListener = function (event, listener) {
+	'use strict';
+
 	if (!Array.isArray(this.listeners[event])) {
 		this.listeners[event] = [];
 	}
@@ -165,6 +177,8 @@ simples.ws.prototype.on = simples.ws.prototype.addListener;
 
 // Append only one time listener
 simples.ws.prototype.once = function (event, listener) {
+	'use strict';
+
 	var oneTimeListener = function () {
 		listener.apply(this, arguments);
 		this.removeListener(event, oneTimeListener);
@@ -176,6 +190,8 @@ simples.ws.prototype.once = function (event, listener) {
 
 // Delete all listeners of an event or all listeners of all events
 simples.ws.prototype.removeAllListeners = function (event) {
+	'use strict';
+
 	if (event) {
 		delete this.listeners[event];
 	} else {
@@ -187,6 +203,8 @@ simples.ws.prototype.removeAllListeners = function (event) {
 
 // Delete specific listener
 simples.ws.prototype.removeListener = function (event, listener) {
+	'use strict';
+
 	var index = this.listeners[event].indexOf(listener);
 	this.listeners[event].splice(index, 1);
 	return this;
@@ -194,13 +212,16 @@ simples.ws.prototype.removeListener = function (event, listener) {
 
 // Send data via the WebSocket in raw or advanced mode
 simples.ws.prototype.send = function () {
+	'use strict';
+
+	var data;
 	if (this.raw) {
 		data = arguments[0];
 	} else {
 		data = JSON.stringify({
 			event: arguments[0],
 			data: arguments[1]
-		})
+		});
 	}
 
 	if (this.started) {
