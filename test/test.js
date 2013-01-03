@@ -3,17 +3,26 @@ var simples = require('../index');
 
 var server = simples(80);
 
-server.serve(__dirname + '/root')
+var noopEngine = {
+	render: function (string) {
+		console.log(string);
+		return string;
+	}
+};
+
+server.engine(noopEngine)
+	.serve(__dirname + '/root')
 	.get('/', function (request, response) {
 		request.session.name = 'HELLO WORLD';
 		response.lang('en');
 		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
 	})
+	.get('/render', function (request, response) {
+		response.render('This "Hello World" was rendered using a noop template engine');
+	})
 	.get('/get', function (request, response) {
 		console.log(request.session.name);
 		response.write('body: ' + request.body + '\n');
-		response.write('connection.ip: ' + request.connection.ip + '\n');
-		response.write('connection.port: ' + request.connection.port + '\n');
 		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
 		response.write('headers: ' + JSON.stringify(request.headers) + '\n');
 		response.write('langs: ' + JSON.stringify(request.langs) + '\n');
@@ -38,10 +47,12 @@ server.serve(__dirname + '/root')
 	.get('/succes', function (request, response) {
 		response.send('Successful operation');
 	})
+	.get('/stop', function (request, response) {
+		response.end('Stopping');
+		server.stop();
+	})
 	.post('/post', function (request, response) {
 		response.write('body: ' + request.body + '\n');
-		response.write('connection.ip: ' + request.connection.ip + '\n');
-		response.write('connection.port: ' + request.connection.port + '\n');
 		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
 		response.write('files: ' + JSON.stringify(request.files) + '\n');
 		response.write('headers: ' + JSON.stringify(request.headers) + '\n');
@@ -65,7 +76,7 @@ server.serve(__dirname + '/root')
 		protocols: ['echo', ''],
 		raw: true
 	}, function (connection) {
-		console.log(connection.request.session.name);
+		console.log(connection.session.name);
 		connection.on('message', function (message) {
 			var data = message.data.toString();console.log('+' + data)
 			console.log(data);

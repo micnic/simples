@@ -2,7 +2,6 @@
 ```javascript
 var simples = require('simples');
 ```
-
 ## New simpleS Instance
 `simples(port)`
 
@@ -54,13 +53,29 @@ simpleS can serve multiple domains on the same server and port, using `.host()` 
 server.host('example.com');
 ```
 ### CORS (Cross-Origin Resource Sharing)
-`.accept(origins)`
+`.accept([arguments])`
 
-origins: array of strings
+arguments: list of strings
 
 simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on the current or the main host (see Virtual Hosting). These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
 ```javascript
 server.accept('null', 'localhost', 'example.com');
+```
+### Templating
+`.engine(engine)`
+
+engine: object
+
+simpleS provide a simple way to use template engine for response rendering, for this it is necessary to define the needed template engine, if it has the method `.render()` then it will be used, else the engine itself will be used to render the response. Example:
+```javascript
+var noopEngine = {
+	render: function (string) {
+		console.log(string);
+		return string;
+	}
+};
+
+server.engine(noopEngine);
 ```
 ## Routing
 All the methods described below are applicable on the current or the main host (see Virtual Hosting).
@@ -78,7 +93,6 @@ server.get('/', function (request, response) {
     // Application logic
 });
 ```
-
 ### POST Requests
 `.post(route, callback)`
 
@@ -93,7 +107,6 @@ server.post('/', function (request, response) {
     // Application logic
 });
 ```
-
 ### All Requests
 `.all(route, callback)`
 
@@ -108,7 +121,6 @@ server.all('/', function (request, response) {
     // Application logic
 });
 ```
-
 ### Static Files
 `.serve(path)`
 
@@ -119,7 +131,6 @@ path: string
 ```javascript
 server.serve('root');
 ```
-
 ### Error Routes
 `.error(code, callback)`
 
@@ -134,16 +145,11 @@ server.error(404, function (request, response) {
     // Application logic
 });
 ```
-
 ### Request Interface
 The first parameter provided in callbacks for routing requests is an object that contains data about the current request. Example:
 ```javascript
 {
     body: '',
-    connection: {
-        ip: '127.0.0.1',
-        port: 50505
-    },
     cookies: {
         user: 'me',
         pass: 'password'
@@ -173,11 +179,8 @@ The first parameter provided in callbacks for routing requests is an object that
     }
 }
 ```
-
 #### .body
 The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, parsed data is contained in `request.query`.
-#### .connection
-Data about the current connection, object containing the remote ip address and the port.
 #### .cookies
 An object that contains the cookies provided by the client.
 #### .files
@@ -196,20 +199,20 @@ A container used to keep important data on the server-side, the clients have acc
 The url of the request split in components like href, path, pathname, query as object and query as string (search).
 ### Response Interface
 The second parameter provided in callbacks for routing requests is a writable stream that defines the data sent to the client. It has the next methods:
-#### .cookie(name, value, config)
+#### .cookie(name, value, attributes)
 name: string
 
 value: string
 
-config: object
+attributes: object
 
 Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. Can be used multiple times, but before `.write()` method. Example:
 ```javascript
 response.cookie('user', 'me', {
-    expires: new Date(new Date().valueOf() + 3600000), // or maxAge: 3600000, default is undefined
-    path: '/path/', // Default is the root of the server
-    domain: 'localhost', // Default is the domain of the server
-    httpOnly: false, // Default is true
+    expires: new Date(new Date().valueOf() + 3600000), // or maxAge: 3600000, Set the expiration time of the cookie
+    path: '/path/', // Path of the cookie, should be defined only if it is diferent from the root, the first slash may be omitted, simpleS will add it
+    domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
+    httpOnly: false, // Set if the cookie can not be changed from client-side
 });
 ```
 #### .lang(language)
@@ -256,6 +259,13 @@ Writes preformatted data to the response stream and ends the response, usually v
 ```javascript
 response.send(['Hello', 'World']);
 ```
+#### .render([arguments])
+arguments: arguments for the template engine
+
+Renders the response using the template engine, arguments will be those necessary for the template engine. Example:
+```javascript
+response.render('HelloWorld');
+```
 ## WebSocket
 The WebSocket host is linked to the current or the main HTTP host (see Virtual Hosting).
 ### WebSocket Host
@@ -278,11 +288,21 @@ server.ws('/', {
 });
 ```
 ### WebSocket Connection
-The object that represents the current WebSocket connection. The WebSocket connection is an event emitter. It has the next attributes and methods:
+The object that represents the current WebSocket connection. The WebSocket connection is an event emitter and has some attributes from request interface to handle needed data from the handshake request. It has the next attributes and methods:
+#### .cookies
+See Request Interface `.cookies`
+#### .headers
+See Request Interface `.headers`
+#### .langs
+See Request Interface `.langs`
 #### .protocols
 The array of protocols of the WebSocket connection.
-#### .request
-The request interface, same as for GET and POST requests, which is described above.
+#### .query
+See Request Interface `.query`
+#### .session
+See Request Interface `.session`
+#### .url
+See Request Interface `.url`
 #### .send(data)
 data: any value except undefined
 

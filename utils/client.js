@@ -75,6 +75,7 @@ var simples = {
 				value: {}
 			},
 			queue: {
+				configurable: true,
 				value: []
 			},
 			raw: {
@@ -84,7 +85,8 @@ var simples = {
 				value: new WebSocket('ws://' + host, protocols)
 			},
 			started: {
-				value: false
+				value: false,
+				writable: true
 			}
 		});
 

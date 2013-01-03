@@ -1,3 +1,5 @@
+var fs = require('fs');
+
 var host = require('./lib/host');
 var server = require('./lib/server');
 
@@ -41,10 +43,17 @@ simples.prototype = Object.create(host.prototype, {
 	}
 });
 
+// Specify the engine to render the responses
+simples.prototype.engine = function (engine) {
+	'use strict';
+	this.server.render = engine.render ? engine.render : engine;
+	return this;
+};
+
 // Create a new host
 simples.prototype.host = function (name) {
 	'use strict';
-	this.hosts[name] = new host();
+	this.hosts[name] = new host(name);
 	return this.hosts[name];
 };
 
@@ -63,6 +72,14 @@ simples.prototype.start = function (port, callback) {
 				}.bind(this));
 			}.bind(this));
 		} else {
+			if (fs.existsSync('.sessions')) {
+				var sessions = JSON.parse(fs.readFileSync('.sessions', 'utf8'));
+				Object.keys(this.hosts).forEach(function (element) {
+					if (sessions[element]) {
+						this.hosts[element].sessions = sessions[element];
+					}
+				}.bind(this));
+			}
 			this.started = true;
 			this.server.listen(port, function () {
 				if (callback) {
@@ -83,6 +100,11 @@ simples.prototype.stop = function (callback) {
 
 	// Stop the server only if it is running
 	try {
+		var sessions = {};
+		Object.keys(this.hosts).forEach(function (element) {
+			sessions[element] = this.hosts[element].sessions;
+		}.bind(this));
+		fs.writeFileSync('.sessions', JSON.stringify(sessions), 'utf8');
 		if (this.started) {
 			this.started = false;
 			this.server.close(function () {
