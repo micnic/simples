@@ -1,24 +1,49 @@
+var assert = require('assert');
 var fs = require('fs');
+var http = require('http');
+var qs = require('querystring');
+
 var simples = require('../index');
 
-var server = simples(80);
+var server = simples(12345);
 
 var noopEngine = {
 	render: function (string) {
-		console.log(string);
 		return string;
 	}
 };
 
-server.engine(noopEngine)
+server
+	.engine(noopEngine)
+	.accept('null.com')
 	.serve(__dirname + '/root')
+	.error(404, function (request, response) {
+		response.send('Error 404 caught');
+	})
+	.error(405, function (request, response) {
+		response.send('Error 405 caught');
+	})
+	.error(500, function (request, response) {
+		0 = infinity;
+	})
 	.get('/', function (request, response) {
-		request.session.name = 'HELLO WORLD';
-		response.lang('en');
 		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
 	})
-	.get('/render', function (request, response) {
-		response.render('This "Hello World" was rendered using a noop template engine');
+	.get('/accept', function (request, response) {
+		response.end('CORS');
+	})
+	.get('/cookies', function (request, response) {
+		Object.keys(request.query).forEach(function (element) {
+			response.cookie(element, request.query[element]);
+		});
+		response.end('Cookies');
+	})
+	.get('/error', function (request, response) {
+		0 = infinity;
+	})
+	.get('/lang', function (request, response) {
+		response.lang('en');
+		response.end('Language');
 	})
 	.get('/get', function (request, response) {
 		console.log(request.session.name);
@@ -31,25 +56,27 @@ server.engine(noopEngine)
 		response.write('url: ' + JSON.stringify(request.url) + '\n');
 		response.end();
 	})
-	.get('/cookie', function (request, response) {
-		Object.keys(request.query).forEach(function (element) {
-			response.cookie(element, request.query[element]);
-		});
-		response.end('Cookies!');
-	})
-	.get('/json', function (request, response) {
-		response.type('json');
-		response.send(request);
+	.get('/render', function (request, response) {
+		response.render('Rendered string');
 	})
 	.get('/redirect', function (request, response) {
-		response.redirect('/succes');
+		response.redirect('/');
 	})
-	.get('/succes', function (request, response) {
-		response.send('Successful operation');
+	.get('/start', function (request, response) {
+		response.end('Starting / Restarting');
+		server.start(12345);
 	})
 	.get('/stop', function (request, response) {
 		response.end('Stopping');
 		server.stop();
+	})
+	.get('/type', function (request, response) {
+		response.type('json');
+		response.send({type:'json'});
+	})
+	.get('/writeend', function (request, response) {
+		response.write('Write');
+		response.end('End');
 	})
 	.post('/post', function (request, response) {
 		response.write('body: ' + request.body + '\n');
@@ -62,25 +89,167 @@ server.engine(noopEngine)
 		response.write('url: ' + JSON.stringify(request.url) + '\n');
 		response.end();
 	})
-	.error(404, function (request, response) {
-		response.send('Error 404 caught');
-	})
-	.error(500, function (request, response) {
-		0 = infinity;
-	})
-	.get('/error', function (request, response) {
-		0 = infinity;
-	})
 	.ws('/', {
 		origins: ['null'],
 		protocols: ['echo', ''],
 		raw: true
 	}, function (connection) {
-		console.log(connection.session.name);
 		connection.on('message', function (message) {
-			var data = message.data.toString();console.log('+' + data)
-			console.log(data);
+			var data = message.data.toString();
 			this.send(data);
 			this.close();
 		});
 	});
+
+var noopHost = server.host('127.0.0.1');
+
+noopHost
+	.get('/', function(request, response) {
+		response.end('Virtual Hosting');
+	});
+
+function request(url, method, data, callback) {
+
+	if (method === 'GET') {
+		data = '';
+		url += qs.stringify(data);
+	} else if (method === 'POST') {
+		data = qs.stringify(data);
+	}
+
+	var req = http.request({
+		hostname: 'localhost',
+		port: 12345,
+		path: url,
+		method: method,
+		headers: {
+			origin: 'null.com'
+		}
+	}, function (response) {
+		var content = '';
+
+		response.setEncoding('utf8');
+
+		response.on('data', function (data) {
+			content += data;
+		});
+
+		response.on('end', function () {
+			if (content) {
+				console.log(content);
+			}
+			callback(response, content);
+		});
+	});
+
+	req.end(data);
+
+	req.on('error', function (error) {
+		console.log(error);
+	});
+}
+
+function test(feature) {
+	feature = tests[feature];
+	request(feature.url, feature.method, feature.data, feature.callback);
+}
+
+var tests = {
+	accept: {
+		url: '/accept',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(response.headers['access-control-allow-origin'], 'null.com');
+			test('lang');
+		}
+	},
+	lang: {
+		url: '/lang?value=en',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(response.headers['content-language'], 'en');
+			assert.equal(content, 'Language');
+			test('redirect');
+		}
+	},
+	redirect: {
+		url: '/redirect',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(response.statusCode, 302);
+			assert.equal(response.headers.location, '/');
+			console.log('Redirect');
+			test('render');
+		}
+	},
+	render: {
+		url: '/render',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(content, 'Rendered string');
+			test('type');
+		}
+	},
+	start: {
+		url: '/start',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(content, 'Starting / Restarting');
+
+			// Undocumented feature, used only internally
+			server.server.once('release', function () {
+				test('accept');
+			});
+		}
+	},
+	stop: {
+		url: '/stop',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(content, 'Stopping');
+			console.log('\nMore tests can be made in browser,\njust run simples/test/test.js script');
+		}
+	},
+	type: {
+		url: '/type',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(content, '{"type":"json"}');
+			test('writeend');
+		}
+	},
+	writeend: {
+		url: '/writeend',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			assert.equal(content, 'WriteEnd');
+			test('stop');
+		}
+	}
+};
+
+if (process.argv[2] === 'test') {
+	http.get('http://127.0.0.1:12345', function (response) {
+		var content = '';
+
+		response.setEncoding('utf8');
+
+		response.on('data', function (data) {
+			content += data;
+		});
+
+		response.on('end', function () {
+			console.log(content);
+			assert.equal(content, 'Virtual Hosting');
+			test('start');
+		});
+	});
+}

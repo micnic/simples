@@ -1,4 +1,4 @@
-# simpleS 0.2.5
+# simpleS 0.2.6
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -25,6 +25,10 @@ Tested with node.js 0.8+
 ## Instalation
 
 	npm install simples
+
+## Testing
+
+	npm test simples
 
 ## Usage
 

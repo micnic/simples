@@ -25,7 +25,7 @@ window.onload = function () {
 	};
 
 	document.getElementById('ws').onclick = function () {
-		simples.ws('localhost', [], true).send(document.getElementById('textinput').value).on('message', function (message) {
+		simples.ws('localhost:12345', [], true).send(document.getElementById('textinput').value).on('message', function (message) {
 			document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
 		});
 	};

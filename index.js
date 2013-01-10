@@ -14,22 +14,46 @@ var simples = module.exports = function (port) {
 	// Call host in this context
 	host.call(this);
 
-	// Initialize the HTTP server
-	Object.defineProperty(this, 'hosts', {
-		value: {
-			main: this
+	// Set simpleS properties
+	Object.defineProperties(this, {
+		busy: {
+			value: false,
+			writable: true
+		},
+		hosts: {
+			value: {
+				main: this
+			}
+		},
+		started: {
+			value: false,
+			writable: true
 		}
 	});
 
+	// Initialize the HTTP server
 	Object.defineProperty(this, 'server', {
 		value: new server(this.hosts)
 	});
 
+	// Set keep alive timeout to 5 seconds
+	this.server.on('connection', function (socket) {
+		socket.setTimeout(5000);
+	});
+
+	// Catch runtime errors
 	this.server.on('error', function (error) {
 		console.log('simpleS: Server Error\n' + error.message + '\n');
 		this.started  = false;
-	});
+		this.busy = false;
+	}.bind(this));
 
+	// Inform when the server is not busy
+	this.server.on('release', function () {
+		this.busy = false;
+	}.bind(this));
+
+	// Start the server on the provided port
 	this.start(port);
 };
 
@@ -43,9 +67,11 @@ simples.prototype = Object.create(host.prototype, {
 	}
 });
 
-// Specify the engine to render the responses
+// Specify the template engine to render the responses
 simples.prototype.engine = function (engine) {
 	'use strict';
+
+	// If the template engine has render method use it
 	this.server.render = engine.render ? engine.render : engine;
 	return this;
 };
@@ -53,6 +79,8 @@ simples.prototype.engine = function (engine) {
 // Create a new host
 simples.prototype.host = function (name) {
 	'use strict';
+
+	// Create the new host and save it to the hosts object
 	this.hosts[name] = new host(name);
 	return this.hosts[name];
 };
@@ -61,31 +89,59 @@ simples.prototype.host = function (name) {
 simples.prototype.start = function (port, callback) {
 	'use strict';
 
-	// If the server is already started, restart it with the provided port
+	// Set the server to listen the port
+	function listen() {
+		this.server.listen(port, function () {
+			this.server.emit('release');
+			if (callback) {
+				callback.call(this);
+			}
+		}.bind(this));
+	}
+
+	// Close the server and start listening on the new port
+	function restart() {
+		this.busy = true;
+		this.server.close(listen.bind(this));
+	};
+
+	// Start listening on the provided port
+	function start() {
+		this.busy = true;
+		this.started = true;
+		listen.call(this);
+	};
+
 	try {
+
+		// If the server is already started, restart it
 		if (this.started) {
-			this.server.close(function () {
-				this.server.listen(port, function () {
-					if (callback) {
-						callback.call(this);
-					}
+			if (this.busy) {
+				this.server.once('release', function () {
+					restart.call(this);
 				}.bind(this));
-			}.bind(this));
+			} else {
+				restart.call(this);
+			}
 		} else {
-			if (fs.existsSync('.sessions')) {
+			// TODO here: get sessions from file
+			/*if (fs.existsSync('.sessions')) {
 				var sessions = JSON.parse(fs.readFileSync('.sessions', 'utf8'));
 				Object.keys(this.hosts).forEach(function (element) {
 					if (sessions[element]) {
 						this.hosts[element].sessions = sessions[element];
 					}
 				}.bind(this));
+			}*/
+
+			this.server.port = port;
+			if (this.busy) {
+				this.server.once('release', function () {
+					start.call(this);
+				}.bind(this));
+			} else {
+				start.call(this);
 			}
-			this.started = true;
-			this.server.listen(port, function () {
-				if (callback) {
-					callback.call(this);
-				}
-			}.bind(this));
 		}
 	} catch (error) {
 		console.log('simpleS: Can not start server\n' + error.message + '\n');
@@ -94,24 +150,44 @@ simples.prototype.start = function (port, callback) {
 	return this;
 };
 
-// Stop simples server
+// Stop simpleS server
 simples.prototype.stop = function (callback) {
 	'use strict';
 
-	// Stop the server only if it is running
+	// Close the server
+	function stop() {
+		this.started = false;
+		this.busy = true;
+		this.server.close(function () {
+			this.server.emit('release');
+			if (callback) {
+				callback.call(this);
+			}
+		}.bind(this));
+	}
+
 	try {
-		var sessions = {};
+		// TODO here: save sessions to file
+		/*var sessions = {};
 		Object.keys(this.hosts).forEach(function (element) {
 			sessions[element] = this.hosts[element].sessions;
 		}.bind(this));
-		fs.writeFileSync('.sessions', JSON.stringify(sessions), 'utf8');
-		if (this.started) {
-			this.started = false;
-			this.server.close(function () {
-				if (callback) {
-					callback.call(this);
-				}
+		fs.writeFileSync('.sessions', JSON.stringify(sessions), 'utf8');*/
+
+		// Remove active sessions sessions
+		for (var i in this.hosts) {
+			for (var j in this.hosts[i].sessions) {
+				clearTimeout(this.hosts[i].sessions[j]._timeout);
+			}
+		}
+
+		// Stop the server only if it is running
+		if (this.started && this.busy) {
+			this.server.once('release', function () {
+				stop.call(this);
 			}.bind(this));
+		} else if (this.started) {
+			stop.call(this);
 		}
 	} catch (error) {
 		console.log('simpleS: Can not stop server\n' + error.message + '\n');

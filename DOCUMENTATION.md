@@ -24,7 +24,7 @@ port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback.
+Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take up to 5 seconds. While restarting no new connection will be accepted but existing connections will be still served.
 
 ```javascript
 server.start(80, function () {
@@ -36,7 +36,7 @@ server.start(80, function () {
 
 callback: function(0)
 
-Stop the server. Can have an optional callback.
+Stop the server. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take up to 5 seconds. While closing no new connection will be accepted but existing connections will be still served.
 
 ```javascript
 server.stop(function () {
@@ -225,7 +225,7 @@ response.lang('ro');
 #### .redirect(path)
 path: string
 
-Redirects the client to the provided path. Should not be used with the other methods. Example:
+Redirects the client to the provided path. Should not be used with the other methods except `.cookie()`. Example:
 ```javascript
 response.redirect('/index');
 ```
@@ -234,7 +234,7 @@ type: string
 
 override: boolean
 
-Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.json](https://github.com/micnic/simpleS/blob/master/utils/mime.json), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value of this method and setting the first parameter as a valid content type. The second parameter is optional. Example:
+Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.json](https://github.com/micnic/simpleS/blob/master/utils/mime.json), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. Example:
 ```javascript
 response.type('html');
 ```
@@ -262,7 +262,7 @@ response.send(['Hello', 'World']);
 #### .render([arguments])
 arguments: arguments for the template engine
 
-Renders the response using the template engine, arguments will be those necessary for the template engine. Example:
+Renders the response using the template engine, arguments will be those necessary for the template engine. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once. Example:
 ```javascript
 response.render('HelloWorld');
 ```
@@ -315,7 +315,7 @@ filter: function(3)
 Sends a message to all connected clients. Clients can be filtered by providing the second parameter, equivalent to `Array.filter()`. Example:
 ```javascript
 connection.broadcast('HelloWorld', function (element, index, array) {
-    return element.getProtocols().indexOf('chat') >= 0; // Will send the message to clients that use "chat" as a subprotocol
+    return element.protocols.indexOf('chat') >= 0; // Will send the message to clients that use "chat" as a subprotocol
 });
 ```
 The WebSocket connection has the next events:
