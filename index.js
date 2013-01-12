@@ -68,11 +68,21 @@ simples.prototype = Object.create(host.prototype, {
 });
 
 // Specify the template engine to render the responses
-simples.prototype.engine = function (engine) {
+simples.prototype.engine = function (engine, render) {
 	'use strict';
 
-	// If the template engine has render method use it
-	this.server.render = engine.render ? engine.render : engine;
+	// Prepare template engine
+	this.server.engine = engine;
+
+	// Choose the rendering method
+	if (render) {
+		this.server.render = engine[render];
+	} else if (engine.render) {
+		this.server.render = engine.render;
+	} else {
+		this.server.render = engine;
+	}
+
 	return this;
 };
 

@@ -62,20 +62,30 @@ simpleS provide a very simple way to accept cross-origin requests. It will autom
 server.accept('null', 'localhost', 'example.com');
 ```
 ### Templating
-`.engine(engine)`
+`.engine(engine, render)`
 
 engine: object
 
-simpleS provide a simple way to use template engine for response rendering, for this it is necessary to define the needed template engine, if it has the method `.render()` then it will be used, else the engine itself will be used to render the response. Example:
+render: string
+
+simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Example:
 ```javascript
 var noopEngine = {
-	render: function (string) {
-		console.log(string);
-		return string;
-	}
+    render: function (string) {
+        console.log(string);
+        return string;
+    }
 };
 
-server.engine(noopEngine);
+server.engine(noopEngine); // or server.engine(noopEngine, 'render');
+
+// Another example
+var noopRender = function (string) {
+    console.log(string);
+    return string;
+}
+
+server.engine(noopRender);
 ```
 ## Routing
 All the methods described below are applicable on the current or the main host (see Virtual Hosting).
