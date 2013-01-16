@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.2.7",
+	"version": "0.2.8",
 	"description": "Simple HTTP Server",
 	"keywords": [
 		"cors",
@@ -24,6 +24,7 @@
 	},
 	"main": "index",
 	"scripts": {
+		"start": "node test/test.js",
 		"test": "node test/test.js test"
 	},
 	"repository": {

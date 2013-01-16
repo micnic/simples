@@ -1,4 +1,4 @@
-# simpleS 0.2.7
+# simpleS 0.2.8
 
 simpleS is a simple http server for node.js that has some special features:
 
@@ -29,6 +29,12 @@ Tested with node.js 0.8+
 ## Testing
 
 	npm test simples
+
+## Start Demo Server
+
+	npm start simples
+
+Then try [http://localhost:12345](http://localhost:12345) in your browser
 
 ## Usage
 

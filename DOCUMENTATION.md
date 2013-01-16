@@ -132,14 +132,18 @@ server.all('/', function (request, response) {
 });
 ```
 ### Static Files
-`.serve(path)`
+`.serve(path[, callback])`
 
 path: string
 
-`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to server static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. Warning: the names of static files are case sensitive.
+callback: function(2)
+
+`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for GET and POST requests, but it is triggered only when the client accesses the root of a subfolder of the folder with static files, this parameter is optional. Warning: the names of static files are case sensitive.
 
 ```javascript
-server.serve('root');
+server.serve('root', function (request, response) {
+    // Application logic
+});
 ```
 ### Error Routes
 `.error(code, callback)`
@@ -287,12 +291,13 @@ config: object
 
 callback: function(1)
 
-Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the config parameter, by default no protocols are required, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The callback function comes with the connection as parameter.
+Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the config parameter, they should match on the server and on the client, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
 
 ```javascript
 server.ws('/', {
     length: 1024,
     protocols: ['', 'echo']
+    raw: true
 }, function (connection) {
     // Application logic
 });
@@ -313,11 +318,15 @@ See Request Interface `.query`
 See Request Interface `.session`
 #### .url
 See Request Interface `.url`
-#### .send(data)
+#### .send([event,] data)
+event: string
+
 data: any value except undefined
 
-Sends a message to the client. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
-#### .broadcast(data, [filter])
+Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
+#### .broadcast([event,] data[, filter])
+event: string
+
 data: string or buffer
 
 filter: function(3)
@@ -336,26 +345,29 @@ Emitted when the connection is closed.
 ### Client-Side Simple API
 To have access to the simpleS client-side API it is necessary to add `<script src="/simples/client.js"></script>` in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
 #### AJAX (Asynchronous JavaScript and XML)
-`simples.ajax(url, method, params)`
+`simples.ajax(url, params[, method])`
 
 url: string
 
-method: string
-
 params: object
 
-`simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url and using the provided method and parameters. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. Example:
+method: string
+
+`simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url, will send the needed parameters using the methods GET (default) or POST. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. The AJAX request can also be aborded by the `.stop()` method. Example:
 ```javascript
-simples.ajax('/', 'post', {
+var request = simples.ajax('/', {
     user: 'me',
     password: 'ok'
-}).error(function (response) {
+}, 'post').error(function (code, description) {
     // Application logic
-}).progress(function (response) {
+}).progress(function () {
     // Application logic
 }).success(function (response) {
     // Application logic
 });
+
+// Somewhere else to stop the request
+request.stop();
 ```
 #### WS (WebSocket)
 `simples.ws(host, protocols, raw)`
@@ -366,9 +378,51 @@ protocols: array
 
 raw: boolean
 
-`simples.ws()` will return an object which will create an WebSocket connection to the provided host and protocols. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default raw is set to true. This object is an event emitter (has the folowing methods: .emit(), .addListener(), .on(), .once(), .removeAllListeners(), .removeListener()). To receive a message in raw mode `.on('message' function () {/*...*/})` should be used, for advanced mode `.on(EVENT, function () {/*...*/})` is used. To send data to the server the .send() method is used, in raw mode it should have only one parameter, the data, in advanced mode it should have two parameters, the event and the data. .emit() method is used to trigger the events locally, but not on the server, this is useful for triggering instantly the event on the client or for debugging. To close the WebSocket connection `.close()` method is used. Example:
+`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default is advanced mode. Example:
 ```javascript
-simples.ws('/', ['echo'], true).on('message', function (message) {
+var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
     this.send('Hello World');
 });
+```
+##### Socket Management
+`simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
+
+`.start(host, protocols)` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection an to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost
+
+`.close()` - closes the WebSocket connection
+##### Listeners Management
+`simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side:
+
+`.emit(event[, data])` - triggers locally an event, does not send data to the server, is useful for triggering instantly the event on the client or for debugging
+
+`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener
+
+`.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event
+###### Events
+`message` - default event received in raw mode or in advanced mode if the incoming message could not be parsed, the callback function has one parameter, the received data
+
+`error` - triggered when an error appears, the callback function has one parameter, the message of the error
+
+`close` - triggered when the WebSocket connection is closed, the callback function has no parameters
+##### Data Management
+Based on the third parameter in `simples.ws()` the communication with the server can be made in advanced or raw mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
+###### Receiving Data in Raw Mode
+```javascript
+socket.on('message', function (message) {
+    // Application logic
+});
+```
+###### Receiving Data in Advanced Mode
+```javascript
+socket.on(EVENT, function (data) {
+    // Application logic
+});
+```
+##### Sending Data in Raw Mode
+```javascript
+socket.send(data);
+```
+##### Sending Data in Advanced Mode
+```javascript
+socket.send(event, data);
 ```

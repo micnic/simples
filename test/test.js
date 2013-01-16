@@ -16,7 +16,9 @@ var noopEngine = {
 server
 	.engine(noopEngine, 'render')
 	.accept('null.com')
-	.serve(__dirname + '/root')
+	.serve(__dirname + '/root', function (request, response) {
+		response.end('You are in the root of the folder ' + request.url.path);
+	})
 	.error(404, function (request, response) {
 		response.send('Error 404 caught');
 	})
@@ -90,14 +92,12 @@ server
 		response.end();
 	})
 	.ws('/', {
-		origins: ['null'],
-		protocols: ['echo', ''],
+		protocols: ['echo'],
 		raw: true
 	}, function (connection) {
 		connection.on('message', function (message) {
 			var data = message.data.toString();
 			this.send(data);
-			this.close();
 		});
 	});
 
@@ -154,13 +154,15 @@ function test(feature) {
 	request(feature.url, feature.method, feature.data, feature.callback);
 }
 
+var equal = assert.equal;
+
 var tests = {
 	accept: {
 		url: '/accept',
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(response.headers['access-control-allow-origin'], 'null.com');
+			equal(response.headers['access-control-allow-origin'], 'null.com');
 			test('lang');
 		}
 	},
@@ -169,8 +171,8 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(response.headers['content-language'], 'en');
-			assert.equal(content, 'Language');
+			equal(response.headers['content-language'], 'en');
+			equal(content, 'Language');
 			test('redirect');
 		}
 	},
@@ -179,8 +181,8 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(response.statusCode, 302);
-			assert.equal(response.headers.location, '/');
+			equal(response.statusCode, 302);
+			equal(response.headers.location, '/');
 			console.log('Redirect');
 			test('render');
 		}
@@ -190,7 +192,7 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(content, 'Rendered string');
+			equal(content, 'Rendered string');
 			test('type');
 		}
 	},
@@ -199,7 +201,7 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(content, 'Starting / Restarting');
+			equal(content, 'Starting / Restarting');
 
 			// Undocumented feature, used only internally
 			server.server.once('release', function () {
@@ -212,7 +214,7 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(content, 'Stopping');
+			equal(content, 'Stopping');
 			console.log('\nMore tests can be made in browser,\njust run simples/test/test.js script');
 		}
 	},
@@ -221,7 +223,7 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(content, '{"type":"json"}');
+			equal(content, '{"type":"json"}');
 			test('writeend');
 		}
 	},
@@ -230,7 +232,7 @@ var tests = {
 		method: 'GET',
 		data: null,
 		callback: function (response, content) {
-			assert.equal(content, 'WriteEnd');
+			equal(content, 'WriteEnd');
 			test('stop');
 		}
 	}
@@ -248,7 +250,7 @@ if (process.argv[2] === 'test') {
 
 		response.on('end', function () {
 			console.log(content);
-			assert.equal(content, 'Virtual Hosting');
+			equal(content, 'Virtual Hosting');
 			test('start');
 		});
 	});
