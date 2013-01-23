@@ -1,3 +1,4 @@
+var chatSocket;
 var echoSocket;
 
 window.onload = function () {
@@ -28,15 +29,14 @@ window.onload = function () {
 
 	document.getElementById('ws').onclick = function () {
 		if (!echoSocket) {
-			echoSocket = simples.ws('localhost:12345', ['echo'], true)
-			.on('message', function (message) {
-				document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
-				this.close();
-			}).on('error', function (error) {
-				console.log(error);
-			}).on('close', function () {
-				console.log('closed');
-			});
+			echoSocket = simples.ws(window.location.host + '/echo', ['echo'], true)
+				.on('message', function (message) {
+					document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
+				}).on('error', function (error) {
+					console.log(error);
+				}).on('close', function () {
+					console.log('closed');
+				});
 		}
 
 		echoSocket.send(document.getElementById('textinput').value);
@@ -45,4 +45,39 @@ window.onload = function () {
 	document.getElementById('filebutton').onclick = function () {
 		document.getElementById('fileinput').click();
 	};
+
+	chatSocket = simples.ws(window.location.host + '/chat', ['chat'])
+		.on('users', function (users) {
+			document.getElementById('users').innerHTML = users.join('<br>');
+		})
+		.on('message', function (message) {
+			document.getElementById('messages').innerHTML += message + '<br>';
+		})
+
+	function sendMessage() {
+		var data = document.getElementById('messageContainer').value;
+		document.getElementById('messageContainer').value = '';
+		document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight * 2;
+		document.getElementById('messageContainer').focus();
+		if (data) {
+			chatSocket.send('message', data);
+		}
+	}
+
+	document.getElementById('messageSender').onclick = sendMessage;
+
+	document.getElementById('messageContainer').onkeydown = function (event) {
+		if (event.which === 13 && event.ctrlKey) {
+			sendMessage();
+		}
+	}
+
+	window.onkeydown = function (event) {
+		if (event.which === 13 && event.shiftKey) {
+			var name = prompt('Which name do you want?');
+			if (name) {
+				chatSocket.send('changeName', name);
+			}
+		}
+	}
 };

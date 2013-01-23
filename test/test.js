@@ -26,9 +26,16 @@ server
 		response.send('Error 405 caught');
 	})
 	.error(500, function (request, response) {
+		response.end();
 		0 = infinity;
 	})
 	.get('/', function (request, response) {
+		if (request.session.name) {
+			console.log('You have been here ;)');
+		} else {
+			console.log('You are new here :D')
+			request.session.name = 'me';
+		}
 		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
 	})
 	.get('/accept', function (request, response) {
@@ -90,16 +97,50 @@ server
 		response.write('query: ' + JSON.stringify(request.query) + '\n');
 		response.write('url: ' + JSON.stringify(request.url) + '\n');
 		response.end();
-	})
-	.ws('/', {
-		protocols: ['echo'],
-		raw: true
-	}, function (connection) {
-		connection.on('message', function (message) {
-			var data = message.data.toString();
-			this.send(data);
-		});
 	});
+
+var echoSocket = server.ws('/echo', {
+	protocols: ['echo'],
+	raw: true
+}, function (connection) {
+
+	connection.on('message', function (message) {
+		this.send(message.data);
+	});
+});
+
+var chatSocket = server.ws('/chat', {
+	protocols: ['chat']
+}, function (connection) {
+
+	chatChannel.bind(connection);
+	connection.name = 'Incognito';
+	
+	function getUsers() {
+		var users = [];
+		for (var i in chatChannel.connections) {
+			users[users.length] = chatChannel.connections[i].name;
+		}
+		return users;
+	}
+
+	chatChannel.broadcast('users', getUsers());
+
+	connection.on('message', function (message) {
+		chatChannel.broadcast('message', this.name + ': ' + message);
+	});
+
+	connection.on('changeName', function (name) {
+		this.name = name;
+		chatChannel.broadcast('users', getUsers());
+	});
+
+	connection.on('close', function () {
+		chatChannel.broadcast('users', getUsers());
+	});
+});
+
+var chatChannel = chatSocket.openChannel('chat');
 
 var noopHost = server.host('127.0.0.1');
 

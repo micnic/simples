@@ -1,24 +1,107 @@
 var fs = require('fs');
+var path = require('path');
 
 var host = require('./lib/host');
 var server = require('./lib/server');
 
-// TODO: function to get sessions from file
-/*if (fs.existsSync('.sessions')) {
-	var sessions = JSON.parse(fs.readFileSync('.sessions', 'utf8'));
-	Object.keys(this.hosts).forEach(function (element) {
-		if (sessions[element]) {
-			that.hosts[element].sessions = sessions[element];
+var dirname = path.dirname(module.parent.filename);
+
+// Will get sessions from file
+function getSessions(instance, callback) {
+	'use strict';
+
+	var hosts = instance.server.hosts;
+	var session;
+	var sessions;
+	var timeout;
+
+	function sessionKiller(x, y) {
+		delete hosts[x].sessions[y];
+	}
+
+	function hostIterator(i) {
+		if (!sessions[i]) {
+			return;
+		}
+		hosts[i].sessions = sessions[i];
+		for (var j in sessions[i]) {
+			sessionIterator(i, j);
+		}
+	}
+
+	function sessionIterator(i, j) {
+		session = hosts[i].sessions;
+		timeout = Math.abs(session[j]._timeout);
+
+		// If no absolute value
+		if (!timeout) {
+			throw new Error('invalid timeout');
+		}
+
+		session[j]._timeout = setTimeout(sessionKiller, timeout, i, j);
+	}
+
+	// Activate the sessions from the file
+	function activateSessions() {
+
+		for (var i in hosts) {
+			hostIterator(i);
+		}
+	}
+
+	// Read and parse the sessions file
+	fs.readFile(dirname + '/.sessions', 'utf8', function (error, data) {
+		instance.server.emit('release', callback);
+
+		// Catch error at reading
+		if (error) {
+			console.log('simpleS: can not read sessions file');
+			console.log(error.message + '\n');
+			return;
+		}
+
+		// Supervise session file parsing
+		try {
+			sessions = JSON.parse(data);
+			activateSessions();
+		} catch (error) {
+			console.log('simpleS: can not parse sessions file');
+			console.log(error.message + '\n');
 		}
 	});
-}*/
+}
 
-// TODO: function save sessions to file
-/*var sessions = {};
-Object.keys(this.hosts).forEach(function (element) {
-	sessions[element] = that.hosts[element].sessions;
-});
-fs.writeFileSync('.sessions', JSON.stringify(sessions), 'utf8');*/
+// Will save sessions to file
+function saveSessions(instance, callback) {
+	'use strict';
+	var hosts = instance.server.hosts;
+	var sessions = {};
+
+	// Select and deactivate sessions
+	for (var i in hosts) {
+		sessions[i] = hosts[i].sessions;
+		for (var j in hosts[i].sessions) {
+			var timer = hosts[i].sessions[j]._timeout;
+			var timeout = timer._idleTimeout;
+			var start = new Date(timer._idleStart).valueOf();
+			var end = new Date(start + timeout).valueOf();
+			clearTimeout(hosts[i].sessions[j]._timeout);
+			hosts[i].sessions[j]._timeout = end - new Date().valueOf();
+		}
+	}
+
+	sessions = JSON.stringify(sessions);
+
+	fs.writeFile(dirname + '/.sessions', sessions, 'utf8', function (error) {
+		instance.server.emit('release', callback);
+		if (error) {
+			console.log('simpleS: can not write sessions to file');
+			console.log(error.message + '\n');
+			return;
+		}
+		console.log('simpleS: file with sessions created');
+	});
+}
 
 // SimpleS prototype constructor
 var simples = module.exports = function (port) {
@@ -29,14 +112,16 @@ var simples = module.exports = function (port) {
 		return new simples(port);
 	}
 
-	// Shortcuts
-	var that = this;
-	var hosts = {
-		main: this
-	};
-
 	// Call host in this context
-	host.call(this);
+	host.call(this, 'main');
+
+	// Shortcut to this context
+	var that = this;
+
+	function sigintListener() {
+		console.log('\nManual stopping simpleS, this may take few seconds');
+		that.stop();
+	}
 
 	// Set simpleS properties
 	Object.defineProperties(this, {
@@ -44,8 +129,8 @@ var simples = module.exports = function (port) {
 			value: false,
 			writable: true
 		},
-		hosts: {
-			value: hosts
+		sigintListener: {
+			value: sigintListener
 		},
 		started: {
 			value: false,
@@ -55,7 +140,9 @@ var simples = module.exports = function (port) {
 
 	// Initialize the HTTP server
 	Object.defineProperty(this, 'server', {
-		value: new server(hosts)
+		value: new server({
+			main: this
+		})
 	});
 
 	// Set keep alive timeout to 5 seconds
@@ -71,10 +158,10 @@ var simples = module.exports = function (port) {
 	});
 
 	// Inform when the server is not busy
-	this.server.on('release', function (context, callback) {
+	this.server.on('release', function (callback) {
 		that.busy = false;
 		if (callback) {
-			callback.call(context);
+			callback.call(that);
 		}
 	});
 
@@ -116,8 +203,9 @@ simples.prototype.host = function (name) {
 	'use strict';
 
 	// Create the new host and save it to the hosts object
-	this.hosts[name] = new host(name);
-	return this.hosts[name];
+	this.server.hosts[name] = new host(name);
+	this.server.hosts[name].parent = this;
+	return this.server.hosts[name];
 };
 
 // Start simples server
@@ -129,8 +217,15 @@ simples.prototype.start = function (port, callback) {
 
 	// Set the server to listen the port
 	function listen() {
+
+		// Start all existing hosts
+		for (var i in that.server.hosts) {
+			that.server.hosts[i].open();
+		}
+
+		process.once('SIGINT', that.sigintListener);
 		that.server.listen(port, function () {
-			that.server.emit('release', that, callback);
+			getSessions(that, callback);
 		});
 	}
 
@@ -140,20 +235,17 @@ simples.prototype.start = function (port, callback) {
 		if (that.started) {
 			that.server.close(listen);
 		} else {
-			this.server.port = port;
 			that.started = true;
-			listen.call(that);
+			listen();
 		}
 		
-	};
+	}
 
 	// If the server is busy wait for release
 	if (this.busy) {
-		this.server.once('release', function () {
-			start.call(that);
-		});
+		this.server.once('release', start);
 	} else {
-		start.call(this);
+		start();
 	}
 
 	return this;
@@ -168,27 +260,25 @@ simples.prototype.stop = function (callback) {
 
 	// Stop the server
 	function stop() {
-		this.started = false;
-		this.busy = true;
-		this.server.close(function () {
-			that.server.emit('release', that, callback);
-		});
-	}
 
-	// Remove active sessions sessions
-	for (var i in this.hosts) {
-		for (var j in this.hosts[i].sessions) {
-			clearTimeout(this.hosts[i].sessions[j]._timeout);
+		// Stop all existing hosts
+		for (var i in that.server.hosts) {
+			that.server.hosts[i].close();
 		}
+
+		process.removeListener('SIGINT', that.sigintListener);
+		that.started = false;
+		that.busy = true;
+		that.server.close(function () {
+			saveSessions(that, callback);
+		});
 	}
 
 	// Stop the server only if it is running
 	if (this.started && this.busy) {
-		this.server.once('release', function () {
-			stop.call(that);
-		});
+		this.server.once('release', stop);
 	} else if (this.started) {
-		stop.call(this);
+		stop();
 	}
 
 	return this;

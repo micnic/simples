@@ -10,6 +10,52 @@ body :nth-child(3n+2) {
 	color: #00007f;
 }
 
+img {
+	border: 1px #7f7f7f solid;
+}
+
 #fileinput {
 	display: none;
+}
+
+#messageContainer {
+	border: 0;
+	box-shadow: 0px 0px 10px 10px #ffeeee inset;
+	height: 90px;
+	margin: 0;
+	padding: 5px;
+	resize: none;
+	width: 390px;
+}
+
+#messager {
+	height: 100px;
+	width: 500px;
+}
+
+#messages {
+	box-shadow: 0px 0px 10px 10px #eeeeff inset;
+	float: left;
+	overflow: auto;
+	padding: 5px;
+	height: 290px;
+	width: 290px;
+}
+
+#messageSender {
+	border: 0;
+	box-shadow: 0px 0px 10px 10px #eeeeee inset;
+	float: right;
+	height: 100px;
+	padding: 0;
+	width: 100px;
+}
+
+#users {
+	box-shadow: 0px 0px 10px 10px #eeffee inset;
+	display: inline-block;
+	height: 290px;
+	overflow: auto;
+	padding: 5px;
+	width: 190px;
 }

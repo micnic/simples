@@ -24,7 +24,7 @@ port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take up to 5 seconds. While restarting no new connection will be accepted but existing connections will be still served.
+Start listening for requests on the provided port. If the server was started before simpleS will get sessions from the `.sessions` file if it exists or it has valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take few seconds, for closing alive http and ws connections. While restarting no new connection will be accepted but existing connections will be still served.
 
 ```javascript
 server.start(80, function () {
@@ -36,7 +36,7 @@ server.start(80, function () {
 
 callback: function(0)
 
-Stop the server. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take up to 5 seconds. While closing no new connection will be accepted but existing connections will be still served.
+Stop the server. The existing sessions are saved to the `.sessions` file for further acces. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take few seconds, for closing alive http and ws connections. While closing no new connection will be accepted but existing connections will be still served. Calling `SIGINT` (`ctrl + c`) will cause the manual close execution, this is made for graceful server close, if no need in graceful closing then `SIGINT` should be called twice.
 
 ```javascript
 server.stop(function () {
@@ -52,6 +52,13 @@ simpleS can serve multiple domains on the same server and port, using `.host()` 
 ```javascript
 server.host('example.com');
 ```
+#### Host Management
+`.open()`
+Make the host active, this method is called automatically when a host is created.
+`.close()`
+Closes all the child WebSocket hosts and make the host inactive.
+`.destroy()`
+Close the host and removes it from the server. Can not detroy the main host.
 ### CORS (Cross-Origin Resource Sharing)
 `.accept([arguments])`
 
@@ -68,7 +75,7 @@ engine: object
 
 render: string
 
-simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Example:
+simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). Example:
 ```javascript
 var noopEngine = {
     render: function (string) {
@@ -294,14 +301,65 @@ callback: function(1)
 Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the config parameter, they should match on the server and on the client, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
 
 ```javascript
-server.ws('/', {
+var echo = server.ws('/', {
     length: 1024,
-    protocols: ['', 'echo']
+    protocols: ['', 'echo'],
     raw: true
 }, function (connection) {
     // Application logic
 });
 ```
+#### .open(config)
+config: object
+
+Restarts the WebSocket host with new configuration. Example:
+```javascript
+echo.start({
+    length: 512,
+    protocols: ['', 'echo']
+});
+```
+#### .close()
+Stops the WebSocket host. Will close all existing connections and will not receive new connections.
+#### .destroy()
+Will stop the current WebSocket host and will remove it from the WebSocket hosts list.
+#### .broadcast([event, ]data[, filter])
+event: string
+
+data: string or buffer
+
+filter: function(3)
+
+Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`. Example:
+```javascript
+echo.broadcast('HelloWorld', function (element, index, array) {
+    return element.protocols.indexOf('echo') >= 0; // Will send the message to clients that use "chat" as a subprotocol
+});
+```
+#### .openChannel(name)
+name: string
+
+Opens a new channel with the provided name. The channel is binded to the WebSocket host. See WebSocket Channel for more information.
+### WebSocket Channel
+The object that groups a set of connections. This is useful for sending messages to a group of connections in a better way than the `.broadcast()` method of the WebSocket host.
+#### .bind(connection)
+connection: WebSocket Connection Instance
+
+Adds the connection to the channel.
+#### .unbind(connection)
+connection: WebSocket Connection Instance
+
+Removes the connection from the channel. The connection remains alive.
+#### .close()
+Drops all the connections from the channel and removes the channel from the WebSocket host.
+#### .broadcast([event, ]data[, filter])
+event: string
+
+data: string or buffer
+
+filter: function(3)
+
+Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel.
 ### WebSocket Connection
 The object that represents the current WebSocket connection. The WebSocket connection is an event emitter and has some attributes from request interface to handle needed data from the handshake request. It has the next attributes and methods:
 #### .cookies
@@ -318,25 +376,12 @@ See Request Interface `.query`
 See Request Interface `.session`
 #### .url
 See Request Interface `.url`
-#### .send([event,] data)
+#### .send([event, ]data)
 event: string
 
 data: any value except undefined
 
 Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
-#### .broadcast([event,] data[, filter])
-event: string
-
-data: string or buffer
-
-filter: function(3)
-
-Sends a message to all connected clients. Clients can be filtered by providing the second parameter, equivalent to `Array.filter()`. Example:
-```javascript
-connection.broadcast('HelloWorld', function (element, index, array) {
-    return element.protocols.indexOf('chat') >= 0; // Will send the message to clients that use "chat" as a subprotocol
-});
-```
 The WebSocket connection has the next events:
 #### message
 Emitted when the server receives a message from the client.
