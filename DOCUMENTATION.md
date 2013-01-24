@@ -54,10 +54,15 @@ server.host('example.com');
 ```
 #### Host Management
 `.open()`
+
 Make the host active, this method is called automatically when a host is created.
+
 `.close()`
+
 Closes all the child WebSocket hosts and make the host inactive.
+
 `.destroy()`
+
 Close the host and removes it from the server. Can not detroy the main host.
 ### CORS (Cross-Origin Resource Sharing)
 `.accept([arguments])`
@@ -463,11 +468,11 @@ socket.on(EVENT, function (data) {
     // Application logic
 });
 ```
-##### Sending Data in Raw Mode
+###### Sending Data in Raw Mode
 ```javascript
 socket.send(data);
 ```
-##### Sending Data in Advanced Mode
+###### Sending Data in Advanced Mode
 ```javascript
 socket.send(event, data);
 ```
