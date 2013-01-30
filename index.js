@@ -7,51 +7,20 @@ var server = require('./lib/server');
 var dirname = path.dirname(module.parent.filename);
 
 // Will get sessions from file
-function getSessions(instance, callback) {
+function getSessions(server, callback) {
 	'use strict';
 
-	var hosts = instance.server.hosts;
-	var session;
 	var sessions;
-	var timeout;
-
-	function sessionKiller(x, y) {
-		delete hosts[x].sessions[y];
-	}
-
-	function hostIterator(i) {
-		if (!sessions[i]) {
-			return;
-		}
-		hosts[i].sessions = sessions[i];
-		for (var j in sessions[i]) {
-			sessionIterator(i, j);
-		}
-	}
-
-	function sessionIterator(i, j) {
-		session = hosts[i].sessions;
-		timeout = Math.abs(session[j]._timeout);
-
-		// If no absolute value
-		if (!timeout) {
-			throw new Error('invalid timeout');
-		}
-
-		session[j]._timeout = setTimeout(sessionKiller, timeout, i, j);
-	}
 
 	// Activate the sessions from the file
 	function activateSessions() {
-
-		for (var i in hosts) {
-			hostIterator(i);
+		for (var i in server.hosts) {
+			server.hosts[i].setSessions(sessions[i]);
 		}
 	}
 
 	// Read and parse the sessions file
 	fs.readFile(dirname + '/.sessions', 'utf8', function (error, data) {
-		instance.server.emit('release', callback);
 
 		// Catch error at reading
 		if (error) {
@@ -68,37 +37,39 @@ function getSessions(instance, callback) {
 			console.log('simpleS: can not parse sessions file');
 			console.log(error.message + '\n');
 		}
+
+		callback();
 	});
 }
 
 // Will save sessions to file
-function saveSessions(instance, callback) {
+function saveSessions(server, callback) {
 	'use strict';
-	var hosts = instance.server.hosts;
+
 	var sessions = {};
 
 	// Select and deactivate sessions
-	for (var i in hosts) {
-		sessions[i] = hosts[i].sessions;
-		for (var j in hosts[i].sessions) {
-			var timer = hosts[i].sessions[j]._timeout;
-			var timeout = timer._idleTimeout;
-			var start = new Date(timer._idleStart).valueOf();
-			var end = new Date(start + timeout).valueOf();
-			clearTimeout(hosts[i].sessions[j]._timeout);
-			hosts[i].sessions[j]._timeout = end - new Date().valueOf();
-		}
+	for (var i in server.hosts) {
+		sessions[i] = server.hosts[i].getSessions();
 	}
 
+	// Prepare sessions for writing on file
 	sessions = JSON.stringify(sessions);
 
+	// Write the sessions in the file
 	fs.writeFile(dirname + '/.sessions', sessions, 'utf8', function (error) {
-		instance.server.emit('release', callback);
+		
+		// Release the server in all cases
+		server.emit('release', callback);
+
+		// Log the error
 		if (error) {
 			console.log('simpleS: can not write sessions to file');
 			console.log(error.message + '\n');
 			return;
 		}
+
+		// Lot the sessions file creation
 		console.log('simpleS: file with sessions created');
 	});
 }
@@ -118,6 +89,7 @@ var simples = module.exports = function (port) {
 	// Shortcut to this context
 	var that = this;
 
+	// Listener for manual stop
 	function sigintListener() {
 		console.log('\nManual stopping simpleS, this may take few seconds');
 		that.stop();
@@ -179,25 +151,6 @@ simples.prototype = Object.create(host.prototype, {
 	}
 });
 
-// Specify the template engine to render the responses
-simples.prototype.engine = function (engine, render) {
-	'use strict';
-
-	// Prepare template engine
-	this.server.engine = engine;
-
-	// Choose the rendering method
-	if (render) {
-		this.server.render = engine[render];
-	} else if (engine.render) {
-		this.server.render = engine.render;
-	} else {
-		this.server.render = engine;
-	}
-
-	return this;
-};
-
 // Create a new host
 simples.prototype.host = function (name) {
 	'use strict';
@@ -223,9 +176,12 @@ simples.prototype.start = function (port, callback) {
 			that.server.hosts[i].open();
 		}
 
+		// Bind the manual stop listener
 		process.once('SIGINT', that.sigintListener);
+
+		// Start listening the port
 		that.server.listen(port, function () {
-			getSessions(that, callback);
+			that.server.emit('release', callback);
 		});
 	}
 
@@ -236,7 +192,7 @@ simples.prototype.start = function (port, callback) {
 			that.server.close(listen);
 		} else {
 			that.started = true;
-			listen();
+			getSessions(that.server, listen);
 		}
 		
 	}
@@ -266,19 +222,24 @@ simples.prototype.stop = function (callback) {
 			that.server.hosts[i].close();
 		}
 
+		// Unbind the manual stop listener
 		process.removeListener('SIGINT', that.sigintListener);
 		that.started = false;
 		that.busy = true;
+
+		// Close the server
 		that.server.close(function () {
-			saveSessions(that, callback);
+			saveSessions(that.server, callback);
 		});
 	}
 
 	// Stop the server only if it is running
-	if (this.started && this.busy) {
-		this.server.once('release', stop);
-	} else if (this.started) {
-		stop();
+	if (this.started) {
+		if (this.busy) {
+			this.server.once('release', stop);
+		} else {
+			stop();
+		}
 	}
 
 	return this;

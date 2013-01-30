@@ -25,7 +25,6 @@ port: number
 callback: function(0)
 
 Start listening for requests on the provided port. If the server was started before simpleS will get sessions from the `.sessions` file if it exists or it has valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take few seconds, for closing alive http and ws connections. While restarting no new connection will be accepted but existing connections will be still served.
-
 ```javascript
 server.start(80, function () {
     // Application logic
@@ -37,7 +36,6 @@ server.start(80, function () {
 callback: function(0)
 
 Stop the server. The existing sessions are saved to the `.sessions` file for further acces. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take few seconds, for closing alive http and ws connections. While closing no new connection will be accepted but existing connections will be still served. Calling `SIGINT` (`ctrl + c`) will cause the manual close execution, this is made for graceful server close, if no need in graceful closing then `SIGINT` should be called twice.
-
 ```javascript
 server.stop(function () {
     // Application logic
@@ -64,14 +62,27 @@ Closes all the child WebSocket hosts and make the host inactive.
 `.destroy()`
 
 Close the host and removes it from the server. Can not detroy the main host.
-### CORS (Cross-Origin Resource Sharing)
+### CORS (Cross-Origin Resource Sharing) and Referers
 `.accept([arguments])`
 
 arguments: list of strings
 
-simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host and local file system origins. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on the current or the main host (see Virtual Hosting). These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
+simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on each host independently (see Virtual Hosting). These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
 ```javascript
-server.accept('null', 'localhost', 'example.com');
+server.accept('null', 'localhost', 'example.com'); // Will accept requests only from these 3 hosts
+
+server.accept('*', 'example.com'); // Will accept requests from all hosts except 'example.com'
+```
+
+`.referer([arguments])`
+
+arguments: list of strings
+
+To block other domains from using host's resources like images, css, js files, or even to make hotlinks to its pages, it is possible to define a list of accepted referers. By default the server will response to all request from different host referers. To a accept only specific referers their list should be defined as parameters to this method, to accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is server anyway. The server will respond with error 404 to unacceptable referers. This method should be used only in rare cases to prevent hotlinking, at the moment it is blocking all the referer actions. Example:
+```javascript
+server.referer('*', 'example.com'); // will respond to all referers except 'example.com'
+
+server.referer('example.com', 'test.com'); // Will respond only to these 2 referers
 ```
 ### Templating
 `.engine(engine, render)`
@@ -80,7 +91,7 @@ engine: object
 
 render: string
 
-simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). Example:
+simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). This method is applicable on each host independently (see Virtual Hosting). Example:
 ```javascript
 var noopEngine = {
     render: function (string) {
@@ -100,7 +111,7 @@ var noopRender = function (string) {
 server.engine(noopRender);
 ```
 ## Routing
-All the methods described below are applicable on the current or the main host (see Virtual Hosting).
+All the methods described below are applicable on each host independently (see Virtual Hosting).
 ### GET Requests
 `.get(route, callback)`
 
@@ -205,23 +216,42 @@ The first parameter provided in callbacks for routing requests is an object that
     }
 }
 ```
-#### .body
+#### Request Object Attributes
+`.body`
+
 The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, parsed data is contained in `request.query`.
-#### .cookies
+
+`.cookies`
+
 An object that contains the cookies provided by the client.
-#### .files
+
+`.files`
+
 An object that contains files send using POST method with multipart/form-data content type.
-#### .headers
+
+`.headers`
+
 An object that contains the HTTP headers of the request.
-#### .langs
+
+`.langs`
+
 An array of strings that represents languages accepted by the client in the order of their relevance.
-#### .method
+
+`.method`
+
 The HTTP method of the request.
-#### .query
+
+`.query`
+
 The object that contains queries from both GET and POST methods.
-#### .session
+
+
+`.session`
+
 A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie.
-#### .url
+
+`.url`
+
 The url of the request split in components like href, path, pathname, query as object and query as string (search).
 ### Response Interface
 The second parameter provided in callbacks for routing requests is a writable stream that defines the data sent to the client. It has the next methods:
@@ -240,6 +270,15 @@ response.cookie('user', 'me', {
     domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
     httpOnly: false, // Set if the cookie can not be changed from client-side
 });
+```
+#### .header(name, value)
+name: string
+
+value: string
+
+Sets the header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. Example:
+```javascript
+response.header('ETag', '0123456789');
 ```
 #### .lang(language)
 language: string
@@ -288,7 +327,7 @@ response.send(['Hello', 'World']);
 #### .render([arguments])
 arguments: arguments for the template engine
 
-Renders the response using the template engine, arguments will be those necessary for the template engine. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once. Example:
+Renders the response using the template engine, arguments will be those necessary for the template engine defined by the host. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once. Example:
 ```javascript
 response.render('HelloWorld');
 ```
@@ -341,10 +380,47 @@ echo.broadcast('HelloWorld', function (element, index, array) {
     return element.protocols.indexOf('echo') >= 0; // Will send the message to clients that use "chat" as a subprotocol
 });
 ```
-#### .openChannel(name)
+#### .channel(name)
 name: string
 
-Opens a new channel with the provided name. The channel is binded to the WebSocket host. See WebSocket Channel for more information.
+Opens a new channel with the provided name. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
+### WebSocket Connection
+The object that represents the current WebSocket connection. The WebSocket connection is an event emitter and has some attributes from request interface to handle needed data from the handshake request.
+#### WebSocket Connection Members
+`.cookies`
+
+See Request Interface `.cookies`
+
+`.headers`
+
+See Request Interface `.headers`
+
+`.langs`
+
+See Request Interface `.langs`
+
+`.protocols`
+
+The array of protocols of the WebSocket connection.
+
+`.session`
+
+See Request Interface `.session`
+
+`.send([event, ]data)`
+event: string
+
+data: any value except undefined
+
+Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
+#### WebSocket Connection Events
+`message`
+
+Emitted when the server receives a message from the client.
+
+`close`
+
+Emitted when the connection is closed.
 ### WebSocket Channel
 The object that groups a set of connections. This is useful for sending messages to a group of connections in a better way than the `.broadcast()` method of the WebSocket host.
 #### .bind(connection)
@@ -357,6 +433,8 @@ connection: WebSocket Connection Instance
 Removes the connection from the channel. The connection remains alive.
 #### .close()
 Drops all the connections from the channel and removes the channel from the WebSocket host.
+#### .destroy()
+Removes the channel from the WebSocket host. Channels are automatically destroyed if there are no bound connections.
 #### .broadcast([event, ]data[, filter])
 event: string
 
@@ -365,36 +443,9 @@ data: string or buffer
 filter: function(3)
 
 Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel.
-### WebSocket Connection
-The object that represents the current WebSocket connection. The WebSocket connection is an event emitter and has some attributes from request interface to handle needed data from the handshake request. It has the next attributes and methods:
-#### .cookies
-See Request Interface `.cookies`
-#### .headers
-See Request Interface `.headers`
-#### .langs
-See Request Interface `.langs`
-#### .protocols
-The array of protocols of the WebSocket connection.
-#### .query
-See Request Interface `.query`
-#### .session
-See Request Interface `.session`
-#### .url
-See Request Interface `.url`
-#### .send([event, ]data)
-event: string
-
-data: any value except undefined
-
-Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
-The WebSocket connection has the next events:
-#### message
-Emitted when the server receives a message from the client.
-#### close
-Emitted when the connection is closed.
-### Client-Side Simple API
+## Client-Side Simple API
 To have access to the simpleS client-side API it is necessary to add `<script src="/simples/client.js"></script>` in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
-#### AJAX (Asynchronous JavaScript and XML)
+### AJAX (Asynchronous JavaScript and XML)
 `simples.ajax(url, params[, method])`
 
 url: string
@@ -419,7 +470,7 @@ var request = simples.ajax('/', {
 // Somewhere else to stop the request
 request.stop();
 ```
-#### WS (WebSocket)
+### WS (WebSocket)
 `simples.ws(host, protocols, raw)`
 
 host: string
@@ -434,13 +485,13 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
     this.send('Hello World');
 });
 ```
-##### Socket Management
+#### Socket Management
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
 `.start(host, protocols)` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection an to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost
 
 `.close()` - closes the WebSocket connection
-##### Listeners Management
+#### Listeners Management
 `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side:
 
 `.emit(event[, data])` - triggers locally an event, does not send data to the server, is useful for triggering instantly the event on the client or for debugging
@@ -448,31 +499,31 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 `.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener
 
 `.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event
-###### Events
+##### Events
 `message` - default event received in raw mode or in advanced mode if the incoming message could not be parsed, the callback function has one parameter, the received data
 
 `error` - triggered when an error appears, the callback function has one parameter, the message of the error
 
 `close` - triggered when the WebSocket connection is closed, the callback function has no parameters
-##### Data Management
+#### Data Management
 Based on the third parameter in `simples.ws()` the communication with the server can be made in advanced or raw mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
-###### Receiving Data in Raw Mode
+##### Receiving Data in Raw Mode
 ```javascript
 socket.on('message', function (message) {
     // Application logic
 });
 ```
-###### Receiving Data in Advanced Mode
+##### Receiving Data in Advanced Mode
 ```javascript
 socket.on(EVENT, function (data) {
     // Application logic
 });
 ```
-###### Sending Data in Raw Mode
+##### Sending Data in Raw Mode
 ```javascript
 socket.send(data);
 ```
-###### Sending Data in Advanced Mode
+##### Sending Data in Advanced Mode
 ```javascript
 socket.send(event, data);
 ```

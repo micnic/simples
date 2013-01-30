@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+	<head>
+		<script>
+			window.onload = function () {
+				document.getElementById('ajax').onclick = function () {
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', 'http://localhost:12345/');
+					xhr.send();
+					xhr.onreadystatechange = function () {
+						if (xhr.readyState === 4) {
+							if (xhr.status === 200 && window.location.protocol === 'file:') {
+								alert('Test passed, the request from local file system not blocked');
+							} else if (xhr.status !== 200 && window.location.protocol !== 'file:') {
+								alert('Test passed, the request from another domain is blocked');
+							} else {
+								alert('Test not passed, something gone wrong');
+							}
+						}
+					};
+				};
+
+				document.getElementById('ws').onclick = function () {
+					var socket = new WebSocket('ws://localhost:12345/echo', ['echo']);
+					socket.onerror = function () {
+						if (window.location.protocol !== 'file:') {
+							alert('Test passed, the request from another domain is blocked');
+						} else {
+							alert('Test not passed, something gone wrong');
+						}
+					};
+					socket.onopen = function () {
+						socket.send('echo');
+					};
+					socket.onmessage = function (event) {
+						alert('Test passed, the request from local file system not blocked and a message is received back');
+						socket.close();
+					};
+				};
+			};
+		</script>
+	</head>
+	<body>
+		To test on another domain, put this code in &#60;script&#62; tag:
+		<br>
+		<textarea style="height:300px;width:600px">
+window.onload = function () {
+	document.getElementById('ajax').onclick = function () {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'http://localhost:12345/');
+		xhr.send();
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState === 4) {
+				if (xhr.status === 200 && window.location.protocol === 'file:') {
+					alert('Test passed, the request from local file system not blocked');
+				} else if (xhr.status !== 200 && window.location.protocol !== 'file:') {
+					alert('Test passed, the request from another domain is blocked');
+				} else {
+					alert('Test not passed, something gone wrong');
+				}
+			}
+		};
+	};
+
+	document.getElementById('ws').onclick = function () {
+		var socket = new WebSocket('ws://localhost:12345/echo', ['echo']);
+		socket.onerror = function () {
+			if (window.location.protocol !== 'file:') {
+				alert('Test passed, the request from another domain is blocked');
+			} else {
+				alert('Test not passed, something gone wrong');
+			}
+		};
+		socket.onopen = function () {
+			socket.send('echo');
+		};
+		socket.onmessage = function (event) {
+			alert('Test passed, the request from local file system not blocked and a message is received back');
+			socket.close();
+		};
+	};
+};</textarea>
+		<br>
+		and this one in &#60;body&#62; tag:
+		<br>
+		<textarea style="height:50px;width:250px">
+<button id="ajax">AJAX</button>
+<button id="ws">WS</button></textarea>
+		<br>
+		To test in this local file system, press the buttons:
+		<br>
+		<button id="ajax">AJAX</button>
+		<button id="ws">WS</button>
+	</body>
+</html>

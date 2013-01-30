@@ -16,6 +16,7 @@ var noopEngine = {
 server
 	.engine(noopEngine, 'render')
 	.accept('null.com')
+	.referer('*', 'null.com')
 	.serve(__dirname + '/root', function (request, response) {
 		response.end('You are in the root of the folder ' + request.url.path);
 	})
@@ -33,7 +34,7 @@ server
 		if (request.session.name) {
 			console.log('You have been here ;)');
 		} else {
-			console.log('You are new here :D')
+			console.log('You are new here :D');
 			request.session.name = 'me';
 		}
 		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
@@ -113,6 +114,8 @@ var chatSocket = server.ws('/chat', {
 	protocols: ['chat']
 }, function (connection) {
 
+	var chatChannel = chatSocket.channel('chat');
+
 	chatChannel.bind(connection);
 	connection.name = 'Incognito';
 	
@@ -139,8 +142,6 @@ var chatSocket = server.ws('/chat', {
 		chatChannel.broadcast('users', getUsers());
 	});
 });
-
-var chatChannel = chatSocket.openChannel('chat');
 
 var noopHost = server.host('127.0.0.1');
 
@@ -280,19 +281,21 @@ var tests = {
 };
 
 if (process.argv[2] === 'test') {
-	http.get('http://127.0.0.1:12345', function (response) {
-		var content = '';
+	server.server.once('release', function () {
+		http.get('http://127.0.0.1:12345', function (response) {
+			var content = '';
 
-		response.setEncoding('utf8');
+			response.setEncoding('utf8');
 
-		response.on('data', function (data) {
-			content += data;
-		});
+			response.on('data', function (data) {
+				content += data;
+			});
 
-		response.on('end', function () {
-			console.log(content);
-			equal(content, 'Virtual Hosting');
-			test('start');
+			response.on('end', function () {
+				console.log(content);
+				equal(content, 'Virtual Hosting');
+				test('start');
+			});
 		});
 	});
 }
