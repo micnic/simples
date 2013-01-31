@@ -10,10 +10,8 @@ var dirname = path.dirname(module.parent.filename);
 function getSessions(server, callback) {
 	'use strict';
 
-	var sessions;
-
 	// Activate the sessions from the file
-	function activateSessions() {
+	function activateSessions(sessions) {
 		for (var i in server.hosts) {
 			server.hosts[i].setSessions(sessions[i]);
 		}
@@ -26,18 +24,19 @@ function getSessions(server, callback) {
 		if (error) {
 			console.log('simpleS: can not read sessions file');
 			console.log(error.message + '\n');
+			callback();
 			return;
 		}
 
 		// Supervise session file parsing
 		try {
-			sessions = JSON.parse(data);
-			activateSessions();
+			activateSessions(JSON.parse(data));
 		} catch (error) {
 			console.log('simpleS: can not parse sessions file');
 			console.log(error.message + '\n');
 		}
 
+		// Continue to port listening
 		callback();
 	});
 }
