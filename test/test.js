@@ -15,7 +15,7 @@ var noopEngine = {
 
 server
 	.engine(noopEngine, 'render')
-	.accept('null.com')
+	.accept('*')
 	.referer('*', 'null.com')
 	.serve(__dirname + '/root', function (request, response) {
 		response.end('You are in the root of the folder ' + request.url.path);

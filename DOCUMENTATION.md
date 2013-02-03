@@ -299,7 +299,7 @@ type: string
 
 override: boolean
 
-Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.json](https://github.com/micnic/simpleS/blob/master/utils/mime.json), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. Example:
+Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. Example:
 ```javascript
 response.type('html');
 ```
