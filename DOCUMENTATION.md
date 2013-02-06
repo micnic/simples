@@ -24,7 +24,7 @@ port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port. If the server was started before simpleS will get sessions from the `.sessions` file if it exists or it has valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take few seconds, for closing alive http and ws connections. While restarting no new connection will be accepted but existing connections will be still served.
+Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if it exists or it has valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are keeped alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served.
 ```javascript
 server.start(80, function () {
     // Application logic
@@ -35,7 +35,7 @@ server.start(80, function () {
 
 callback: function(0)
 
-Stop the server. The existing sessions are saved to the `.sessions` file for further acces. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take few seconds, for closing alive http and ws connections. While closing no new connection will be accepted but existing connections will be still served. Calling `SIGINT` (`ctrl + c`) will cause the manual close execution, this is made for graceful server close, if no need in graceful closing then `SIGINT` should be called twice.
+Stop the server. The existing sessions are saved to the `.sessions` file for further acces. Can have an optional callback. All connection in simpleS are keeped alive and the closing can take few seconds, for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. Calling `SIGINT` (`ctrl + c`) will cause the manual close execution, this is made for graceful server close, if no need in graceful closing then `SIGINT` should be called twice.
 ```javascript
 server.stop(function () {
     // Application logic
@@ -46,14 +46,14 @@ server.stop(function () {
 
 name: string
 
-simpleS can serve multiple domains on the same server and port, using `.host()` method it's simple to specify which host should use which routes. By default simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts. Example:
+simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts. Example:
 ```javascript
 server.host('example.com');
 ```
 #### Host Management
 `.open()`
 
-Make the host active, this method is called automatically when a host is created.
+Make the host active, this method is called automatically when a new host is created.
 
 `.close()`
 
@@ -67,7 +67,7 @@ Close the host and removes it from the server. Can not detroy the main host.
 
 arguments: list of strings
 
-simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default the server will accept requests only from the host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on each host independently (see Virtual Hosting). These limitations will work for HTTP GET and POST request and even for WebSocket requests. Example:
+simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on each host independently (see Virtual Hosting). These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. Example:
 ```javascript
 server.accept('null', 'localhost', 'example.com'); // Will accept requests only from these 3 hosts
 
@@ -78,7 +78,7 @@ server.accept('*', 'example.com'); // Will accept requests from all hosts except
 
 arguments: list of strings
 
-To block other domains from using host's resources like images, css, js files, or even to make hotlinks to its pages, it is possible to define a list of accepted referers. By default the server will response to all request from different host referers. To a accept only specific referers their list should be defined as parameters to this method, to accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is server anyway. The server will respond with error 404 to unacceptable referers. This method should be used only in rare cases to prevent hotlinking, at the moment it is blocking all the referer actions. Example:
+To block other domains from using host's resources like images, css, js files, or even to make hotlinks to its pages, it is possible to define a list of accepted referers. By default, the server will response to all request from different host referers. To a accept only specific referers their list should be defined as parameters to this method, to accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is server anyway. The server will respond with error 404 to unacceptable referers. This method should be used only in rare cases to prevent hotlinking, at the moment, it is blocking all the referer actions. Example:
 ```javascript
 server.referer('*', 'example.com'); // will respond to all referers except 'example.com'
 
@@ -91,7 +91,7 @@ engine: object
 
 render: string
 
-simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its '.render()' method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). This method is applicable on each host independently (see Virtual Hosting). Example:
+simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its `.render()` method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). This method is applicable on each host independently (see Virtual Hosting). Example:
 ```javascript
 var noopEngine = {
     render: function (string) {
@@ -147,7 +147,7 @@ route: string
 
 callback: function(2)
 
-Listen for both GET and POST requests and uses the callback function with request and response as parameters,this is useful for defining general behavior for both types of requests. Warning: `route` is case sensitive.
+Listen for both `GET` and `POST` requests and uses the callback function with request and response as parameters,this is useful for defining general behavior for both types of requests. Warning: `route` is case sensitive.
 
 ```javascript
 server.all('/', function (request, response) {
@@ -161,7 +161,7 @@ path: string
 
 callback: function(2)
 
-`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for GET and POST requests, but it is triggered only when the client accesses the root of a subfolder of the folder with static files, this parameter is optional. Warning: the names of static files are case sensitive.
+`path` is the local path to a folder that contains static files (for example: css and js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a subfolder of the folder with static files, this parameter is optional. All files are dynamically cached for better performance. Warning: the names of static files are case sensitive.
 
 ```javascript
 server.serve('root', function (request, response) {
@@ -219,7 +219,7 @@ The first parameter provided in callbacks for routing requests is an object that
 #### Request Object Attributes
 `.body`
 
-The content of the body of the request, for GET requests it is empty, for POST request it will contain plain data, parsed data is contained in `request.query`.
+The content of the body of the request, for `GET` requests it is empty, for `POST` request it will contain plain data, parsed data is contained in `request.query` or `request.files`.
 
 `.cookies`
 
@@ -227,7 +227,7 @@ An object that contains the cookies provided by the client.
 
 `.files`
 
-An object that contains files send using POST method with multipart/form-data content type.
+An object that contains files send using POST method with `multipart/form-data` content type.
 
 `.headers`
 
@@ -239,20 +239,20 @@ An array of strings that represents languages accepted by the client in the orde
 
 `.method`
 
-The HTTP method of the request.
+The HTTP method of the request, it can be `GET`, `HEAD` or `POST` for usual requests, but can have a different value on error `405`.
 
 `.query`
 
-The object that contains queries from both GET and POST methods.
+The object that contains queries from both GET and POST methods, it is recommended to use different names for queries from both methods, if there are two queries with the same name then the GET query will be overwritten.
 
 
 `.session`
 
-A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie.
+A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 8 `0-9a-zA-Z` characters which will ensure security for `218.340.105.584.896` values. This is a getter and the session is initialized only when it is called, this is made for more performance.
 
 `.url`
 
-The url of the request split in components like href, path, pathname, query as object and query as string (search).
+The url of the request split in components like href, path, pathname, query as object and query as string (search), see `url` core module for more details.
 ### Response Interface
 The second parameter provided in callbacks for routing requests is a writable stream that defines the data sent to the client. It has the next methods:
 #### .cookie(name, value, attributes)

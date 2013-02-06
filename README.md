@@ -1,12 +1,13 @@
-# simpleS 0.3.1
+# simpleS 0.3.2
 
 simpleS is a simple http server for node.js that has some special features:
 
 - Simple structure with minimum configuration
 - Routing for http GET and POST requests, static files and errors
+- Dynamic caching for static files
 - Virtual Hosting
 - WebSocket implementation (version 13, RFC 6455)
-- CORS support
+- CORS support and Referer blocking
 - Sessions
 - Template engine connection
 - Automatic response compression (deflate and gzip)
