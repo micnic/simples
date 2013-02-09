@@ -7,6 +7,8 @@ var simples = require('simples');
 
 port: number
 
+options: object
+
 simpleS needs only the port number and it sets up a HTTP server on this port.
 
 ```javascript
@@ -16,7 +18,7 @@ or
 ```javascript
 var server = simples(80); // simpler
 ```
-To set up a HTTPS server it will be needed the options object with `key` and `cert` attributes.
+To set up a HTTPS server it will be needed the options object with `key` and `cert` attributes, these will be the paths to the `.pem` files.
 ```javascript
 var server = simples(443, {
     key: 'xxx',

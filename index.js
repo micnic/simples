@@ -79,7 +79,7 @@ var simples = module.exports = function (port, options) {
 
 	// Ignore new keyword
 	if (!(this instanceof simples)) {
-		return new simples(port);
+		return new simples(port, options);
 	}
 
 	// Call host in this context
