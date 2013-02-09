@@ -74,7 +74,7 @@ function saveSessions(server, callback) {
 }
 
 // SimpleS prototype constructor
-var simples = module.exports = function (port) {
+var simples = module.exports = function (port, options) {
 	'use strict';
 
 	// Ignore new keyword
@@ -111,9 +111,9 @@ var simples = module.exports = function (port) {
 
 	// Initialize the HTTP server
 	Object.defineProperty(this, 'server', {
-		value: new server({
+		value: server({
 			main: this
-		})
+		}, options)
 	});
 
 	// Set keep alive timeout to 5 seconds

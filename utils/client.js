@@ -1,118 +1,119 @@
 // simpleS global namespace
-var simples = {
+var simples = {};
 
-	// AJAX microframework
-	ajax: function (url, data, method) {
-		'use strict';
+// AJAX microframework
+var ajax = simples.ajax = function (url, data, method) {
+	'use strict';
 
-		// Ignore new keyword
-		if (!(this instanceof simples.ajax)) {
-			return new simples.ajax(url, data, method);
-		}
-
-		// Accept only GET and POST methods, defaults to get
-		if (method !== 'get' && method !== 'post') {
-			method = 'get';
-		}
-
-		// Create the listeners and the XMLHttpRequest
-		Object.defineProperties(this, {
-			listeners: {
-				value: {
-					error: function () {},
-					progress: function () {},
-					success: function () {}
-				}
-			},
-			xhr: {
-				value: new XMLHttpRequest()
-			}
-		});
-
-		// Process data
-		if (method === 'get') {
-			if (~url.indexOf('?')) {
-				url += '&';
-			} else {
-				url += '?';
-			}
-			url += Object.keys(data).map(function (element) {
-				return element + '=' + encodeURIComponent(data[element]);
-			}).join('&');
-			data = null;
-		} else {
-			if (data instanceof HTMLFormElement) {
-				data = new FormData(data);
-			} else {
-				var formData = new FormData();
-				Object.keys(data).forEach(function (element) {
-					formData.append(element, data[element]);
-				});
-				data = formData;
-			}
-		}
-
-		// Open the XMLHttpRequest and send data
-		var xhr = this.xhr;
-		var listeners = this.listeners;
-		xhr.open(method.toUpperCase(), url);
-		xhr.send(data);
-
-		// Listen for changes in the state of the XMLHttpRequest
-		xhr.onreadystatechange = function () {
-			if (xhr.readyState === 4 && xhr.status === 200) {
-				listeners.success(xhr.responseText);
-			} else if (xhr.readyState === 4 && xhr.status !== 200) {
-				listeners.error(xhr.status, xhr.statusText);
-			}
-		};
-
-		listeners.progress();
-	},
-
-	// WebSocket microframework
-	ws: function (host, protocols, raw) {
-		'use strict';
-
-		// Ignore new keyword
-		if (!(this instanceof simples.ws)) {
-			return new simples.ws(host, protocols, raw);
-		}
-
-		// Create internal parameters
-		Object.defineProperties(this, {
-			host: {
-				value: host
-			},
-			listeners: {
-				value: {}
-			},
-			queue: {
-				value: []
-			},
-			protocols: {
-				value: protocols
-			},
-			raw: {
-				value: raw || false
-			},
-			socket: {
-				value: null,
-				writable: true
-			},
-			started: {
-				value: null,
-				writable: true
-			}
-		});
-
-		this.start(host, protocols);
+	// Ignore new keyword
+	if (!(this instanceof simples.ajax)) {
+		return new simples.ajax(url, data, method);
 	}
+
+	// Accept only GET and POST methods, defaults to get
+	if (method !== 'get' && method !== 'post') {
+		method = 'get';
+	}
+
+	var xhr = new XMLHttpRequest();
+	var listeners = {
+		error: function () {},
+		progress: function () {},
+		success: function () {}
+	};
+
+	// Create the listeners and the XMLHttpRequest
+	Object.defineProperties(this, {
+		listeners: {
+			value: listeners
+		},
+		xhr: {
+			value: xhr
+		}
+	});
+
+	// Form data from object
+	function objectData(data) {
+		var formData = new FormData();
+		for (var i in data) {
+			formData.append(i, data[i]);
+		}
+		return formData;
+	}
+
+	// Process data
+	if (method === 'get') {
+		if (~url.indexOf('?')) {
+			url += '&';
+		} else {
+			url += '?';
+		}
+		url += Object.keys(data).map(function (element) {
+			return element + '=' + encodeURIComponent(data[element]);
+		}).join('&');
+		data = null;
+	} else {
+		if (data instanceof HTMLFormElement) {
+			data = new FormData(data);
+		} else {
+			data = objectData(data);
+		}
+	}
+
+	// Open the XMLHttpRequest and send data
+	xhr.open(method.toUpperCase(), url);
+	xhr.send(data);
+
+	// Listen for changes in the state of the XMLHttpRequest
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			listeners.success(xhr.responseText);
+		} else if (xhr.readyState === 4 && xhr.status !== 200) {
+			listeners.error(xhr.status, xhr.statusText);
+		}
+	};
+
+	listeners.progress();
 };
 
-// Shortcuts
-var ajax = simples.ajax;
-var ws = simples.ws;
+// WebSocket microframework
+var ws = simples.ws = function (host, protocols, raw) {
+	'use strict';
+
+	// Ignore new keyword
+	if (!(this instanceof simples.ws)) {
+		return new simples.ws(host, protocols, raw);
+	}
+
+	// Create internal parameters
+	Object.defineProperties(this, {
+		host: {
+			value: host
+		},
+		listeners: {
+			value: {}
+		},
+		queue: {
+			value: []
+		},
+		protocols: {
+			value: protocols
+		},
+		raw: {
+			value: raw || false
+		},
+		socket: {
+			value: null,
+			writable: true
+		},
+		started: {
+			value: null,
+			writable: true
+		}
+	});
+
+	this.open(host, protocols);
+};
 
 // Set the error listener
 ajax.prototype.error = function (listener) {
@@ -311,17 +312,17 @@ ws.prototype.send = function () {
 		// Push the message to the end of the queue
 		this.queue[this.queue.length] = data;
 
-		// If connection is down start a new one
+		// If connection is down open a new one
 		if (this.started === false) {
-			this.start(this.host, this.protocols);
+			this.open(this.host, this.protocols);
 		}
 	}
 	
 	return this;
 };
 
-// Start or restart the WebSocket socket
-ws.prototype.start = function (host, protocols) {
+// Open or reopen the WebSocket socket
+ws.prototype.open = function (host, protocols) {
 	'use strict';
 
 	// Shortcut to this context
@@ -348,16 +349,14 @@ ws.prototype.start = function (host, protocols) {
 	this.socket.onmessage = function (event) {
 		if (that.raw) {
 			that.emit('message', event.data);
-		} else {
-			try {
-				var message = JSON.parse(event.data);
-				if (message && that.listeners[message.event]) {
-					that.emit(message.event, message.data);
-				}
-			} catch (error) {
-				that.emit('error', 'simpleS: can not parse incoming message');
-				that.emit('message', event.data);
-			}
+			return;
+		}
+		try {
+			var message = JSON.parse(event.data);
+			that.emit(message.event, message.data);
+		} catch (error) {
+			that.emit('error', 'simpleS: can not parse incoming message');
+			that.emit('message', event.data);
 		}
 	};
 

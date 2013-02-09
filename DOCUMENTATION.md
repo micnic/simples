@@ -3,7 +3,7 @@
 var simples = require('simples');
 ```
 ## New simpleS Instance
-`simples(port)`
+`simples(port[, options])`
 
 port: number
 
@@ -15,6 +15,13 @@ var server = new simples(80);
 or
 ```javascript
 var server = simples(80); // simpler
+```
+To set up a HTTPS server it will be needed the options object with `key` and `cert` attributes.
+```javascript
+var server = simples(443, {
+    key: 'xxx',
+    cert: 'yyy'
+});
 ```
 ## Server Management
 ### Starting and Restarting
@@ -268,6 +275,7 @@ response.cookie('user', 'me', {
     expires: new Date(new Date().valueOf() + 3600000), // or maxAge: 3600000, Set the expiration time of the cookie
     path: '/path/', // Path of the cookie, should be defined only if it is diferent from the root, the first slash may be omitted, simpleS will add it
     domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
+    secure: false, // Set if the cookie is secured, used by HTTPS
     httpOnly: false, // Set if the cookie can not be changed from client-side
 });
 ```
@@ -488,7 +496,7 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 #### Socket Management
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
-`.start(host, protocols)` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection an to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost
+`.open(host, protocols)` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection an to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost
 
 `.close()` - closes the WebSocket connection
 #### Listeners Management

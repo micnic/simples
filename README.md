@@ -1,6 +1,6 @@
-# simpleS 0.3.2
+# simpleS 0.3.3
 
-simpleS is a simple http server for node.js that has some special features:
+simpleS is a simple HTTP(S) server for node.js that has some special features:
 
 - Simple structure with minimum configuration
 - Routing for http GET and POST requests, static files and errors
