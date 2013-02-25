@@ -1,77 +1,6 @@
-var fs = require('fs');
-var path = require('path');
-
 var host = require('./lib/host');
 var server = require('./lib/server');
-
-var dirname = path.dirname(module.parent.filename);
-
-// Will get sessions from file
-function getSessions(server, callback) {
-	'use strict';
-
-	// Activate the sessions from the file
-	function activateSessions(sessions) {
-		for (var i in server.hosts) {
-			server.hosts[i].setSessions(sessions[i]);
-		}
-	}
-
-	// Read and parse the sessions file
-	fs.readFile(dirname + '/.sessions', 'utf8', function (error, data) {
-
-		// Catch error at reading
-		if (error) {
-			console.log('simpleS: can not read sessions file');
-			console.log(error.message + '\n');
-			callback();
-			return;
-		}
-
-		// Supervise session file parsing
-		try {
-			activateSessions(JSON.parse(data));
-		} catch (error) {
-			console.log('simpleS: can not parse sessions file');
-			console.log(error.message + '\n');
-		}
-
-		// Continue to port listening
-		callback();
-	});
-}
-
-// Will save sessions to file
-function saveSessions(server, callback) {
-	'use strict';
-
-	var sessions = {};
-
-	// Select and deactivate sessions
-	for (var i in server.hosts) {
-		sessions[i] = server.hosts[i].getSessions();
-	}
-
-	// Prepare sessions for writing on file
-	sessions = JSON.stringify(sessions);
-
-	// Write the sessions in the file
-	fs.writeFile(dirname + '/.sessions', sessions, 'utf8', function (error) {
-		
-		// Release the server in all cases
-		server.emit('release', callback);
-
-		// Log the error
-		if (error) {
-			console.log('simpleS: can not write sessions to file');
-			console.log(error.message + '\n');
-			return;
-		}
-
-		// Lot the sessions file creation
-		console.log('simpleS: file with sessions created');
-	});
-}
+var utils = require('./utils/utils');
 
 // SimpleS prototype constructor
 var simples = module.exports = function (port, options) {
@@ -82,7 +11,7 @@ var simples = module.exports = function (port, options) {
 		return new simples(port, options);
 	}
 
-	// Call host in this context
+	// Call host in this context and set it as the main host
 	host.call(this, 'main');
 
 	// Shortcut to this context
@@ -100,6 +29,9 @@ var simples = module.exports = function (port, options) {
 			value: false,
 			writable: true
 		},
+		server: {
+			value: server(this, options)
+		},
 		sigintListener: {
 			value: sigintListener
 		},
@@ -107,18 +39,6 @@ var simples = module.exports = function (port, options) {
 			value: false,
 			writable: true
 		}
-	});
-
-	// Initialize the HTTP server
-	Object.defineProperty(this, 'server', {
-		value: server({
-			main: this
-		}, options)
-	});
-
-	// Set keep alive timeout to 5 seconds
-	this.server.on('connection', function (socket) {
-		socket.setTimeout(5000);
 	});
 
 	// Catch runtime errors
@@ -170,13 +90,13 @@ simples.prototype.start = function (port, callback) {
 	// Set the server to listen the port
 	function listen() {
 
+		// Bind the manual stop listener
+		process.once('SIGINT', that.sigintListener);
+
 		// Start all existing hosts
 		for (var i in that.server.hosts) {
 			that.server.hosts[i].open();
 		}
-
-		// Bind the manual stop listener
-		process.once('SIGINT', that.sigintListener);
 
 		// Start listening the port
 		that.server.listen(port, function () {
@@ -191,7 +111,7 @@ simples.prototype.start = function (port, callback) {
 			that.server.close(listen);
 		} else {
 			that.started = true;
-			getSessions(that.server, listen);
+			utils.getSessions(that.server, listen);
 		}
 		
 	}
@@ -216,19 +136,21 @@ simples.prototype.stop = function (callback) {
 	// Stop the server
 	function stop() {
 
-		// Stop all existing hosts
+		// Set status flags
+		that.started = false;
+		that.busy = true;
+
+		// Unbind the manual stop listener
+		process.removeListener('SIGINT', that.sigintListener);
+
+		// Close all existing hosts
 		for (var i in that.server.hosts) {
 			that.server.hosts[i].close();
 		}
 
-		// Unbind the manual stop listener
-		process.removeListener('SIGINT', that.sigintListener);
-		that.started = false;
-		that.busy = true;
-
 		// Close the server
 		that.server.close(function () {
-			saveSessions(that.server, callback);
+			utils.saveSessions(that.server, callback);
 		});
 	}
 

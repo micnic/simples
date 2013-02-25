@@ -15,6 +15,7 @@ var ajax = simples.ajax = function (url, data, method) {
 		method = 'get';
 	}
 
+	// Create the listeners and the XMLHttpRequest
 	var xhr = new XMLHttpRequest();
 	var listeners = {
 		error: function () {},
@@ -22,7 +23,7 @@ var ajax = simples.ajax = function (url, data, method) {
 		success: function () {}
 	};
 
-	// Create the listeners and the XMLHttpRequest
+	// Bind the listeners and the XMLHttpRequest to this context
 	Object.defineProperties(this, {
 		listeners: {
 			value: listeners

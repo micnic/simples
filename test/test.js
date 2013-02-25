@@ -3,7 +3,7 @@ var fs = require('fs');
 var http = require('http');
 var qs = require('querystring');
 
-var simples = require('../index');
+var simples = require('simples');
 
 var server = simples(12345);
 
@@ -37,7 +37,7 @@ server
 			console.log('You are new here :D');
 			request.session.name = 'me';
 		}
-		fs.createReadStream(__dirname + '/root/index.html').pipe(response);
+		response.drain(__dirname + '/root/index.html');
 	})
 	.get('/accept', function (request, response) {
 		response.end('CORS');
