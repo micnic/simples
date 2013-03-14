@@ -46,7 +46,7 @@ window.onload = function () {
 		document.getElementById('fileinput').click();
 	};
 
-	chatSocket = simples.ws(window.location.host + '/chat', ['chat'])
+	chatSocket = simples.ws('/chat', ['chat'])
 		.on('users', function (users) {
 			document.getElementById('users').innerHTML = users.join('<br>');
 		})

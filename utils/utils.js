@@ -7,34 +7,135 @@ var mime = require('./mime');
 var requestInterface = require('../lib/request');
 var responseInterface = require('../lib/response');
 
+// Default callback for "Not Found"
+function e404(request, response) {
+	response.end('"' + request.url.path + '" Not Found');
+}
+
+// Default callback for "Method Not Allowed"
+function e405(request, response) {
+	response.end('"' + request.method + '" Method Not Allowed');
+}
+
+// Default callback for "Internal Server Error"
+function e500(request, response) {
+	response.end('"' + request.url.path + '" Internal Server Error');
+}
+
+// Returns the named parameters of an advanced route
+function getNamedParams(route, url) {
+	var index = route.length;
+	var params = {};
+	while (index--) {
+		if (route[index].charAt(0) === ':') {
+			params[route[index].substr(1)] = url[index];
+		} else if (route[index] !== url[index]) {
+			params = null;
+			break;
+		}
+	}
+	return params;
+}
+
+// Returns the advanced route if found
+function findAdvancedRoute(routes, url) {
+	var index = routes.length;
+	var params;
+	while (!params && index--) {
+		if (routes[index].slices.length === url.length) {
+			params = getNamedParams(routes[index].slices, url);
+		}
+	}
+	return {
+		params: params,
+		route: routes[index]
+	};
+}
+
+// Add all kinds of routes
+exports.addRoute = function (type, route, callback) {
+	'use strict';
+
+	// Add the route to the host
+	if (type === 'serve') {
+		this.routes.serve = {
+			path: route,
+			callback: callback
+		};
+	} else {
+		if (route.charAt(0) === '/') {
+			route = route.substr(1);
+		}
+		route = url.parse(route).pathname || '';
+
+		// Check for routes with named parameters
+		if (~route.indexOf(':')) {
+			this.routes[type].advanced.push({
+				slices: route.split('/'),
+				callback: callback
+			});
+		} else {
+			this.routes[type].raw[route] = callback;
+		}
+	}
+};
+
+// Generate emptry routes
+exports.defaultRoutes = function () {
+	'use strict';
+
+	return {
+		all: {
+			advanced: [],
+			raw: {}
+		},
+		error: {
+			404: e404,
+			405: e405,
+			500: e500
+		},
+		get: {
+			advanced: [],
+			raw: {}
+		},
+		post: {
+			advanced: [],
+			raw: {}
+		},
+		serve: {}
+	};
+};
+
 // Get sessions from file and activate them in the hosts
 exports.getSessions = function (server, callback) {
 	'use strict';
-
-	// Activate the sessions from the file
-	function activateSessions(sessions) {
-		for (var i in server.hosts) {
-			server.hosts[i].setSessions(sessions[i]);
-		}
-	}
 
 	// Read and parse the sessions file
 	fs.readFile('.sessions', 'utf8', function (error, data) {
 
 		// Catch error at reading
 		if (error) {
-			console.log('simpleS: can not read sessions file');
-			console.log(error.message + '\n');
 			callback();
 			return;
 		}
 
 		// Supervise session file parsing
 		try {
-			activateSessions(JSON.parse(data));
+			data = JSON.parse(data);
 		} catch (error) {
 			console.log('simpleS: can not parse sessions file');
 			console.log(error.message + '\n');
+		}
+
+		// If data was not parsed
+		if (typeof data === 'string') {
+			callback();
+			return;
+		}
+
+		// Activate the sessions from the file
+		for (var i in server.hosts) {
+			server.hosts[i].setSessions(data[i]);
 		}
 
 		// Continue to port listening
@@ -46,60 +147,51 @@ exports.getSessions = function (server, callback) {
 exports.handleCache = function (server, path, stream) {
 	'use strict';
 	
+	var cache = server.cache;
 	var index = 0;
 
 	// Read 64kB pieces from cache
 	function read() {
-		if (server.cache[path].length - index > 65536) {
-			stream.write(server.cache[path].slice(index, index += 65536));
-			process.nextTick(read);
+		if (cache[path].length - index > 65536) {
+			stream.write(cache[path].slice(index, index += 65536));
+			setImmediate(read);
 		} else {
-			stream.end(server.cache[path].slice(index));
+			stream.end(cache[path].slice(index));
 		}
 	}
 
-	// Callback for file reading and caching
-	function reader(error, content) {
+	if (cache[path]) {
+		read();
+		return;
+	}
 
-		// If the file can not be read
-		if (error) {
-			console.log('simpleS: can not cache "' + path + '"');
-			delete server.cache[path];
+	// Watch file changes for dynamic caching
+	fs.watch(path, {
+		persistent: false
+	}, function (event, filename) {
+
+		// Close the watcher and remove the cache on file rename/move/delete
+		if (event === 'rename') {
+			this.close();
+			delete cache[path];
 			return;
 		}
 
-		server.cache[path] = content;
-	}
-
-	// Listener for watch files
-	function watcher(event, filename) {
-		if (event === 'change') {
-			fs.readFile(path, reader);
-		} else if (event === 'rename') {
-			this.close();
-			delete server.cache[path];
-		}
-	}
-
-	if (server.cache[path]) {
-		read();
-	} else {
-
-		server.cache[path] = Buffer(0);
-
-		// Watch file changes for dynamic caching
-		fs.watch(path, {
-			persistent: false
-		}, watcher);
-
-		// Stream the data to the cache and the response
+		// Stream the data to the cache
+		cache[path] = new Buffer(0);
 		fs.ReadStream(path).on('data', function (data) {
-			server.cache[path] = Buffer.concat([server.cache[path], data]);
-			stream.write(data);
-		}).on('end', function () {
-			stream.end();
-		});
-	}
+			cache[path] = Buffer.concat([cache[path], data]);
+		})
+	});
+
+	// Stream the data to the cache and the response
+	cache[path] = new Buffer(0);
+	fs.ReadStream(path).on('data', function (data) {
+		cache[path] = Buffer.concat([cache[path], data]);
+		stream.write(data);
+	}).on('end', function () {
+		stream.end();
+	});
 };
 
 // Handle for the HTTP(S) requests
@@ -162,45 +254,46 @@ exports.handleHTTPRequest = function (request, response) {
 	// Prepare the response stream with possible compression
 	if (contentEncoding) {
 		response.setHeader('Content-Encoding', contentEncoding);
-		response.stream = zlib['create' + contentEncoding]();
+		response.stream = zlib[contentEncoding]();
 		response.stream.pipe(response);
 	} else {
 		response.stream = response;
 	}
 
 	// Routing requests
-	var requestURL = url.parse(request.url).pathname;
+	var requestURL = url.parse(request.url).pathname.substr(1);
 	var routes = host.routes;
+
+	var get = request.method === 'GET' || request.method === 'HEAD';
+	var post = request.method === 'POST';
 
 	// Create the route interface
 	var routeInterface = [
-		new requestInterface(request, response, host),
-		new responseInterface(request, response, host)
+		new requestInterface(host, request, response),
+		new responseInterface(host, request, response)
 	];
 
-	// Route GET requests
-	function getRouting() {
-		if (routes.get[requestURL]) {
-			routes.get[requestURL].apply(null, routeInterface);
-		} else if (routes.all[requestURL]) {
-			routes.all[requestURL].apply(null, routeInterface);
-		} else if (routes.serve.path || requestURL === '/simples/client.js') {
-			staticRouting(routeInterface);
-		} else {
-			response.statusCode = 404;
-			routes.error[404].apply(null, routeInterface);
-		}
-	}
+	// Routing for parametrized urls and static files
+	function advancedRouting() {
+		var urlSlices = requestURL.split('/');
 
-	// Route POST requests
-	function postRouting() {
-		if (routes.post[requestURL]) {
-			routes.post[requestURL].apply(null, routeInterface);
-		} else if (routes.all[requestURL]) {
-			routes.all[requestURL].apply(null, routeInterface);
+		// Search for an advanced route in all, get and post routes
+		var found = findAdvancedRoute(routes.all.advanced, urlSlices);
+		if (!found.route && get) {
+			found = findAdvancedRoute(routes.get.advanced, urlSlices);
+		} else if (!found.route && post) {
+			found = findAdvancedRoute(routes.post.advanced, urlSlices);
+		}
+
+		// Apply callback if found one
+		if (found.route) {
+			routeInterface[0].params = found.params;
+			found.route.callback.apply(host, routeInterface);
+		} else if (get && (routes.serve.path || requestURL === 'simples/client.js')) {
+			staticRouting();
 		} else {
 			response.statusCode = 404;
-			routes.error[404].apply(null, routeInterface);
+			routes.error[404].apply(host, routeInterface);
 		}
 	}
 
@@ -228,10 +321,10 @@ exports.handleHTTPRequest = function (request, response) {
 		if (!error && (stats.isFile() || stats.isSymbolicLink())) {
 			routeFiles(stats.mtime.valueOf());
 		} else if (!error && routes.serve.callback && stats.isDirectory()) {
-			routes.serve.callback.apply(null, routeInterface);
+			routes.serve.callback.apply(host, routeInterface);
 		} else {
 			response.statusCode = 404;
-			routes.error[404].apply(null, routeInterface);
+			routes.error[404].apply(host, routeInterface);
 		}
 	}
 
@@ -243,21 +336,21 @@ exports.handleHTTPRequest = function (request, response) {
 
 		// Verify referer
 		if (headers.referer && host.referers.length) {
-			var referer = url.parse(headers.referer).hostname;
+			referer = url.parse(headers.referer).hostname;
 			index = ~host.referers.indexOf(referer);
-			var isBanned = host.referers[0] === '*' && index || !index;
+			isBanned = host.referers[0] === '*' && index || !index;
 		}
 
 		// Response with 404 code to banned referers
 		if (hostname !== referer && isBanned) {
 			response.statusCode = 404;
-			routes.error[404].apply(null, routeInterface);
+			routes.error[404].apply(host, routeInterface);
 			return;
 		}
 
 		// Check for client api file request
-		if (requestURL === '/simples/client.js') {
-			requestURL = __dirname + '/../utils/client.js';
+		if (requestURL === 'simples/client.js') {
+			requestURL = __dirname + '/client.js';
 		} else {
 			requestURL = path.join(routes.serve.path, requestURL);
 		}
@@ -268,26 +361,28 @@ exports.handleHTTPRequest = function (request, response) {
 
 	// All requests routing
 	function routing() {
-
-		// Switch for HTTP methods
-		if (request.method === 'GET' || request.method === 'HEAD') {
-			getRouting(routeInterface);
-		} else if (request.method === 'POST') {
-			postRouting(routeInterface);
+		if ((get || post) && routes.all.raw[requestURL]) {
+			routes.all.raw[requestURL].apply(host, routeInterface);
+		} else if (get && routes.get.raw[requestURL]) {
+			routes.get.raw[requestURL].apply(host, routeInterface);
+		} else if (post && routes.post.raw[requestURL]) {
+			routes.post.raw[requestURL].apply(host, routeInterface);
+		} else if (get || post) {
+			advancedRouting();
 		} else {
 			response.statusCode = 405;
-			response.setHeader('Allow', 'GET,POST');
-			routes.error[405].apply(null, routeInterface);
+			response.setHeader('Allow', 'GET,HEAD,POST');
+			routes.error[405].apply(host, routeInterface);
 		}
 	}
 
 	// Handler for internal errors of the server
-	function errorHandler() {
+	function errorHandler(error) {
 		console.log('simpleS: Internal Server Error > "' + request.url + '"');
 		console.log(error.stack + '\n');
 		response.statusCode = 500;
 		try {
-			routes.error[500].apply(null, routeInterface);
+			routes.error[500].apply(host, routeInterface);
 		} catch (error) {
 			console.log('simpleS: can not apply route for error 500');
 			console.log(error.stack + '\n');
@@ -300,11 +395,13 @@ exports.handleHTTPRequest = function (request, response) {
 
 		// Vulnerable code handling
 		try {
-			routing(routeInterface);
+			routing();
 		} catch (error) {
-			errorHandler(routeInterface);
+			errorHandler(error);
 		}
 	});
+
+	request.resume();
 };
 
 // Get the sessions from the hosts and save them to file

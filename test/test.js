@@ -39,23 +39,26 @@ server
 		}
 		response.drain(__dirname + '/root/index.html');
 	})
-	.get('/accept', function (request, response) {
+	.get('accept', function (request, response) {
 		response.end('CORS');
 	})
-	.get('/cookies', function (request, response) {
+	.get('cookies', function (request, response) {
 		Object.keys(request.query).forEach(function (element) {
 			response.cookie(element, request.query[element]);
 		});
 		response.end('Cookies');
 	})
-	.get('/error', function (request, response) {
+	.get('error', function (request, response) {
 		0 = infinity;
 	})
-	.get('/lang', function (request, response) {
+	.get('lang', function (request, response) {
 		response.lang('en');
 		response.end('Language');
 	})
-	.get('/get', function (request, response) {
+	.get('param/:param', function (request, response) {
+		response.send(request.params);
+	})
+	.get('get', function (request, response) {
 		console.log(request.session.name);
 		response.write('body: ' + request.body + '\n');
 		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
@@ -66,29 +69,29 @@ server
 		response.write('url: ' + JSON.stringify(request.url) + '\n');
 		response.end();
 	})
-	.get('/render', function (request, response) {
+	.get('render', function (request, response) {
 		response.render('Rendered string');
 	})
-	.get('/redirect', function (request, response) {
+	.get('redirect', function (request, response) {
 		response.redirect('/');
 	})
-	.get('/start', function (request, response) {
+	.get('start', function (request, response) {
 		response.end('Starting / Restarting');
 		server.start(12345);
 	})
-	.get('/stop', function (request, response) {
+	.get('stop', function (request, response) {
 		response.end('Stopping');
 		server.stop();
 	})
-	.get('/type', function (request, response) {
+	.get('type', function (request, response) {
 		response.type('json');
 		response.send({type:'json'});
 	})
-	.get('/writeend', function (request, response) {
+	.get('writeend', function (request, response) {
 		response.write('Write');
 		response.end('End');
 	})
-	.post('/post', function (request, response) {
+	.post('post', function (request, response) {
 		response.write('body: ' + request.body + '\n');
 		response.write('cookies: ' + JSON.stringify(request.cookies) + '\n');
 		response.write('files: ' + JSON.stringify(request.files) + '\n');
@@ -215,6 +218,15 @@ var tests = {
 		callback: function (response, content) {
 			equal(response.headers['content-language'], 'en');
 			equal(content, 'Language');
+			test('params');
+		}
+	},
+	params: {
+		url: '/param/works',
+		method: 'GET',
+		data: null,
+		callback: function (response, content) {
+			equal(content, '{"param":"works"}');
 			test('redirect');
 		}
 	},
@@ -257,7 +269,8 @@ var tests = {
 		data: null,
 		callback: function (response, content) {
 			equal(content, 'Stopping');
-			console.log('\nMore tests can be made in browser,\njust run simples/test/test.js script');
+			console.log('\nMore tests can be made in browser,');
+			console.log('just run "simples/test/test.js" script');
 		}
 	},
 	type: {

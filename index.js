@@ -1,6 +1,10 @@
+var fs = require('fs');
+var http = require('http');
+var https = require('https');
+
 var host = require('./lib/host');
-var server = require('./lib/server');
 var utils = require('./utils/utils');
+var ws = require('./lib/ws');
 
 // SimpleS prototype constructor
 var simples = module.exports = function (port, options) {
@@ -14,14 +18,63 @@ var simples = module.exports = function (port, options) {
 	// Call host in this context and set it as the main host
 	host.call(this, 'main');
 
-	// Shortcut to this context
 	var that = this;
+	var server;
 
-	// Listener for manual stop
-	function sigintListener() {
-		console.log('\nManual stopping simpleS, this may take few seconds');
-		that.stop();
+	// Prepare the server
+	if (options && options.key && options.cert) {
+		var key;
+		var cert;
+
+		// Create the key and the certificate
+		try {
+			key = fs.readFileSync(options.key);
+			cert = fs.readFileSync(options.cert);
+		} catch (error) {
+			console.log('simpleS: Could not read data for HTTPS');
+			console.log('HTTP server will be created on port ' + port);
+			console.log(error.message + '\n');
+			server = http.Server(utils.handleHTTPRequest);
+			return;
+		}
+
+		// Add the content of the key and the certificate
+		options = {
+			key: key,
+			cert: cert
+		};
+
+		server = https.Server(options, utils.handleHTTPRequest);
+	} else {
+		server = http.Server(utils.handleHTTPRequest);
 	}
+
+	// Container for caching static files content
+	server.cache = {};
+
+	// The hosts of the server
+	server.hosts = {
+		main: this
+	};
+
+	// Catch runtime errors
+	server.on('error', function (error) {
+		console.log('simpleS: Server Error');
+		console.log(error.message + '\n');
+		that.started  = false;
+		that.busy = false;
+	});
+
+	// Inform when the server is not busy
+	server.on('release', function (callback) {
+		that.busy = false;
+		if (callback) {
+			callback.call(that);
+		}
+	});
+
+	// Listen for upgrade connections dedicated for WebSocket
+	server.on('upgrade', ws);
 
 	// Set simpleS properties
 	Object.defineProperties(this, {
@@ -30,29 +83,11 @@ var simples = module.exports = function (port, options) {
 			writable: true
 		},
 		server: {
-			value: server(this, options)
-		},
-		sigintListener: {
-			value: sigintListener
+			value: server
 		},
 		started: {
 			value: false,
 			writable: true
-		}
-	});
-
-	// Catch runtime errors
-	this.server.on('error', function (error) {
-		console.log('simpleS: Server Error\n' + error.message + '\n');
-		that.started  = false;
-		that.busy = false;
-	});
-
-	// Inform when the server is not busy
-	this.server.on('release', function (callback) {
-		that.busy = false;
-		if (callback) {
-			callback.call(that);
 		}
 	});
 
@@ -89,9 +124,6 @@ simples.prototype.start = function (port, callback) {
 
 	// Set the server to listen the port
 	function listen() {
-
-		// Bind the manual stop listener
-		process.once('SIGINT', that.sigintListener);
 
 		// Start all existing hosts
 		for (var i in that.server.hosts) {
@@ -140,9 +172,6 @@ simples.prototype.stop = function (callback) {
 		that.started = false;
 		that.busy = true;
 
-		// Unbind the manual stop listener
-		process.removeListener('SIGINT', that.sigintListener);
-
 		// Close all existing hosts
 		for (var i in that.server.hosts) {
 			that.server.hosts[i].close();
@@ -155,12 +184,10 @@ simples.prototype.stop = function (callback) {
 	}
 
 	// Stop the server only if it is running
-	if (this.started) {
-		if (this.busy) {
-			this.server.once('release', stop);
-		} else {
-			stop();
-		}
+	if (this.busy && this.started) {
+		this.server.once('release', stop);
+	} else if (this.started) {
+		stop();
 	}
 
 	return this;

@@ -89,7 +89,8 @@ var ws = simples.ws = function (host, protocols, raw) {
 	// Create internal parameters
 	Object.defineProperties(this, {
 		host: {
-			value: host
+			value: host,
+			writable: true
 		},
 		listeners: {
 			value: {}
@@ -97,23 +98,28 @@ var ws = simples.ws = function (host, protocols, raw) {
 		queue: {
 			value: []
 		},
+		opening: {
+			value: false,
+			writable: true
+		},
 		protocols: {
-			value: protocols
+			value: protocols,
+			writable: true
 		},
 		raw: {
-			value: raw || false
+			value: !!raw
 		},
 		socket: {
 			value: null,
 			writable: true
 		},
 		started: {
-			value: null,
+			value: false,
 			writable: true
 		}
 	});
 
-	this.open(host, protocols);
+	this.open();
 };
 
 // Set the error listener
@@ -145,6 +151,73 @@ ajax.prototype.success = function (listener) {
 
 	this.listeners.success = listener;
 	return this;
+};
+
+// Open or reopen the WebSocket socket
+ws.prototype.open = function (host, protocols) {
+	'use strict';
+
+	// Shortcut to this context
+	var that = this;
+	var protocol = 'ws';
+
+	host = host || this.host;
+	protocols = protocols || this.protocols;
+
+	if (location.protocol === 'https:') {
+		protocol += 's';
+	}
+
+	if (host.charAt(0) === '/' && host.indexOf(location.host) !== 0) {
+		this.host = host = location.host + host;
+	}
+
+	this.opening = true;
+
+	// Close the previously used socket
+	this.close();
+
+	// Initialize the WebSocket
+	this.socket = new WebSocket(protocol + '://' + host, protocols);
+
+	// Catch connection close
+	this.socket.onclose = function () {
+		that.started = false;
+		that.emit('close');
+	};
+
+	// Catch connection errors
+	this.socket.onerror = function () {
+		that.emit('error', 'simpleS: can not connect to the WebSocket server');
+	};
+
+	// Listen for incoming messages
+	this.socket.onmessage = function (event) {
+		if (that.raw) {
+			that.emit('message', event.data);
+			return;
+		}
+		try {
+			var message = JSON.parse(event.data);
+			that.emit(message.event, message.data);
+		} catch (error) {
+			that.emit('error', 'simpleS: can not parse incoming message');
+			that.emit('message', event.data);
+		}
+	};
+
+	// Listen for socket open
+	this.socket.onopen = function () {
+		
+		// Set the started flag
+		that.started = true;
+		that.opening = false;
+
+		// send the messages from the queue
+		while (that.queue.length) {
+			that.socket.send(that.queue.shift());
+		}
+	};
 };
 
 // Close the WebSocket
@@ -314,62 +387,10 @@ ws.prototype.send = function () {
 		this.queue[this.queue.length] = data;
 
 		// If connection is down open a new one
-		if (this.started === false) {
-			this.open(this.host, this.protocols);
+		if (!this.started && !this.opening) {
+			this.open();
 		}
 	}
 	
 	return this;
-};
-
-// Open or reopen the WebSocket socket
-ws.prototype.open = function (host, protocols) {
-	'use strict';
-
-	// Shortcut to this context
-	var that = this;
-
-	// Close the previously used socket
-	this.close();
-
-	// Initialize the WebSocket
-	this.socket = new WebSocket('ws://' + host, protocols);
-
-	// Catch connection close
-	this.socket.onclose = function () {
-		that.started = false;
-		that.emit('close');
-	};
-
-	// Catch connection errors
-	this.socket.onerror = function () {
-		that.emit('error', 'simpleS: can not connect to the WebSocket server');
-	};
-
-	// Listen for incoming messages
-	this.socket.onmessage = function (event) {
-		if (that.raw) {
-			that.emit('message', event.data);
-			return;
-		}
-		try {
-			var message = JSON.parse(event.data);
-			that.emit(message.event, message.data);
-		} catch (error) {
-			that.emit('error', 'simpleS: can not parse incoming message');
-			that.emit('message', event.data);
-		}
-	};
-
-	// Listen for socket open
-	this.socket.onopen = function () {
-		
-		// Set the started flag
-		that.started = true;
-
-		// send the messages from the queue
-		while (that.queue.length) {
-			that.socket.send(that.queue.shift());
-		}
-	};
 };

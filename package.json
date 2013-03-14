@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"description": "Simple HTTP(S) Server",
 	"keywords": [
 		"cors",
@@ -33,6 +33,6 @@
 		"url": "http://github.com/micnic/simples"
 	},
 	"engines": {
-		"node": ">=0.8"
+		"node": ">=0.10"
 	}
 }

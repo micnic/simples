@@ -1,9 +1,10 @@
-# simpleS 0.3.4
+# simpleS 0.3.5
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
 - Simple structure with minimum configuration
 - Routing for http GET and POST requests, static files and errors
+- Routes with named parameters
 - Dynamic caching for static files
 - Virtual Hosting
 - WebSocket implementation (version 13, RFC 6455)
@@ -14,13 +15,14 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 - Easy to use interfaces for requests and responses
 - Client-side simple API for AJAX and WebSocket
 
-Tested with node.js 0.8+
+Works in Node.JS 0.10+
 
 *THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED*
 
 ### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
 
 #### More simple modules
+[simpleR](http://micnic.github.com/simpleR/)
 [simpleT](http://micnic.github.com/simpleT/)
 
 ## Instalation
