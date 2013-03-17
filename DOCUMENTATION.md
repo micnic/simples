@@ -33,6 +33,14 @@ var server = simples(443, {
 });
 ```
 
+To create a really good HTTPS server it will be needed to add a redirect for the simple HTTP connections (see `.redirect()` method of Response Interface). As an example consider this one:
+
+```javascript
+var redirect = simples(80).get('/', function (request, response) {
+	response.redirect('https://localhost/');
+});
+```
+
 ## Server Management
 
 ### Starting and Restarting
@@ -43,7 +51,7 @@ port: number
 
 callback: function(0)
 
-Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if they exist or they have a valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served.
+Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if they exist or they have a valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port or to start a closed simpleS instance.
 
 ```javascript
 server.start(80, function () {
@@ -57,7 +65,7 @@ server.start(80, function () {
 
 callback: function(0)
 
-Stop the server. The existing sessions are saved to the `.sessions` file for further access. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds, for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served.
+Stop the server. The existing sessions are saved to the `.sessions` file for further access. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds, for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. The purpose of this method is to provide a way for closing the server and save the existing session for future use.
 
 ```javascript
 server.stop(function () {
@@ -74,14 +82,14 @@ name: string
 simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts.
 
 ```javascript
-server.host('example.com');
+var host = server.host('example.com');
 ```
 
 #### Host Management
 
 `.open()`
 
-Make the host active, this method is called automatically when a new host is created.
+Make the host active, this method is called automatically when a new host is created, it is not needed to call it explicitly on host creation.
 
 `.close()`
 
@@ -119,36 +127,51 @@ server.referer('example.com', 'test.com'); // Will respond only to these 2 refer
 
 ### Templating
 
-`.engine(engine, render)`
+`.engine(engine[, prefix])`
 
 engine: object
 
-render: string
+prefix: string
 
-simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine and its rendering method, if the method is not defined then the engine itself or its `.render()` method, if available, will be used to render the response. Recommended template engine: [simpleT](http://micnic.github.com/simpleT/). This method is applicable on each host independently (see Virtual Hosting).
+simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine, the `.render()` method if available or the template engine itself  will be used to render the response. The templates are rendered using the `.render()` method of Response Interface and by adding the prefix it is possible to define a path to the container folder with the templates. The rendering method should accept 2 parameters, `source` and `imports`, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT/).
 
 ```javascript
+// In all examples the templates will be taken from "'templates/' + source"
+
 var noopEngine = {
-	render: function (string) {
-		console.log(string);
-		return string;
+	render: function (source) {
+		console.log(source);
+		return source;
 	}
 };
 
-server.engine(noopEngine); // or server.engine(noopEngine, 'render');
+server.engine(noopEngine, 'templates');
 
 // Another example
-var noopRender = function (string) {
-	console.log(string);
-	return string;
+var noopRender = function (source) {
+	console.log(source);
+	return source;
 }
 
-server.engine(noopRender);
+server.engine(noopRender, 'templates');
+
+// Wrapped engine example
+var unsupportedEngine = {
+	renderFile: function (imports, source) {
+		// Some code
+	}
+};
+
+server.engine({
+	render: function (source, imports) {
+		unsupportedEngine.renderFile(imports, source);
+	}
+}, 'templates');
 ```
 
 ## Routing
 
-All the methods described below are applicable on each host independently (see Virtual Hosting). All route paths are case sensitive and should contain only paths without queries to exclude possible unexpected behavior and to ensure improved performance, undesired data will be cut off. All routes are relative to the host root and may not begin with `/`, simpleS will ignore it anyway. The routes may be fixed or can contain named parameters. Fixed routes are fast and simple, while the second ones are more flexible and handy in complex applications. The named parameters in the advanced routes are mandatory, if at least one component of the route is absent in the url then the url is not routed.
+All the methods described below are applicable on each host independently (see [Virtual Hosting](#virtual-hosting)). All route paths are case sensitive and should contain only paths without queries to exclude possible unexpected behavior and to ensure improved performance, undesired data will be cut off. All routes are relative to the host root and may not begin with `/`, simpleS will ignore it anyway. The routes may be fixed or can contain named parameters. Fixed routes are fast and simple, while the second ones are more flexible and handy in complex applications. The named parameters in the advanced routes are mandatory, if at least one component of the route is absent in the url then the url is not routed.
 
 ```javascript
 'user/john/action/thinking'; // Fixed route
@@ -178,7 +201,7 @@ route: string
 
 callback: function(2)
 
-Listen for both `GET` and `POST` requests and uses the callback function with request and response as parameters, this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods. If route is omitted, then the callback is triggered on root.
+Listen for both `GET` and `POST` requests and uses the callback function with request and response as parameters, this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
 
 ```javascript
 server.all('/', function (request, response) {
@@ -194,7 +217,7 @@ route: string
 
 callback: function(2)
 
-Listen for get requests and uses the callback function with request and response as parameters. If route is omitted, then the callback is triggered on root.
+Listen for get requests and uses the callback function with request and response as parameters.
 
 ```javascript
 server.get('/', function (request, response) {
@@ -210,7 +233,7 @@ route: string
 
 callback: function(2)
 
-Listen for post requests and uses the callback function with request and response as parameters. If route is omitted, then the callback is triggered on root.
+Listen for post requests and uses the callback function with request and response as parameters.
 
 ```javascript
 server.post('/', function (request, response) {
@@ -352,6 +375,16 @@ response.cookie('user', 'me', {
 });
 ```
 
+#### .removeCookie(name)
+
+name: string
+
+Sets a cookie with the expiration time the current time, the browser will remove the stored cookie with the specified name because its time has passed.
+
+```javascript
+response.removeCookie('user');
+```
+
 #### .header(name, value)
 
 name: string
@@ -436,11 +469,13 @@ Get the content of the file located on the specified path and write it to the re
 response.drain('path/to/index.html');
 ```
 
-#### .render([arguments])
+#### .render(source, imports)
 
-arguments: arguments for the template engine
+source: string
 
-Renders the response using the template engine, arguments will be those necessary for the template engine defined by the host. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+imports: object
+
+Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
 response.render('HelloWorld');
@@ -478,7 +513,7 @@ config: object
 
 callback: function(1)
 
-Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. This method is called automatically when a new WebSocket host is created.
+Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. This method is called automatically when a new WebSocket host is created, it is not needed to call it explicitly on WebSocket host creation.
 
 ```javascript
 echo.start({
@@ -544,6 +579,10 @@ The array of protocols of the WebSocket connection.
 `.session`
 
 See Request Interface `.session`.
+
+`.close()`
+
+Sends the last frame of the WebSocket connection and then closes the socket.
 
 `.send([event, ]data)`
 event: string

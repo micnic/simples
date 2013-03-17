@@ -14,7 +14,7 @@ var noopEngine = {
 };
 
 server
-	.engine(noopEngine, 'render')
+	.engine(noopEngine)
 	.accept('*')
 	.referer('*', 'null.com')
 	.serve(__dirname + '/root', function (request, response) {

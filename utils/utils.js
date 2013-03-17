@@ -135,7 +135,7 @@ exports.getSessions = function (server, callback) {
 
 		// Activate the sessions from the file
 		for (var i in server.hosts) {
-			server.hosts[i].setSessions(data[i]);
+			server.hosts[i].manageSessions(data[i]);
 		}
 
 		// Continue to port listening
@@ -404,6 +404,38 @@ exports.handleHTTPRequest = function (request, response) {
 	request.resume();
 };
 
+// Populate sessions from an object or return them
+exports.manageSessions = function (sessions) {
+	'use strict';
+
+	function cleaner(index) {
+		delete this.sessions[index];
+	}
+
+	if (sessions) {
+		this.sessions = sessions;
+
+		for (var i in this.sessions) {
+			this.sessions[i]._timeout = setTimeout(cleaner, this.sessions[i]._timeout, i);
+		}
+	} else {
+		var timeout;
+		var start;
+		var end;
+
+		for (var i in this.sessions) {
+			timeout = this.sessions[i]._timeout;
+			start = new Date(timeout._idleStart).valueOf();
+			end = new Date(start + timeout._idleTimeout).valueOf();
+			clearTimeout(timeout);
+			this.sessions[i]._timeout = end - new Date().valueOf();
+		}
+
+		return this.sessions;
+	}
+	
+}
+
 // Get the sessions from the hosts and save them to file
 exports.saveSessions = function (server, callback) {
 	'use strict';
@@ -413,7 +445,7 @@ exports.saveSessions = function (server, callback) {
 
 	// Select and deactivate sessions
 	for (var i in server.hosts) {
-		sessions[i] = server.hosts[i].getSessions();
+		sessions[i] = server.hosts[i].manageSessions();
 	}
 
 	// Prepare sessions for writing on file
