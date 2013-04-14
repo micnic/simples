@@ -17,7 +17,7 @@ var request = {
 	}
 };
 
-var parsedCookies = requestInterface.parseCookies(request, host);
+var parsedCookies = requestInterface.parseCookies(host, request);
 
 clearTimeout(host.sessions['0aA1bB2c']._timeout);
 

@@ -1,29 +1,27 @@
-var fs = require('fs');
-var path = require('path');
-var url = require('url');
-var zlib = require('zlib');
-
-var mime = require('./mime');
-var requestInterface = require('../lib/request');
-var responseInterface = require('../lib/response');
+var fs = require('fs'),
+	mime = require('./mime'),
+	path = require('path'),
+	url = require('url'),
+	zlib = require('zlib');
 
 // Default callback for "Not Found"
-function e404(request, response) {
-	response.end('"' + request.url.path + '" Not Found');
+function e404(connection) {
+	connection.end('"' + connection.url.path + '" Not Found');
 }
 
 // Default callback for "Method Not Allowed"
-function e405(request, response) {
-	response.end('"' + request.method + '" Method Not Allowed');
+function e405(connection) {
+	connection.end('"' + connection.method + '" Method Not Allowed');
 }
 
 // Default callback for "Internal Server Error"
-function e500(request, response) {
-	response.end('"' + request.url.path + '" Internal Server Error');
+function e500(connection) {
+	connection.end('"' + connection.url.path + '" Internal Server Error');
 }
 
 // Returns the named parameters of an advanced route
 function getNamedParams(route, url) {
+	'use strict';
 	var index = route.length;
 	var params = {};
 	while (index--) {
@@ -35,21 +33,6 @@ function getNamedParams(route, url) {
 		}
 	}
 	return params;
-}
-
-// Returns the advanced route if found
-function findAdvancedRoute(routes, url) {
-	var index = routes.length;
-	var params;
-	while (!params && index--) {
-		if (routes[index].slices.length === url.length) {
-			params = getNamedParams(routes[index].slices, url);
-		}
-	}
-	return {
-		params: params,
-		route: routes[index]
-	};
 }
 
 // Add all kinds of routes
@@ -106,6 +89,44 @@ exports.defaultRoutes = function () {
 	};
 };
 
+// Returns the advanced route if found
+exports.findAdvancedRoute = function (routes, url) {
+	'use strict';
+	var index = routes.length;
+	var params;
+	while (!params && index--) {
+		if (routes[index].slices.length === url.length) {
+			params = getNamedParams(routes[index].slices, url);
+		}
+	}
+	return {
+		params: params,
+		route: routes[index]
+	};
+};
+
+// Returns a random session name
+exports.generateSessionName = function () {
+	var chars = [];
+	var count = 16;
+	var value;
+
+	// Generate numbers in loop
+	while (count--) {
+
+		// Get a random value from 0 to 61
+		value = Math.round(Math.random() * 61);
+
+		// Prepare char code 0-9a-zA-Z
+		value += value < 10 && 48 || value < 36 && 55 || 61;
+
+		// Append the value to the chars array
+		chars[chars.length] = value;
+	}
+
+	return String.fromCharCode.apply(null, chars);
+}
+
 // Get sessions from file and activate them in the hosts
 exports.getSessions = function (server, callback) {
 	'use strict';
@@ -144,10 +165,9 @@ exports.getSessions = function (server, callback) {
 };
 
 // Handle for static files content cache
-exports.handleCache = function (server, path, stream) {
+exports.handleCache = function (cache, path, stream) {
 	'use strict';
 	
-	var cache = server.cache;
 	var index = 0;
 
 	// Read 64kB pieces from cache
@@ -179,229 +199,20 @@ exports.handleCache = function (server, path, stream) {
 
 		// Stream the data to the cache
 		cache[path] = new Buffer(0);
-		fs.ReadStream(path).on('data', function (data) {
-			cache[path] = Buffer.concat([cache[path], data]);
+		fs.ReadStream(path).on('readable', function () {
+			cache[path] = Buffer.concat([cache[path], this.read()]);
 		})
 	});
 
 	// Stream the data to the cache and the response
 	cache[path] = new Buffer(0);
-	fs.ReadStream(path).on('data', function (data) {
+	fs.ReadStream(path).on('readable', function () {
+		var data = this.read();
 		cache[path] = Buffer.concat([cache[path], data]);
 		stream.write(data);
 	}).on('end', function () {
 		stream.end();
 	});
-};
-
-// Handle for the HTTP(S) requests
-exports.handleHTTPRequest = function (request, response) {
-	'use strict';
-
-	// Set the keep alive timeout of the socket to 5 seconds
-	request.connection.setTimeout(5000);
-
-	var that = this;
-
-	var headers = request.headers;
-	var hostname = headers.host;
-	var index = hostname.indexOf(':');
-	if (index > 0) {
-		hostname = hostname.substring(0, index);
-	}
-
-	// Get the host
-	var host;
-	if (this.hosts[hostname] && this.hosts[hostname].started) {
-		host = this.hosts[hostname];
-	} else {
-		host = this.hosts.main;
-	}
-
-	// CORS limitation
-	if (headers.origin) {
-		var origin = headers.origin;
-		index = ~host.origins.indexOf(origin);
-		response.setHeader('Access-Control-Allow-Credentials', 'True');
-		response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-		response.setHeader('Access-Control-Allow-Methods', 'GET,POST');
-
-		// Check for accepted origins
-		if (index || host.origins[0] === '*' && !index) {
-			response.setHeader('Access-Control-Allow-Origin', origin);
-		} else {
-			response.setHeader('Access-Control-Allow-Origin', hostname);
-		}
-	}
-
-	// Check for preflighted request
-	if (request.method === 'OPTIONS') {
-		response.end();
-		return;
-	}
-
-	// Check for supported content encodings of the client
-	var acceptEncoding = headers['accept-encoding'];
-	var contentEncoding;
-	if (acceptEncoding) {
-		if (~acceptEncoding.indexOf('deflate')) {
-			contentEncoding = 'Deflate';
-		} else if (~acceptEncoding.indexOf('gzip')) {
-			contentEncoding = 'Gzip';
-		}
-	}
-
-	// Prepare the response stream with possible compression
-	if (contentEncoding) {
-		response.setHeader('Content-Encoding', contentEncoding);
-		response.stream = zlib[contentEncoding]();
-		response.stream.pipe(response);
-	} else {
-		response.stream = response;
-	}
-
-	// Routing requests
-	var requestURL = url.parse(request.url).pathname.substr(1);
-	var routes = host.routes;
-
-	var get = request.method === 'GET' || request.method === 'HEAD';
-	var post = request.method === 'POST';
-
-	// Create the route interface
-	var routeInterface = [
-		new requestInterface(host, request, response),
-		new responseInterface(host, request, response)
-	];
-
-	// Routing for parametrized urls and static files
-	function advancedRouting() {
-		var urlSlices = requestURL.split('/');
-
-		// Search for an advanced route in all, get and post routes
-		var found = findAdvancedRoute(routes.all.advanced, urlSlices);
-		if (!found.route && get) {
-			found = findAdvancedRoute(routes.get.advanced, urlSlices);
-		} else if (!found.route && post) {
-			found = findAdvancedRoute(routes.post.advanced, urlSlices);
-		}
-
-		// Apply callback if found one
-		if (found.route) {
-			routeInterface[0].params = found.params;
-			found.route.callback.apply(host, routeInterface);
-		} else if (get && (routes.serve.path || requestURL === 'simples/client.js')) {
-			staticRouting();
-		} else {
-			response.statusCode = 404;
-			routes.error[404].apply(host, routeInterface);
-		}
-	}
-
-	// Route static files or their symbolic links
-	function routeFiles(lastModified) {
-		var extension = path.extname(requestURL).substr(1);
-		var notModified = Number(headers['if-modified-since']) === lastModified;
-		var code = 200;
-		if (notModified) {
-			code = 304;
-		}
-		response.writeHead(code, {
-			'Content-Type': mime[extension] || mime['default'],
-			'Last-Modified': lastModified
-		});
-		if (notModified) {
-			response.end();
-		} else {
-			exports.handleCache(that, requestURL, response.stream);
-		}
-	}
-
-	// Callback for stats of static path
-	function statCallback(error, stats) {
-		if (!error && (stats.isFile() || stats.isSymbolicLink())) {
-			routeFiles(stats.mtime.valueOf());
-		} else if (!error && routes.serve.callback && stats.isDirectory()) {
-			routes.serve.callback.apply(host, routeInterface);
-		} else {
-			response.statusCode = 404;
-			routes.error[404].apply(host, routeInterface);
-		}
-	}
-
-	// Route static files and directories
-	function staticRouting() {
-
-		var referer = hostname;
-		var isBanned = false;
-
-		// Verify referer
-		if (headers.referer && host.referers.length) {
-			referer = url.parse(headers.referer).hostname;
-			index = ~host.referers.indexOf(referer);
-			isBanned = host.referers[0] === '*' && index || !index;
-		}
-
-		// Response with 404 code to banned referers
-		if (hostname !== referer && isBanned) {
-			response.statusCode = 404;
-			routes.error[404].apply(host, routeInterface);
-			return;
-		}
-
-		// Check for client api file request
-		if (requestURL === 'simples/client.js') {
-			requestURL = __dirname + '/client.js';
-		} else {
-			requestURL = path.join(routes.serve.path, requestURL);
-		}
-
-		// Verify the stats of the path
-		fs.stat(requestURL, statCallback);
-	}
-
-	// All requests routing
-	function routing() {
-		if ((get || post) && routes.all.raw[requestURL]) {
-			routes.all.raw[requestURL].apply(host, routeInterface);
-		} else if (get && routes.get.raw[requestURL]) {
-			routes.get.raw[requestURL].apply(host, routeInterface);
-		} else if (post && routes.post.raw[requestURL]) {
-			routes.post.raw[requestURL].apply(host, routeInterface);
-		} else if (get || post) {
-			advancedRouting();
-		} else {
-			response.statusCode = 405;
-			response.setHeader('Allow', 'GET,HEAD,POST');
-			routes.error[405].apply(host, routeInterface);
-		}
-	}
-
-	// Handler for internal errors of the server
-	function errorHandler(error) {
-		console.log('simpleS: Internal Server Error > "' + request.url + '"');
-		console.log(error.stack + '\n');
-		response.statusCode = 500;
-		try {
-			routes.error[500].apply(host, routeInterface);
-		} catch (error) {
-			console.log('simpleS: can not apply route for error 500');
-			console.log(error.stack + '\n');
-			response.stream.destroy();
-		}
-	}
-
-	// Start acting when the request ended
-	request.on('end', function () {
-
-		// Vulnerable code handling
-		try {
-			routing();
-		} catch (error) {
-			errorHandler(error);
-		}
-	});
-
-	request.resume();
 };
 
 // Populate sessions from an object or return them
@@ -434,6 +245,229 @@ exports.manageSessions = function (sessions) {
 		return this.sessions;
 	}
 	
+}
+
+// Get the cookies and the session
+exports.parseCookies = function (host, request) {
+	var cookies = {};
+	var session = null;
+
+	// Populate cookies and session
+	if (request.headers.cookie) {
+		var content = request.headers.cookie;
+		var currentChar;
+		var index = 0;
+		while (currentChar = content.charAt(index)) {
+			while (currentChar = content.charAt(index), currentChar === ' ') {
+				index++;
+			}
+			if (!currentChar) {
+				break;
+			}
+			var name = '';
+			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== '=') {
+				name += currentChar;
+				index++;
+			}
+			if (!currentChar) {
+				break;
+			}
+			while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
+				index++;
+			}
+			if (!currentChar) {
+				break;
+			}
+			var value = '';
+			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
+				value += currentChar;
+				index++;
+			}
+			value = decodeURIComponent(value);
+			if (name === '_session') {
+				session = host.sessions[value];
+			} else {
+				cookies[name] = value;
+			}
+			index++;
+		}
+	}
+
+	return {
+		cookies: cookies,
+		session: session
+	}
+};
+
+// Get the languages accepted by the client
+exports.parseLangs = function (request) {
+
+	// Return an empty array if no accept language header
+	if (!request.headers['accept-language']) {
+		return [];
+	}
+
+	var content = request.headers['accept-language'];
+	var currentChar;
+	var index = 0;
+	var lang;
+	var langs = [];
+	var quality;
+	while (currentChar = content.charAt(index)) {
+		lang = '';
+		quality = '';
+		while (currentChar = content.charAt(index), currentChar === ' ') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',' && currentChar !== ';') {
+			lang += currentChar;
+			index++;
+		}
+		index++;
+		if (!currentChar || currentChar === ',') {
+			langs.push({
+				lang: lang,
+				quality: 1
+			});
+			continue;
+		}
+		while (currentChar = content.charAt(index), currentChar === ' ') {
+			index++;
+		}
+		if (currentChar !== 'q') {
+			break;
+		}
+		index++;
+		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',') {
+			quality += currentChar;
+			index++;
+		}
+		langs.push({
+			lang: lang,
+			quality: Number(quality)
+		});
+		index++;
+	}
+
+	langs = langs.sort(function (first, second) {
+		return second.quality - first.quality;
+	});
+
+	var index = langs.length;
+
+	while (index--) {
+		langs[index] = langs[index].lang;
+	}
+
+	return langs;
+};
+
+// Parse data sent via POST method
+exports.parsePOST = function (request, that) {
+	'use strict';
+	if (!request.headers['content-type']) {
+		return;
+	}
+	var content = request.headers['content-type'];
+	var index = 0;
+	var currentChar;
+	while (currentChar = content.charAt(index), currentChar === ' ') {
+		index++;
+	}
+	if (!currentChar) {
+		return;
+	}
+	var contentType = '';
+	while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
+		contentType += currentChar;
+		index++;
+	}
+	if (contentType === 'multipart/form-data') {
+		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === ';') {
+			index++;
+		}
+		if (!currentChar) {
+			return;
+		}
+		var buffer = '';
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== '=') {
+			buffer += currentChar;
+			index++;
+		}
+		if (buffer !== 'boundary' || !currentChar) {
+			return;
+		}
+		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
+			index++;
+		}
+		if (!currentChar) {
+			return;
+		}
+		var boundary = '';
+		while (currentChar = content.charAt(index)) {
+			boundary += currentChar;
+			index++;
+		}
+		if (!boundary) {
+			return;
+		}
+		content = that.body;
+		index = 0;
+		var boundaryLength = boundary.length;
+		var filename;
+		var name;
+		var type;
+		var tempIndex;
+		var filecontent;
+		while (content.substr(index, 4 + boundaryLength) === '--' + boundary + '\r\n') {
+			index += 4 + boundaryLength;
+			index = content.indexOf('name="', index) + 6;
+			if (index < 6) {
+				break;
+			}
+			name = content.substring(index, content.indexOf('"', index));
+			index += name.length + 1;
+			tempIndex = content.indexOf('filename="', index) + 10;
+			filename = undefined;
+			if (tempIndex >= 10) {
+				filename = content.substring(tempIndex, content.indexOf('"', tempIndex));
+				index += 11 + filename.length;
+				index = content.indexOf('Content-Type: ', index) + 14;
+				type = content.substring(index, content.indexOf('\r', index));
+				index += type.length;
+			}
+			index += 4;
+			filecontent = '';
+			while (currentChar = content.charAt(index), content.substr(index, 4 + boundaryLength) !== '\r\n--' + boundary) {
+				filecontent += currentChar;
+				index++;
+			}
+			if (filename) {
+				that.files[name] = {
+					content: filecontent,
+					filename: filename,
+					type: type
+				};
+			} else {
+				that.query[name] = filecontent;
+			}
+			index += 2;
+		}
+	} else {
+		var POSTquery = qs.parse(that.body);
+		for (var i in POSTquery) {
+			that.query[i] = POSTquery[i];
+		}
+	}
 }
 
 // Get the sessions from the hosts and save them to file

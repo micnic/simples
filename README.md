@@ -1,29 +1,27 @@
-# simpleS 0.3.6
+# simpleS 0.3.7
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
 - Simple structure with minimum configuration
-- Routing for http GET and POST requests, static files and errors
-- Routes with named parameters
-- Dynamic caching for static files
+- Advanced routing for http GET and POST requests, static files and errors
+- Automatic response compression (deflate and gzip)
+- Easy to use interfaces for requests and responses
 - Virtual Hosting
-- WebSocket implementation (version 13, RFC 6455)
 - CORS support and Referer blocking
 - Sessions
 - Template engine connection
-- Automatic response compression (deflate and gzip)
-- Easy to use interfaces for requests and responses
+- WebSocket implementation (version 13, RFC 6455)
 - Client-side simple API for AJAX and WebSocket
 
-Works in Node.JS 0.10+
+#### Works in Node.JS 0.10+
+#### Any feedback is welcome!
 
-*THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED*
+#### More simple modules:
+- [simpleR](http://micnic.github.com/simpleR/)
+- [simpleT](http://micnic.github.com/simpleT/)
 
-### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
-
-#### More simple modules
-[simpleR](http://micnic.github.com/simpleR/)
-[simpleT](http://micnic.github.com/simpleT/)
+## [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
+Read it, it contains all the information in a very handy way
 
 ## Instalation
 
@@ -50,14 +48,14 @@ var server = simples(12345); // Your server is set up on port 12345
 ## Routing
 
 ```javascript
-server.get('/', function (request, response) {
-	response.end('root');
+server.get('/', function (connection) {
+	connection.end('root');
 });
 
 server.serve('static_files'); // Route for static files located in the folder "static_files"
 
-server.error(404, function (request, response) {
-	response.end('404');
+server.error(404, function (connection) {
+	connection.end('404');
 });
 ```
 
@@ -69,16 +67,16 @@ var host1 = server.host('example.com'); // Other hosts
 var host2 = server.host('example2.com');
 
 // Now for each host you can apply individual routing
-mainHost.get('/', function (request, response) {
-	response.end('Main Host');
+mainHost.get('/', function (connection) {
+	connection.end('Main Host');
 });
 
-host1.get('/', function (request, response) {
-	response.end('Host1');
+host1.get('/', function (connection) {
+	connection.end('Host1');
 });
 
-host2.get('/', function (request, response) {
-	response.end('Host2');
+host2.get('/', function (connection) {
+	connection.end('Host2');
 });
 ```
 
@@ -87,14 +85,14 @@ host2.get('/', function (request, response) {
 ```javascript
 server.ws('/', {
 	length: 1024, // The maximum size of a message
-	protocols: ['echo'] // The accepted protocols
+	protocols: ['echo'], // The accepted protocols
+	raw: true // Connections in raw mode, see docs for more info
 }, function (connection) {
 	console.log('New connection');
 
 	connection.on('message', function (message) {
-		message = message.toString();
-		console.log(message);
-		connection.send(message);
+		console.log('Message: ' + message.data);
+		connection.send(message.data);
 	});
 
 	connection.on('close', function () {
@@ -106,6 +104,7 @@ server.ws('/', {
 On client:
 
 ```javascript
+// Use browser built-in API
 var socket = new WebSocket('ws://localhost:12345/', 'echo'); // Enjoy the real-time connection
 
 socket.onmessage = function (event) {
@@ -113,4 +112,19 @@ socket.onmessage = function (event) {
 };
 
 socket.send('ECHO');
+
+// or simpleS client-side simple API
+var socket = simples.ws('/', ['echo']);
+
+socket.on('message', function (message) {
+	console.log(message.data);
+});
+
+socket.send('ECHO');
+```
+
+## Template engine connection
+
+```javascript
+server.engine(bestTemplateEngine);
 ```
