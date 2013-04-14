@@ -28,33 +28,33 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h1>simpleS 0.3.6</h1>
+          <h1>simpleS 0.3.7</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
 <ul>
 <li>Simple structure with minimum configuration</li>
-<li>Routing for http GET and POST requests, static files and errors</li>
-<li>Routes with named parameters</li>
-<li>Dynamic caching for static files</li>
+<li>Advanced routing for http GET and POST requests, static files and errors</li>
+<li>Automatic response compression (deflate and gzip)</li>
+<li>Easy to use interfaces for requests and responses</li>
 <li>Virtual Hosting</li>
-<li>WebSocket implementation (version 13, RFC 6455)</li>
 <li>CORS support and Referer blocking</li>
 <li>Sessions</li>
 <li>Template engine connection</li>
-<li>Automatic response compression (deflate and gzip)</li>
-<li>Easy to use interfaces for requests and responses</li>
+<li>WebSocket implementation (version 13, RFC 6455)</li>
 <li>Client-side simple API for AJAX and WebSocket</li>
-</ul><p>Works in Node.JS 0.10+</p>
+</ul><h4>Works in Node.JS 0.10+</h4>
 
-<p><em>THIS DESCRIPTION IS NOT COMPLETE, MORE CONTENT WILL BE ADDED</em></p>
+<h4>Any feedback is welcome!</h4>
 
-<h3><a href="https://github.com/micnic/simpleS/wiki/Documentation" title="simpleS Documentation">Documentation</a></h3>
+<h4>More simple modules:</h4>
 
-<h4>More simple modules</h4>
+<ul>
+<li><a href="http://micnic.github.com/simpleR/">simpleR</a></li>
+<li><a href="http://micnic.github.com/simpleT/">simpleT</a></li>
+</ul><h2><a href="https://github.com/micnic/simpleS/wiki/Documentation" title="simpleS Documentation">Documentation</a></h2>
 
-<p><a href="http://micnic.github.com/simpleR/">simpleR</a>
-<a href="http://micnic.github.com/simpleT/">simpleT</a></p>
+<p>Read it, it contains all the information in a very handy way</p>
 
 <h2>Instalation</h2>
 
@@ -82,14 +82,14 @@
 
 <h2>Routing</h2>
 
-<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
+<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
 <span class="p">});</span>
 
 <span class="nx">server</span><span class="p">.</span><span class="nx">serve</span><span class="p">(</span><span class="s1">'static_files'</span><span class="p">);</span> <span class="c1">// Route for static files located in the folder "static_files"</span>
 
-<span class="nx">server</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'404'</span><span class="p">);</span>
+<span class="nx">server</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'404'</span><span class="p">);</span>
 <span class="p">});</span>
 </pre></div>
 
@@ -100,16 +100,16 @@
 <span class="kd">var</span> <span class="nx">host2</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example2.com'</span><span class="p">);</span>
 
 <span class="c1">// Now for each host you can apply individual routing</span>
-<span class="nx">mainHost</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Main Host'</span><span class="p">);</span>
+<span class="nx">mainHost</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Main Host'</span><span class="p">);</span>
 <span class="p">});</span>
 
-<span class="nx">host1</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host1'</span><span class="p">);</span>
+<span class="nx">host1</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host1'</span><span class="p">);</span>
 <span class="p">});</span>
 
-<span class="nx">host2</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">response</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host2'</span><span class="p">);</span>
+<span class="nx">host2</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host2'</span><span class="p">);</span>
 <span class="p">});</span>
 </pre></div>
 
@@ -117,14 +117,14 @@
 
 <div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
     <span class="nx">length</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
-    <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">]</span> <span class="c1">// The accepted protocols</span>
+    <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
+    <span class="nx">raw</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
 <span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'New connection'</span><span class="p">);</span>
 
     <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">message</span> <span class="o">=</span> <span class="nx">message</span><span class="p">.</span><span class="nx">toString</span><span class="p">();</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">message</span><span class="p">);</span>
-        <span class="nx">connection</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">message</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Message: '</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+        <span class="nx">connection</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
     <span class="p">});</span>
 
     <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'close'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
@@ -135,13 +135,28 @@
 
 <p>On client:</p>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">'ws://localhost:12345/'</span><span class="p">,</span> <span class="s1">'echo'</span><span class="p">);</span> <span class="c1">// Enjoy the real-time connection</span>
+<div class="highlight"><pre><span class="c1">// Use browser built-in API</span>
+<span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">'ws://localhost:12345/'</span><span class="p">,</span> <span class="s1">'echo'</span><span class="p">);</span> <span class="c1">// Enjoy the real-time connection</span>
 
 <span class="nx">socket</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
 <span class="p">};</span>
 
 <span class="nx">socket</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="s1">'ECHO'</span><span class="p">);</span>
+
+<span class="c1">// or simpleS client-side simple API</span>
+<span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">]);</span>
+
+<span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="nx">socket</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="s1">'ECHO'</span><span class="p">);</span>
+</pre></div>
+
+<h2>Template engine connection</h2>
+
+<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">engine</span><span class="p">(</span><span class="nx">bestTemplateEngine</span><span class="p">);</span>
 </pre></div>
         </section>
 
