@@ -574,7 +574,7 @@ simples.prototype.start = function (port, callback) {
 			that.server.close(listen);
 		} else {
 			that.started = true;
-			utils.getSessions(that.server, listen);
+			utils.getSessions(that, listen);
 		}
 	}
 
@@ -611,7 +611,7 @@ simples.prototype.stop = function (callback) {
 
 		// Close the server
 		that.server.close(function () {
-			utils.saveSessions(that.server, callback);
+			utils.saveSessions(that, callback);
 		});
 	}
 

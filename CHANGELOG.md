@@ -1,3 +1,7 @@
+## 0.3.8
+- Fixed session in WebSocket
+- Improved the internal organization of sessions
+
 ## 0.3.7
 - Added CHANGELOG.md
 - Combined request and response interfaces in connection interface

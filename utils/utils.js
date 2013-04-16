@@ -105,30 +105,23 @@ exports.findAdvancedRoute = function (routes, url) {
 	};
 };
 
-// Returns a random session name
+// Return a random session name of 16 characters
 exports.generateSessionName = function () {
-	var chars = [];
-	var count = 16;
-	var value;
+	'use strict';
+	var chrs = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+		count = 16,
+		name = '';
 
-	// Generate numbers in loop
+	// Append a random character to the name in loop
 	while (count--) {
-
-		// Get a random value from 0 to 61
-		value = Math.round(Math.random() * 61);
-
-		// Prepare char code 0-9a-zA-Z
-		value += value < 10 && 48 || value < 36 && 55 || 61;
-
-		// Append the value to the chars array
-		chars[chars.length] = value;
+		name += chrs.charAt(Math.random() * 62 | 0);
 	}
 
-	return String.fromCharCode.apply(null, chars);
+	return name;
 }
 
 // Get sessions from file and activate them in the hosts
-exports.getSessions = function (server, callback) {
+exports.getSessions = function (instance, callback) {
 	'use strict';
 
 	// Read and parse the sessions file
@@ -155,8 +148,15 @@ exports.getSessions = function (server, callback) {
 		}
 
 		// Activate the sessions from the file
-		for (var i in server.hosts) {
-			server.hosts[i].manageSessions(data[i]);
+		for (var i in instance.hosts) {
+			instance.hosts[i].sessions = data[i];
+
+			for (var j in data[i]) {
+				instance.hosts[i].timers[j] = setTimeout(function (host, index) {
+					delete host.sessions[index];
+					delete host.timers[index];
+				}, 3600000, instance.hosts[i], j);
+			}
 		}
 
 		// Continue to port listening
@@ -215,42 +215,10 @@ exports.handleCache = function (cache, path, stream) {
 	});
 };
 
-// Populate sessions from an object or return them
-exports.manageSessions = function (sessions) {
-	'use strict';
-
-	function cleaner(index) {
-		delete this.sessions[index];
-	}
-
-	if (sessions) {
-		this.sessions = sessions;
-
-		for (var i in this.sessions) {
-			this.sessions[i]._timeout = setTimeout(cleaner, this.sessions[i]._timeout, i);
-		}
-	} else {
-		var timeout;
-		var start;
-		var end;
-
-		for (var i in this.sessions) {
-			timeout = this.sessions[i]._timeout;
-			start = new Date(timeout._idleStart).valueOf();
-			end = new Date(start + timeout._idleTimeout).valueOf();
-			clearTimeout(timeout);
-			this.sessions[i]._timeout = end - new Date().valueOf();
-		}
-
-		return this.sessions;
-	}
-	
-}
-
 // Get the cookies and the session
-exports.parseCookies = function (host, request) {
-	var cookies = {};
-	var session = null;
+exports.parseCookies = function (request) {
+	var cookies = {},
+		session = '';
 
 	// Populate cookies and session
 	if (request.headers.cookie) {
@@ -285,7 +253,7 @@ exports.parseCookies = function (host, request) {
 			}
 			value = decodeURIComponent(value);
 			if (name === '_session') {
-				session = host.sessions[value];
+				session = value;
 			} else {
 				cookies[name] = value;
 			}
@@ -471,15 +439,19 @@ exports.parsePOST = function (request, that) {
 }
 
 // Get the sessions from the hosts and save them to file
-exports.saveSessions = function (server, callback) {
+exports.saveSessions = function (instance, callback) {
 	'use strict';
 
 	// Sessions container
 	var sessions = {};
 
 	// Select and deactivate sessions
-	for (var i in server.hosts) {
-		sessions[i] = server.hosts[i].manageSessions();
+	for (var i in instance.hosts) {
+		for (var j in instance.hosts[i].timers) {
+			clearTimeout(instance.hosts[i].timers[j]);
+		}
+		instance.hosts[i].timers = {};
+		sessions[i] = instance.hosts[i].sessions;
 	}
 
 	// Prepare sessions for writing on file
@@ -489,7 +461,7 @@ exports.saveSessions = function (server, callback) {
 	fs.writeFile('.sessions', sessions, 'utf8', function (error) {
 		
 		// Release the server in all cases
-		server.emit('release', callback);
+		instance.server.emit('release', callback);
 
 		// Log the error
 		if (error) {
