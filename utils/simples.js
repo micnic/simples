@@ -42,6 +42,13 @@ var ajax = simples.ajax = function (url, data, method) {
 		return formData;
 	}
 
+	var hashIndex = url.indexOf('#');
+	var sufix;
+	if (~hashIndex) {
+		sufix = url.substr(hashIndex);
+		url = url.substr(0, hashIndex);
+	}
+
 	// Process data
 	if (method === 'get') {
 		if (~url.indexOf('?')) {
@@ -62,7 +69,7 @@ var ajax = simples.ajax = function (url, data, method) {
 	}
 
 	// Open the XMLHttpRequest and send data
-	xhr.open(method.toUpperCase(), url);
+	xhr.open(method.toUpperCase(), url + sufix);
 	xhr.send(data);
 
 	// Listen for changes in the state of the XMLHttpRequest

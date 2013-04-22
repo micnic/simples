@@ -1,11 +1,12 @@
-# simpleS 0.3.8
+# simpleS 0.3.9
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
 - Simple structure with minimum configuration
+- No dependencies
 - Advanced routing for http GET and POST requests, static files and errors
 - Automatic response compression (deflate and gzip)
-- Easy to use interfaces for requests and responses
+- Unique interface for requests and responses
 - Virtual Hosting
 - CORS support and Referer blocking
 - Sessions
@@ -20,20 +21,21 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 - [simpleR](http://micnic.github.com/simpleR/)
 - [simpleT](http://micnic.github.com/simpleT/)
 
+#### [Changelog](https://github.com/micnic/simpleS/wiki/Changelog)
 ## [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
 Read it, it contains all the information in a very handy way
 
 ## Instalation
 
-	npm install simples
+    npm install simples
 
 ## Testing
 
-	npm test simples
+    npm test simples
 
 ## Start Demo Server
 
-	npm start simples
+    npm start simples
 
 Then try [http://localhost:12345](http://localhost:12345) in your browser
 
@@ -49,13 +51,13 @@ var server = simples(12345); // Your server is set up on port 12345
 
 ```javascript
 server.get('/', function (connection) {
-	connection.end('root');
+    connection.end('root');
 });
 
 server.serve('static_files'); // Route for static files located in the folder "static_files"
 
 server.error(404, function (connection) {
-	connection.end('404');
+    connection.end('404');
 });
 ```
 
@@ -68,15 +70,15 @@ var host2 = server.host('example2.com');
 
 // Now for each host you can apply individual routing
 mainHost.get('/', function (connection) {
-	connection.end('Main Host');
+    connection.end('Main Host');
 });
 
 host1.get('/', function (connection) {
-	connection.end('Host1');
+    connection.end('Host1');
 });
 
 host2.get('/', function (connection) {
-	connection.end('Host2');
+    connection.end('Host2');
 });
 ```
 
@@ -84,20 +86,20 @@ host2.get('/', function (connection) {
 
 ```javascript
 server.ws('/', {
-	length: 1024, // The maximum size of a message
-	protocols: ['echo'], // The accepted protocols
-	raw: true // Connections in raw mode, see docs for more info
+    length: 1024, // The maximum size of a message
+    protocols: ['echo'], // The accepted protocols
+    raw: true // Connections in raw mode, see docs for more info
 }, function (connection) {
-	console.log('New connection');
+    console.log('New connection');
 
-	connection.on('message', function (message) {
-		console.log('Message: ' + message.data);
-		connection.send(message.data);
-	});
+    connection.on('message', function (message) {
+        console.log('Message: ' + message.data);
+        connection.send(message.data);
+    });
 
-	connection.on('close', function () {
-		console.log('Connection closed');
-	});
+    connection.on('close', function () {
+        console.log('Connection closed');
+    });
 });
 ```
 
@@ -108,7 +110,7 @@ On client:
 var socket = new WebSocket('ws://localhost:12345/', 'echo'); // Enjoy the real-time connection
 
 socket.onmessage = function (event) {
-	console.log(event.data);
+    console.log(event.data);
 };
 
 socket.send('ECHO');
@@ -117,7 +119,7 @@ socket.send('ECHO');
 var socket = simples.ws('/', ['echo']);
 
 socket.on('message', function (message) {
-	console.log(message.data);
+    console.log(message.data);
 });
 
 socket.send('ECHO');

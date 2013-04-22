@@ -1,3 +1,10 @@
+## 0.3.9
+- Made some optimizations
+- Added .ip and .path to connection
+- Fixed a rare bug in WebSocket with big data
+- Fixed the bug with template engine connection
+- Added .leave() method to host instances
+
 ## 0.3.8
 - Fixed session in WebSocket
 - Improved the internal organization of sessions

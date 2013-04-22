@@ -1,16 +1,40 @@
 var chatSocket;
 var echoSocket;
+var string;
 
 window.onload = function () {
+
+	var radios = document.getElementsByName('size');
+
+	function setSum() {
+		var sum = 0;
+		string = '';
+		for (var j = 0; j < radios.length; j++) {
+			if (radios[j].checked) {
+				sum += Number(radios[j].value);
+			}
+		}
+		document.getElementById('sum').innerHTML = sum;
+		while (sum--) {
+			string += ' ';
+		}
+	}
+
+	for (var i = 0; i < radios.length; i++) {
+		radios[i].onchange = setSum;
+	}
+
+	setSum();
+
 	document.getElementById('get').onclick = function () {
-		simples.ajax('get', {
+		simples.ajax('get#hash', {
 			textinput: document.getElementById('textinput').value
 		}).error(function (code, description) {
 			document.getElementById('result').innerHTML = 'Error: ' + code + ' ' + description;
 		}).progress(function () {
 			document.getElementById('result').innerHTML = 'Loading...';
 		}).success(function (response) {
-			document.getElementById('result').innerHTML = 'Result:<br><br>' + response.replace(/\n/g, '<br>');
+			document.getElementById('result').innerHTML = 'Result:<br><br>' + response.replace(/\n/g, '<br>').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 		});
 	};
 
@@ -31,7 +55,11 @@ window.onload = function () {
 		if (!echoSocket) {
 			echoSocket = simples.ws(window.location.host + '/echo', ['echo'], true)
 				.on('message', function (message) {
-					document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
+					if (document.getElementsByName('type')[0].checked) {
+						document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
+					} else {
+						document.getElementById('result').innerHTML = 'Result:<br><br>' + message.length + ' bytes received';
+					}
 				}).on('error', function (error) {
 					console.log(error);
 				}).on('close', function () {
@@ -39,7 +67,11 @@ window.onload = function () {
 				});
 		}
 
-		echoSocket.send(document.getElementById('textinput').value);
+		if (document.getElementsByName('type')[0].checked) {
+			echoSocket.send(document.getElementById('textinput').value);
+		} else {
+			echoSocket.send(string);
+		}
 	};
 
 	document.getElementById('filebutton').onclick = function () {

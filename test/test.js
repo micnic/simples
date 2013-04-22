@@ -1,5 +1,4 @@
 var assert = require('assert');
-var fs = require('fs');
 var http = require('http');
 var qs = require('querystring');
 
@@ -8,7 +7,7 @@ var simples = require('simples');
 var server = simples(12345);
 
 var noopEngine = {
-	render: function (string) {console.log(string)
+	render: function (string) {
 		return string;
 	}
 };
@@ -18,7 +17,7 @@ server
 	.accept('*')
 	.referer('*', 'null.com')
 	.serve(__dirname + '/root', function (connection) {
-		connection.end('You are in the root of the folder ' + connection.url.path);
+		connection.end('You are in the root of the folder ' + connection.path);
 	})
 	.error(404, function (connection) {
 		connection.send('Error 404 caught');
@@ -59,14 +58,32 @@ server
 	})
 	.get('get', function (connection) {
 		console.log(connection.session.name);
-		connection.write('body: ' + connection.body + '\n');
+
+		var response = {
+			body: connection.body,
+			cookies: connection.cookies,
+			headers: connection.headers,
+			host: connection.host,
+			ip: connection.ip,
+			langs: connection.langs,
+			method: connection.method,
+			query: connection.query,
+			params: connection.params,
+			path: connection.path,
+			session: connection.session,
+			url: connection.url
+		};
+
+		connection.end(JSON.stringify(response, null, '\t'));
+
+		/*connection.write('body: ' + connection.body + '\n');
 		connection.write('cookies: ' + JSON.stringify(connection.cookies) + '\n');
 		connection.write('headers: ' + JSON.stringify(connection.headers) + '\n');
 		connection.write('langs: ' + JSON.stringify(connection.langs) + '\n');
 		connection.write('method: ' + connection.method + '\n');
 		connection.write('query: ' + JSON.stringify(connection.query) + '\n');
 		connection.write('url: ' + JSON.stringify(connection.url) + '\n');
-		connection.end();
+		connection.end();*/
 	})
 	.get('render', function (connection) {
 		connection.render('Rendered string');
@@ -106,10 +123,14 @@ var echoSocket = server.ws('/echo', {
 	protocols: ['echo'],
 	raw: true
 }, function (connection) {
+	console.log('new connection on echoSocket');
 
 	connection.on('message', function (message) {
 		this.send(message.data);
+		console.log(message.data.length + ' bytes received on echoSocket');
 	});
+
+	console.log('connection from echoSocket closed');
 });
 
 var chatSocket = server.ws('/chat', {
@@ -131,7 +152,7 @@ var chatSocket = server.ws('/chat', {
 
 	chatChannel.broadcast('users', getUsers());
 
-	connection.on('message', function (message) {
+	connection.on('message', function (message) {console.log(message.length);
 		chatChannel.broadcast('message', this.name + ': ' + message);
 	});
 

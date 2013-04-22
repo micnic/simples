@@ -27,15 +27,21 @@ var simples = function (port, options) {
 			get = request.method === 'GET' || request.method === 'HEAD',
 			headers = request.headers,
 			host,
-			hostname = url.parse('http://' + headers.host).hostname,
+			hostname,
 			index,
-			isHost = that.hosts[hostname],
+			isHost,
 			origin,
-			parsedUrl = url.parse(request.url, true),
+			parsedUrl,
 			post = request.method === 'POST',
+			protocol = request.connection.encrypted ? 'https' : 'http',
 			redirect,
-			requestURL = parsedUrl.pathname.substr(1),
+			requestURL,
 			routes;
+
+		parsedUrl = url.parse(protocol + '://' + headers.host + request.url, true);
+		hostname = parsedUrl.hostname;
+		isHost = that.hosts[hostname];
+		requestURL = parsedUrl.pathname.substr(1);
 
 		host = isHost && isHost.started && isHost || that.hosts.main;
 		routes = host.routes;
@@ -58,6 +64,7 @@ var simples = function (port, options) {
 
 		connection = new httpConnection(host, request, response);
 		connection.host = hostname;
+		connection.path = parsedUrl.pathname;
 		connection.query = parsedUrl.query;
 		connection.url = parsedUrl;
 
@@ -113,9 +120,9 @@ var simples = function (port, options) {
 				return;
 			}
 
-			// Check for client api file request
-			if (requestURL === 'simples/client.js') {
-				requestURL = __dirname + '/utils/client.js';
+			// Check for client-side api file request
+			if (requestURL === 'simples.js') {
+				requestURL = __dirname + '/utils/simples.js';
 			} else {
 				requestURL = path.join(routes.serve.path, requestURL);
 			}
@@ -130,17 +137,17 @@ var simples = function (port, options) {
 				found = utils.findAdvancedRoute(routes.all.advanced, urlSlices);
 
 			// Search for an advanced route in all, get and post routes
-			if (!found.route && get) {
+			if (!found && get) {
 				found = utils.findAdvancedRoute(routes.get.advanced, urlSlices);
-			} else if (!found.route && post) {
+			} else if (!found && post) {
 				found = utils.findAdvancedRoute(routes.post.advanced, urlSlices);
 			}
 
 			// Apply callback if found one
-			if (found.route) {
+			if (found) {
 				connection.params = found.params;
 				found.route.callback.call(host, connection);
-			} else if (get && (routes.serve.path || requestURL === 'simples/client.js')) {
+			} else if (get && (routes.serve.path || requestURL === 'simples.js')) {
 				staticRouting();
 			} else {
 				response.statusCode = 404;
@@ -257,9 +264,9 @@ var simples = function (port, options) {
 
 		// Prepare data for WebSocket host
 		var config,
-			closeData = new Buffer([136, 0]),
+			close = new Buffer([136, 0]),
 			connection,
-			dataBuffer = new Buffer(0),
+			data = new Buffer(0),
 			fin,
 			handshake,
 			hash,
@@ -276,6 +283,7 @@ var simples = function (port, options) {
 			message = new Buffer(0),
 			opcode,
 			origin,
+			parsedUrl = url.parse(request.url, true),
 			parseState = 0,
 			payloadData,
 			payloadLength,
@@ -288,7 +296,7 @@ var simples = function (port, options) {
 
 		// Get the host
 		host = isHost && isHost.started && isHost || that.hosts.main;
-		wsHost = host.wsHosts[url.parse(request.url).path];
+		wsHost = host.wsHosts[parsedUrl.pathname];
 
 		// Inactive WebSocket host
 		if (!wsHost || !wsHost.started) {
@@ -337,7 +345,11 @@ var simples = function (port, options) {
 
 		// Current connection object
 		connection = new wsConnection(host, request, protocols);
+		connection.host = hostname;
+		connection.path = parsedUrl.pathname;
+		connection.query = parsedUrl.query;
 		connection.raw = config.raw;
+		connection.url = parsedUrl;
 
 		connection.on('close', function () {
 			clearTimeout(keepAliveTimer);
@@ -355,28 +367,28 @@ var simples = function (port, options) {
 		socket.on('readable', function () {
 
 			// Buffer data
-			dataBuffer = Buffer.concat([dataBuffer, this.read()]);
+			data = Buffer.concat([data, this.read()]);
 
 			// Wait for header
-			if (parseState === 0 && dataBuffer.length >= 2) {
+			if (parseState === 0 && data.length >= 2) {
 
 				// Header components
-				fin = dataBuffer[0] & 128;
-				opcode = dataBuffer[0] & 15;
-				mask = dataBuffer[1] & 128;
-				payloadLength = dataBuffer[1] & 127;
+				fin = data[0] & 128;
+				opcode = data[0] & 15;
+				mask = data[1] & 128;
+				payloadLength = data[1] & 127;
 
 				// Extensions, unknown frame type or unmasked message
-				reserved = dataBuffer[0] & 112;
+				reserved = data[0] & 112;
 				unknownType = (opcode > 2 && opcode < 8) || opcode > 10;
 				if (reserved || unknownType || !mask) {
-					this.end(closeData);
+					this.end(close);
 					return;
 				}
 
 				// Control frames should be <= 125 bits and not be fragmented
 				if (opcode > 7 && opcode < 11 && (payloadLength > 125 || !fin)) {
-					this.end(closeData);
+					this.end(close);
 					return;
 				}
 
@@ -390,44 +402,44 @@ var simples = function (port, options) {
 				}
 
 				// Throw away header
-				dataBuffer = dataBuffer.slice(2);
+				data = data.slice(2);
 			}
 
-			// Wait for 16bit, 64bit payload length or masking key
-			if (parseState === 1 && dataBuffer.length >= 2) {
-				payloadLength = dataBuffer[0] << 8 | dataBuffer[1];
+			// Wait for 16bit, 64bit payload length
+			if (parseState === 1 && data.length >= 2) {
+				payloadLength = data[0] << 8 | data[1];
+				data = data.slice(2);
 				parseState = 3;
-				dataBuffer = dataBuffer.slice(2);
-			} else if (parseState === 2 && dataBuffer.length >= 8) {
+			} else if (parseState === 2 && data.length >= 8) {
 
 				// Most significant bit  should not be 1
-				if (dataBuffer[0] & 128) {
-					this.end(closeData);
+				if (data[0] & 128) {
+					this.end(close);
 					return;
 				}
 
 				// Concatenate payload length
-				payloadLength = dataBuffer[0] << 56;
-				payloadLength |= dataBuffer[1] << 48;
-				payloadLength |= dataBuffer[2] << 40;
-				payloadLength |= dataBuffer[3] << 32;
-				payloadLength |= dataBuffer[4] << 24;
-				payloadLength |= dataBuffer[5] << 16;
-				payloadLength |= dataBuffer[6] << 8;
-				payloadLength |= dataBuffer[7];
+				payloadLength = data[0] << 56;
+				payloadLength |= data[1] << 48;
+				payloadLength |= data[2] << 40;
+				payloadLength |= data[3] << 32;
+				payloadLength |= data[4] << 24;
+				payloadLength |= data[5] << 16;
+				payloadLength |= data[6] << 8;
+				payloadLength |= data[7];
+				data = data.slice(8);
 				parseState = 3;
-				dataBuffer = dataBuffer.slice(8);
-			} else if (parseState === 3 && dataBuffer.length >= 4) {
-				maskingKey = dataBuffer.slice(0, 4);
+			}
+
+			// Wait for masking key
+			if (parseState === 3 && data.length >= 4) {
+				maskingKey = data.slice(0, 4);
+				data = data.slice(4);
 				parseState = 4;
-				dataBuffer = dataBuffer.slice(4);
 			}
 
 			// Wait for payload data
-			if (parseState === 4 && dataBuffer.length >= payloadLength) {
-
-				// Reset state
-				parseState = 0;
+			if (parseState === 4 && data.length >= payloadLength) {
 
 				// Keep the connection alive
 				clearTimeout(keepAliveTimer);
@@ -444,11 +456,11 @@ var simples = function (port, options) {
 					// Unmasking payload data
 					i = payloadLength;
 					while (i--) {
-						payloadData[i] = dataBuffer[i] ^ maskingKey[i % 4];
+						payloadData[i] = data[i] ^ maskingKey[i % 4];
 					}
 
 					// Concatenate payload data to the message
-					dataBuffer = dataBuffer.slice(payloadLength);
+					data = data.slice(payloadLength);
 					message = Buffer.concat([message, payloadData]);
 
 					// Check for last frame
@@ -479,12 +491,15 @@ var simples = function (port, options) {
 					} else if (message.length > config.length) {
 
 						// Message too big
-						this.end(closeData);
+						this.end(close);
 						return;
 					}
 				} else if (opcode === 8) {
-					this.end(closeData);
+					this.end(close);
 				}
+
+				// Reset state
+				parseState = 0;
 			}
 		});
 

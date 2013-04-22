@@ -6,24 +6,27 @@ var fs = require('fs'),
 
 // Default callback for "Not Found"
 function e404(connection) {
+	'use strict';
 	connection.end('"' + connection.url.path + '" Not Found');
 }
 
 // Default callback for "Method Not Allowed"
 function e405(connection) {
+	'use strict';
 	connection.end('"' + connection.method + '" Method Not Allowed');
 }
 
 // Default callback for "Internal Server Error"
 function e500(connection) {
+	'use strict';
 	connection.end('"' + connection.url.path + '" Internal Server Error');
 }
 
 // Returns the named parameters of an advanced route
 function getNamedParams(route, url) {
 	'use strict';
-	var index = route.length;
-	var params = {};
+	var index = route.length,
+		params = {};
 	while (index--) {
 		if (route[index].charAt(0) === ':') {
 			params[route[index].substr(1)] = url[index];
@@ -53,10 +56,10 @@ exports.addRoute = function (type, route, callback) {
 
 		// Check for routes with named parameters
 		if (~route.indexOf(':')) {
-			this.routes[type].advanced.push({
+			this.routes[type].advanced[route] = {
 				slices: route.split('/'),
 				callback: callback
-			});
+			};
 		} else {
 			this.routes[type].raw[route] = callback;
 		}
@@ -92,17 +95,20 @@ exports.defaultRoutes = function () {
 // Returns the advanced route if found
 exports.findAdvancedRoute = function (routes, url) {
 	'use strict';
-	var index = routes.length;
-	var params;
-	while (!params && index--) {
+	var index,
+		params;
+	for (index in routes) {
 		if (routes[index].slices.length === url.length) {
 			params = getNamedParams(routes[index].slices, url);
+			if (params) {
+				return {
+					params: params,
+					route: routes[index]
+				};
+			}
 		}
 	}
-	return {
-		params: params,
-		route: routes[index]
-	};
+	return null;
 };
 
 // Return a random session name of 16 characters
@@ -118,11 +124,14 @@ exports.generateSessionName = function () {
 	}
 
 	return name;
-}
+};
 
 // Get sessions from file and activate them in the hosts
 exports.getSessions = function (instance, callback) {
 	'use strict';
+
+	var i,
+		j;
 
 	// Read and parse the sessions file
 	fs.readFile('.sessions', 'utf8', function (error, data) {
@@ -148,10 +157,10 @@ exports.getSessions = function (instance, callback) {
 		}
 
 		// Activate the sessions from the file
-		for (var i in instance.hosts) {
+		for (i in instance.hosts) {
 			instance.hosts[i].sessions = data[i];
 
-			for (var j in data[i]) {
+			for (j in data[i]) {
 				instance.hosts[i].timers[j] = setTimeout(function (host, index) {
 					delete host.sessions[index];
 					delete host.timers[index];
@@ -167,7 +176,7 @@ exports.getSessions = function (instance, callback) {
 // Handle for static files content cache
 exports.handleCache = function (cache, path, stream) {
 	'use strict';
-	
+
 	var index = 0;
 
 	// Read 64kB pieces from cache
@@ -201,7 +210,7 @@ exports.handleCache = function (cache, path, stream) {
 		cache[path] = new Buffer(0);
 		fs.ReadStream(path).on('readable', function () {
 			cache[path] = Buffer.concat([cache[path], this.read()]);
-		})
+		});
 	});
 
 	// Stream the data to the cache and the response
@@ -217,14 +226,19 @@ exports.handleCache = function (cache, path, stream) {
 
 // Get the cookies and the session
 exports.parseCookies = function (request) {
-	var cookies = {},
-		session = '';
+	'use strict';
+	var content,
+		cookies = {},
+		currentChar,
+		index,
+		name,
+		session = '',
+		value;
 
 	// Populate cookies and session
 	if (request.headers.cookie) {
-		var content = request.headers.cookie;
-		var currentChar;
-		var index = 0;
+		content = request.headers.cookie;
+		index = 0;
 		while (currentChar = content.charAt(index)) {
 			while (currentChar = content.charAt(index), currentChar === ' ') {
 				index++;
@@ -232,7 +246,7 @@ exports.parseCookies = function (request) {
 			if (!currentChar) {
 				break;
 			}
-			var name = '';
+			name = '';
 			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== '=') {
 				name += currentChar;
 				index++;
@@ -246,7 +260,7 @@ exports.parseCookies = function (request) {
 			if (!currentChar) {
 				break;
 			}
-			var value = '';
+			value = '';
 			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
 				value += currentChar;
 				index++;
@@ -269,18 +283,20 @@ exports.parseCookies = function (request) {
 
 // Get the languages accepted by the client
 exports.parseLangs = function (request) {
+	'use strict';
+
+	var content = request.headers['accept-language'],
+		currentChar,
+		index = 0,
+		lang,
+		langs = [],
+		quality;
 
 	// Return an empty array if no accept language header
 	if (!request.headers['accept-language']) {
 		return [];
 	}
 
-	var content = request.headers['accept-language'];
-	var currentChar;
-	var index = 0;
-	var lang;
-	var langs = [];
-	var quality;
 	while (currentChar = content.charAt(index)) {
 		lang = '';
 		quality = '';
@@ -330,7 +346,7 @@ exports.parseLangs = function (request) {
 		return second.quality - first.quality;
 	});
 
-	var index = langs.length;
+	index = langs.length;
 
 	while (index--) {
 		langs[index] = langs[index].lang;
@@ -345,16 +361,25 @@ exports.parsePOST = function (request, that) {
 	if (!request.headers['content-type']) {
 		return;
 	}
-	var content = request.headers['content-type'];
-	var index = 0;
-	var currentChar;
+	var boundary,
+		boundaryLength,
+		content = request.headers['content-type'],
+		contentType,
+		currentChar,
+		filecontent,
+		filename,
+		index = 0,
+		name,
+		POSTquery,
+		tempIndex,
+		type;
 	while (currentChar = content.charAt(index), currentChar === ' ') {
 		index++;
 	}
 	if (!currentChar) {
 		return;
 	}
-	var contentType = '';
+	contentType = '';
 	while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
 		contentType += currentChar;
 		index++;
@@ -380,7 +405,7 @@ exports.parsePOST = function (request, that) {
 		if (!currentChar) {
 			return;
 		}
-		var boundary = '';
+		boundary = '';
 		while (currentChar = content.charAt(index)) {
 			boundary += currentChar;
 			index++;
@@ -390,12 +415,7 @@ exports.parsePOST = function (request, that) {
 		}
 		content = that.body;
 		index = 0;
-		var boundaryLength = boundary.length;
-		var filename;
-		var name;
-		var type;
-		var tempIndex;
-		var filecontent;
+		boundaryLength = boundary.length;
 		while (content.substr(index, 4 + boundaryLength) === '--' + boundary + '\r\n') {
 			index += 4 + boundaryLength;
 			index = content.indexOf('name="', index) + 6;
@@ -431,9 +451,9 @@ exports.parsePOST = function (request, that) {
 			index += 2;
 		}
 	} else {
-		var POSTquery = qs.parse(that.body);
-		for (var i in POSTquery) {
-			that.query[i] = POSTquery[i];
+		POSTquery = qs.parse(that.body);
+		for (index in POSTquery) {
+			that.query[index] = POSTquery[index];
 		}
 	}
 }
@@ -443,11 +463,13 @@ exports.saveSessions = function (instance, callback) {
 	'use strict';
 
 	// Sessions container
-	var sessions = {};
+	var i,
+		j,
+		sessions = {};
 
 	// Select and deactivate sessions
-	for (var i in instance.hosts) {
-		for (var j in instance.hosts[i].timers) {
+	for (i in instance.hosts) {
+		for (j in instance.hosts[i].timers) {
 			clearTimeout(instance.hosts[i].timers[j]);
 		}
 		instance.hosts[i].timers = {};

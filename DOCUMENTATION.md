@@ -22,9 +22,9 @@ To set up a HTTPS server the options object is needed with `key` and `cert` attr
 
 ```javascript
 var server = simples(443, {
-	key: 'path/to/key.pem',
-	cert: 'path/to/certificate.pem',
-	redirect: true
+    key: 'path/to/key.pem',
+    cert: 'path/to/certificate.pem',
+    redirect: true
 });
 ```
 
@@ -34,11 +34,11 @@ For more freedom in development, it is possible to create a simpleS instance whi
 var redirect = simples(80);
 
 redirect.get('/', function (connection) {
-	connection.end('Please try HTTPS');
+    connection.end('Please try HTTPS');
 });
 
 redirect.error(404, function (connection) {
-	connection.redirect('https://' + connection.host + connection.url.href);
+    connection.redirect('https://' + connection.host + connection.url.href);
 });
 ```
 
@@ -50,13 +50,13 @@ redirect.error(404, function (connection) {
 
 port: number
 
-callback: function(0)
+callback: function()
 
-Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if they exist or they have a valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port or to start a closed simpleS instance.
+Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if they exist or they have a valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port or to start a stopped simpleS instance.
 
 ```javascript
 server.start(80, function () {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -64,13 +64,13 @@ server.start(80, function () {
 
 `.stop([callback])`
 
-callback: function(0)
+callback: function()
 
 Stop the server. The existing sessions are saved to the `.sessions` file for further access. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds, for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. The purpose of this method is to provide a way for closing the server and save the existing session for future use.
 
 ```javascript
 server.stop(function () {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -140,33 +140,33 @@ simpleS provide a simple way to use template engines for response rendering, for
 // In all examples the templates will be taken from "'templates/' + source"
 
 var noopEngine = {
-	render: function (source) {
-		console.log(source);
-		return source;
-	}
+    render: function (source) {
+        console.log(source);
+        return source;
+    }
 };
 
 server.engine(noopEngine, 'templates');
 
 // Another example
 var noopRender = function (source) {
-	console.log(source);
-	return source;
+    console.log(source);
+    return source;
 };
 
 server.engine(noopRender, 'templates');
 
 // Wrapped engine example
 var unsupportedEngine = {
-	renderFile: function (imports, source) {
-		// Some code
-	}
+    renderFile: function (imports, source) {
+        // Some code
+    }
 };
 
 server.engine({
-	render: function (source, imports) {
-		unsupportedEngine.renderFile(imports, source);
-	}
+    render: function (source, imports) {
+        unsupportedEngine.renderFile(imports, source);
+    }
 }, 'templates');
 ```
 
@@ -180,18 +180,17 @@ All the methods described below are applicable on each host independently (see [
 'user/:user/action/:action'; // Advanced route with named parameters
 
 /*
-	This route will match this request url:
+    This route will match this request url:
 
-	/user/mary/action/cooking
+    /user/mary/action/cooking
 
-	with parameters:
+    with parameters:
 
-	{
-		user: 'mary',
-		action: 'cooking'
-	}
+    {
+        user: 'mary',
+        action: 'cooking'
+    }
 */
-
 ```
 
 ### All Requests
@@ -200,13 +199,13 @@ All the methods described below are applicable on each host independently (see [
 
 route: string
 
-callback: function(1)
+callback: function(connection)
 
 Listen for both `GET` and `POST` requests and uses the callback function with request and response as parameters, this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
 
 ```javascript
 server.all('/', function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -216,13 +215,13 @@ server.all('/', function (connection) {
 
 route: string
 
-callback: function(1)
+callback: function(connection)
 
 Listen for get requests and uses the callback function with request and response as parameters.
 
 ```javascript
 server.get('/', function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -232,13 +231,13 @@ server.get('/', function (connection) {
 
 route: string
 
-callback: function(1)
+callback: function(connection)
 
 Listen for post requests and uses the callback function with request and response as parameters.
 
 ```javascript
 server.post('/', function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -248,13 +247,13 @@ server.post('/', function (connection) {
 
 path: string
 
-callback: function(1)
+callback: function(connection)
 
 `path` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, this parameter is optional. All files are dynamically cached for better performance.
 
 ```javascript
 server.serve('root', function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -262,17 +261,27 @@ server.serve('root', function (connection) {
 
 `.error(code, callback)`
 
-code: number
+code: 404, 405 or 500
 
-callback: function(1)
+callback: function(connection)
 
-Use the callback function with request and response as parameters for errors that can have place. Only one callback function can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. 
+Use the callback function with request and response as parameters for errors that can have place. Only one callback function can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
 
 ```javascript
 server.error(404, function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
+
+### Removing Routes
+
+`.leave([type, route])`
+
+type: 'all', 'error', 'get', 'post' or 'serve'
+
+route: 404, 405, 500 or string
+
+Removes a specific route, a specific type of routes or all routes. If the type and the route is specified, then the route of this type is removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
 
 ### Connection Interface
 
@@ -280,37 +289,48 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 ```javascript
 {
-	body: '',
-	cookies: {
-		user: 'me',
-		pass: 'password'
-	},
-	files: {},
-	headers: {
-		host: 'localhost',
-		'user-agent': 'myBrowser',
-		accept: 'text/html',
-		'accept-language': 'ro;q=0.8,en;q=0.6',
-		'accept-encoding': 'gzip, deflate',
-		cookie: 'user=me; pass=password'
-	},
-	host: 'localhost',
-	langs: [
-		'ro',
-		'en'
-	],
-	method: 'GET',
-	query: {},
-	params: {},
-	session: {},
-	url: {
-		search: '',
-		query: {},
-		pathname: '/',
-		path: '/',
-		href: '/'
-	}
-	/* methods */
+    body: '',
+    cookies: {
+        user: 'me',
+        pass: 'password'
+    },
+    files: {},
+    headers: {
+        host: 'localhost',
+        'user-agent': 'myBrowser',
+        accept: 'text/html',
+        'accept-language': 'ro;q=0.8,en;q=0.6',
+        'accept-encoding': 'gzip, deflate',
+        cookie: 'user=me; pass=password'
+    },
+    host: 'localhost',
+    ip: '127.0.0.1',
+    langs: [
+        'ro',
+        'en'
+    ],
+    method: 'GET',
+    query: {},
+    params: {},
+    path: '/'
+    session: {},
+    url: {
+        /* These will never be filled
+        auth: null,
+        hash: null,
+        */
+        host: 'localhost:12345',
+        hostname: 'localhost',
+        href: '/',
+        pathname: '/',
+        path: '/',
+        port: '12345',
+        protocol: 'http:',
+        query: {},
+        search: '',
+        slashes: true
+    }
+    /* methods */
 }
 ```
 
@@ -333,6 +353,10 @@ An object that contains the HTTP headers of the request.
 #### .host
 The hostname from the `Host` header.
 
+#### .ip
+
+The remote ip address of the request.
+
 #### .langs
 
 An array of strings that represents languages accepted by the client in the order of their relevance.
@@ -341,13 +365,17 @@ An array of strings that represents languages accepted by the client in the orde
 
 The HTTP method of the request, it can be `GET`, `HEAD` or `POST` for usual requests, but can have a different value on error `405`.
 
-#### .query
-
-The object that contains queries from both GET and POST methods, it is recommended to use different names for queries from both methods, if there are two queries with the same name then the GET query will be overwritten.
-
 #### .params
 
 The object that contains named parameters from the route. This object is only populated when the request url match a specific route with named parameters. The named parameters represents strings that are limited only by `/` or the end of the url.
+
+#### .path
+
+The pathname of the url of the request.
+
+#### .query
+
+The object that contains queries from both GET and POST methods, it is recommended to use different names for queries from both methods, if there are two queries with the same name then the GET query will be overwritten.
 
 #### .session
 
@@ -357,7 +385,7 @@ A container used to keep important data on the server-side, the clients have acc
 
 The url of the request split in components, see [`url`](http://nodejs.org/api/url.html) core module for more details.
 
-#### .cookie(name, value, attributes)
+#### .cookie(name, value[, attributes])
 
 name: string
 
@@ -365,15 +393,15 @@ value: string
 
 attributes: object
 
-Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. Can be used multiple times, but before `.write()` method.
+Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before `.write()` method.
 
 ```javascript
 connection.cookie('user', 'me', {
-	expires: 3600, // or maxAge: 3600, Set the expiration time of the cookie in seconds
-	path: '/path/', // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
-	domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
-	secure: false, // Set if the cookie is secured, used by HTTPS
-	httpOnly: false, // Set if the cookie can not be changed from client-side
+    expires: 3600, // or maxAge: 3600, Set the expiration time of the cookie in seconds
+    path: '/path/', // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
+    domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
+    secure: false, // Set if the cookie is secured, used by HTTPS
+    httpOnly: false, // Set if the cookie can not be changed from client-side
 });
 ```
 
@@ -467,17 +495,17 @@ path: string
 
 config: object
 
-callback: function(1)
+callback: function(connection)
 
 Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
 
 ```javascript
 var echo = server.ws('/', {
-	length: 1024,
-	protocols: ['', 'echo'],
-	raw: true
+    length: 1024,
+    protocols: ['', 'echo'],
+    raw: true
 }, function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -485,16 +513,16 @@ var echo = server.ws('/', {
 
 config: object
 
-callback: function(1)
+callback: function(connection)
 
 Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. This method is called automatically when a new WebSocket host is created, it is not needed to call it explicitly on WebSocket host creation.
 
 ```javascript
 echo.start({
-	length: 512,
-	protocols: ['', 'echo']
+    length: 512,
+    protocols: ['', 'echo']
 }, function (connection) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -512,13 +540,13 @@ event: string
 
 data: string or buffer
 
-filter: function(3)
+filter: function(element, index, array)
 
 Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`.
 
 ```javascript
 echo.broadcast('HelloWorld', function (element, index, array) {
-	return element.protocols.indexOf('echo') >= 0; // Will send the message to clients that use "chat" as a sub protocol
+    return element.protocols.indexOf('echo') >= 0; // Will send the message to clients that use "chat" as a sub protocol
 });
 ```
 
@@ -542,6 +570,14 @@ See Connection Interface `.cookies`.
 
 See Connection Interface `.headers`.
 
+`.host`
+
+See Connection Interface `.host`.
+
+`.ip`
+
+See Connection Interface `.ip`.
+
 `.langs`
 
 See Connection Interface `.langs`.
@@ -550,9 +586,17 @@ See Connection Interface `.langs`.
 
 The array of protocols of the WebSocket connection.
 
+`.query`
+
+The object that contains the queries from the handshake HTTP request.
+
 `.session`
 
 See Connection Interface `.session`.
+
+`.url`
+
+See Connection Interface `.url`.
 
 `.close()`
 
@@ -601,7 +645,7 @@ event: string
 
 data: string or buffer
 
-filter: function(3)
+filter: function(element, index, array)
 
 Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters.
 
@@ -610,7 +654,7 @@ Same as the WebSocket host `.broadcast()` method, but is applied to the connecti
 To have access to the simpleS client-side API it is necessary to add
 
 ```html
-<script src="/simples/client.js"></script>
+<script src="simples.js"></script>
 ```
 
 in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
@@ -623,20 +667,20 @@ url: string
 
 params: object
 
-method: string
+method: 'get' or 'post'
 
 `simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url, will send the needed parameters using the methods GET (default) or POST. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. The AJAX request can also be aborted by the `.stop()` method.
 
 ```javascript
 var request = simples.ajax('/', {
-	user: 'me',
-	password: 'ok'
+    user: 'me',
+    password: 'ok'
 }, 'post').error(function (code, description) {
-	// Application logic
+    // Application logic
 }).progress(function () {
-	// Application logic
+    // Application logic
 }).success(function (response) {
-	// Application logic
+    // Application logic
 });
 
 // Somewhere else to stop the request
@@ -657,7 +701,7 @@ raw: boolean
 
 ```javascript
 var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
-	this.send('Hello World');
+    this.send('Hello World');
 });
 ```
 
@@ -694,7 +738,7 @@ Based on the third parameter in `simples.ws()` the communication with the server
 
 ```javascript
 socket.on('message', function (message) {
-	// Application logic
+    // Application logic
 });
 ```
 
@@ -702,7 +746,7 @@ socket.on('message', function (message) {
 
 ```javascript
 socket.on(event, function (data) {
-	// Application logic
+    // Application logic
 });
 ```
 
