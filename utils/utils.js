@@ -1,3 +1,5 @@
+'use strict';
+
 var fs = require('fs'),
 	mime = require('./mime'),
 	path = require('path'),
@@ -6,25 +8,21 @@ var fs = require('fs'),
 
 // Default callback for "Not Found"
 function e404(connection) {
-	'use strict';
 	connection.end('"' + connection.url.path + '" Not Found');
 }
 
 // Default callback for "Method Not Allowed"
 function e405(connection) {
-	'use strict';
 	connection.end('"' + connection.method + '" Method Not Allowed');
 }
 
 // Default callback for "Internal Server Error"
 function e500(connection) {
-	'use strict';
 	connection.end('"' + connection.url.path + '" Internal Server Error');
 }
 
 // Returns the named parameters of an advanced route
 function getNamedParams(route, url) {
-	'use strict';
 	var index = route.length,
 		params = {};
 	while (index--) {
@@ -40,7 +38,6 @@ function getNamedParams(route, url) {
 
 // Add all kinds of routes
 exports.addRoute = function (type, route, callback) {
-	'use strict';
 
 	// Add the route to the host
 	if (type === 'serve') {
@@ -48,7 +45,24 @@ exports.addRoute = function (type, route, callback) {
 			path: route,
 			callback: callback
 		};
-	} else {
+	} else if (Array.isArray(route)) {
+		for (var i = 0; i < route.length; i++) {
+			if (route[i].charAt(0) === '/') {
+				route[i] = route[i].substr(1);
+			}
+			route[i] = url.parse(route[i]).pathname || '';
+
+			// Check for routes with named parameters
+			if (~route[i].indexOf(':')) {
+				this.routes[type].advanced[route[i]] = {
+					slices: route[i].split('/'),
+					callback: callback
+				};
+			} else {
+				this.routes[type].raw[route[i]] = callback;
+			}
+		}
+	} else if (typeof route === 'string') {
 		if (route.charAt(0) === '/') {
 			route = route.substr(1);
 		}
@@ -68,7 +82,6 @@ exports.addRoute = function (type, route, callback) {
 
 // Generate emptry routes
 exports.defaultRoutes = function () {
-	'use strict';
 
 	return {
 		all: {
@@ -94,7 +107,6 @@ exports.defaultRoutes = function () {
 
 // Returns the advanced route if found
 exports.findAdvancedRoute = function (routes, url) {
-	'use strict';
 	var index,
 		params;
 	for (index in routes) {
@@ -113,7 +125,6 @@ exports.findAdvancedRoute = function (routes, url) {
 
 // Return a random session name of 16 characters
 exports.generateSessionName = function () {
-	'use strict';
 	var chrs = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
 		count = 16,
 		name = '';
@@ -128,7 +139,6 @@ exports.generateSessionName = function () {
 
 // Get sessions from file and activate them in the hosts
 exports.getSessions = function (instance, callback) {
-	'use strict';
 
 	var i,
 		j;
@@ -175,7 +185,6 @@ exports.getSessions = function (instance, callback) {
 
 // Handle for static files content cache
 exports.handleCache = function (cache, path, stream) {
-	'use strict';
 
 	var index = 0;
 
@@ -226,7 +235,6 @@ exports.handleCache = function (cache, path, stream) {
 
 // Get the cookies and the session
 exports.parseCookies = function (request) {
-	'use strict';
 	var content,
 		cookies = {},
 		currentChar,
@@ -283,7 +291,6 @@ exports.parseCookies = function (request) {
 
 // Get the languages accepted by the client
 exports.parseLangs = function (request) {
-	'use strict';
 
 	var content = request.headers['accept-language'],
 		currentChar,
@@ -357,7 +364,6 @@ exports.parseLangs = function (request) {
 
 // Parse data sent via POST method
 exports.parsePOST = function (request, that) {
-	'use strict';
 	if (!request.headers['content-type']) {
 		return;
 	}
@@ -460,7 +466,6 @@ exports.parsePOST = function (request, that) {
 
 // Get the sessions from the hosts and save them to file
 exports.saveSessions = function (instance, callback) {
-	'use strict';
 
 	// Sessions container
 	var i,

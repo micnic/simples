@@ -1,9 +1,17 @@
+## 0.4.0
+- New template engine connection rules
+- Multiple routes apply / remove
+- Added shorthand for template rendering
+- Added binary data in advanced mode
+- Fixed a WebSocket connection bug with sending data
+- Fixed crash on WebSocket close
+
 ## 0.3.9
 - Made some optimizations
-- Added .ip and .path to connection
+- Added `.ip` and `.path` to connection
 - Fixed a rare bug in WebSocket with big data
 - Fixed the bug with template engine connection
-- Added .leave() method to host instances
+- Added `.leave()` method to host instances
 
 ## 0.3.8
 - Fixed session in WebSocket

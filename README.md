@@ -1,9 +1,9 @@
-# simpleS 0.3.9
+# simpleS 0.4.0
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
 - Simple structure with minimum configuration
-- No dependencies
+- No dependencies and high performance
 - Advanced routing for http GET and POST requests, static files and errors
 - Automatic response compression (deflate and gzip)
 - Unique interface for requests and responses
@@ -21,9 +21,8 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 - [simpleR](http://micnic.github.com/simpleR/)
 - [simpleT](http://micnic.github.com/simpleT/)
 
-#### [Changelog](https://github.com/micnic/simpleS/wiki/Changelog)
-## [Documentation](https://github.com/micnic/simpleS/wiki/Documentation "simpleS Documentation")
-Read it, it contains all the information in a very handy way
+### [Changelog](https://github.com/micnic/simpleS/wiki/Changelog)
+### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation)
 
 ## Instalation
 

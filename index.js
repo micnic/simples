@@ -1,10 +1,12 @@
-var crypto = require('crypto'),
+'use strict';
+
+var cluster = require('cluster'),
+	crypto = require('crypto'),
 	fs = require('fs'),
 	http = require('http'),
 	httpConnection = require('./lib/http/connection'),
 	https = require('https'),
 	host = require('./lib/http/host'),
-	mime = require('./utils/mime'),
 	path = require('path'),
 	url = require('url'),
 	utils = require('./utils/utils'),
@@ -12,8 +14,6 @@ var crypto = require('crypto'),
 
 // SimpleS prototype constructor
 var simples = function (port, options) {
-	'use strict';
-
 	var server,
 		that = this;
 
@@ -22,7 +22,6 @@ var simples = function (port, options) {
 
 	// The listener for the HTTP requests
 	function requestListener(request, response) {
-
 		var connection,
 			get = request.method === 'GET' || request.method === 'HEAD',
 			headers = request.headers,
@@ -34,7 +33,6 @@ var simples = function (port, options) {
 			parsedUrl,
 			post = request.method === 'POST',
 			protocol = request.connection.encrypted ? 'https' : 'http',
-			redirect,
 			requestURL,
 			routes;
 
@@ -52,12 +50,11 @@ var simples = function (port, options) {
 			index = ~host.origins.indexOf(origin);
 			origin = (index || host.origins[0] === '*' && !index) && origin;
 			origin = origin || hostname;
-			response.writeHead(200, {
-				'Access-Control-Allow-Credentials': 'True',
-				'Access-Control-Allow-Headers': 'Content-Type',
-				'Access-Control-Allow-Methods': 'GET,HEAD,POST',
-				'Access-Control-Allow-Origin': origin
-			});
+
+			response.setHeader('Access-Control-Allow-Credentials', 'True');
+			response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+			response.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST');
+			response.setHeader('Access-Control-Allow-Origin', origin);
 			response.end();
 			return;
 		}
@@ -68,41 +65,8 @@ var simples = function (port, options) {
 		connection.query = parsedUrl.query;
 		connection.url = parsedUrl;
 
-		// Route static files or their symbolic links
-		function routeFiles(lastModified) {
-			var code = 200,
-				extension = path.extname(requestURL).substr(1),
-				notModified = Number(headers['if-modified-since']) === lastModified;
-
-			if (notModified) {
-				code = 304;
-			}
-			response.writeHead(code, {
-				'Content-Type': mime[extension] || mime['default'],
-				'Last-Modified': lastModified
-			});
-			if (notModified) {
-				connection.end();
-			} else {
-				utils.handleCache(that.cache, requestURL, connection);
-			}
-		}
-
-		// Callback for stats of static path
-		function statCallback(error, stats) {
-			if (!error && (stats.isFile() || stats.isSymbolicLink())) {
-				routeFiles(stats.mtime.valueOf());
-			} else if (!error && routes.serve.callback && stats.isDirectory()) {
-				routes.serve.callback.call(host, connection);
-			} else {
-				response.statusCode = 404;
-				routes.error[404].call(host, connection);
-			}
-		}
-
 		// Route static files and directories
 		function staticRouting() {
-
 			var referer = hostname,
 				isBanned = false;
 
@@ -128,7 +92,28 @@ var simples = function (port, options) {
 			}
 
 			// Verify the stats of the path
-			fs.stat(requestURL, statCallback);
+			fs.stat(requestURL, function (error, stats) {
+				if (!error && (stats.isFile() || stats.isSymbolicLink())) {
+
+					// Set the headers for static files
+					connection.type(path.extname(requestURL).substr(1));
+					connection.header('Last-Modified', stats.mtime.valueOf());
+
+					// Set status code and serve the content
+					if (Number(headers['if-modified-since']) === stats.mtime.valueOf()) {
+						response.statusCode = 304;
+						connection.end();
+					} else {
+						response.statusCode = 200;
+						utils.handleCache(that.cache, requestURL, connection);
+					}
+				} else if (!error && routes.serve.callback && stats.isDirectory()) {
+					routes.serve.callback.call(host, connection);
+				} else {
+					response.statusCode = 404;
+					routes.error[404].call(host, connection);
+				}
+			});
 		}
 
 		// Routing for parametrized urls and static files
@@ -146,7 +131,11 @@ var simples = function (port, options) {
 			// Apply callback if found one
 			if (found) {
 				connection.params = found.params;
-				found.route.callback.call(host, connection);
+				if (typeof found.route.callback === 'string') {
+					connection.render(found.route.callback);
+				} else {
+					found.route.callback.call(host, connection);
+				}
 			} else if (get && (routes.serve.path || requestURL === 'simples.js')) {
 				staticRouting();
 			} else {
@@ -158,11 +147,29 @@ var simples = function (port, options) {
 		// All requests routing
 		function routing() {
 			if ((get || post) && routes.all.raw[requestURL]) {
-				routes.all.raw[requestURL].call(host, connection);
+				if (typeof routes.all.raw[requestURL] === 'string') {
+					connection.render(routes.all.raw[requestURL], {
+						connection: connection
+					});
+				} else {
+					routes.all.raw[requestURL].call(host, connection);
+				}
 			} else if (get && routes.get.raw[requestURL]) {
-				routes.get.raw[requestURL].call(host, connection);
+				if (typeof routes.get.raw[requestURL] === 'string') {
+					connection.render(routes.get.raw[requestURL], {
+						connection: connection
+					});
+				} else {
+					routes.get.raw[requestURL].call(host, connection);
+				}
 			} else if (post && routes.post.raw[requestURL]) {
-				routes.post.raw[requestURL].call(host, connection);
+				if (typeof routes.post.raw[requestURL] === 'string') {
+					connection.render(routes.post.raw[requestURL], {
+						connection: connection
+					});
+				} else {
+					routes.post.raw[requestURL].call(host, connection);
+				}
 			} else if (get || post) {
 				advancedRouting();
 			} else {
@@ -175,7 +182,8 @@ var simples = function (port, options) {
 
 		// Handler for internal errors of the server
 		function errorHandler(error) {
-			console.log('simpleS: Internal Server Error > "' + request.url + '"');
+			console.log('simpleS: Internal Server Error');
+			console.log(parsedUrl.href);
 			console.log(error.stack + '\n');
 			response.statusCode = 500;
 			try {
@@ -217,23 +225,18 @@ var simples = function (port, options) {
 	// Prepare the server
 	if (options && options.key && options.cert) {
 
-		// Create the key and the certificate for HTTPS server
+		// Set HTTPS port
+		port = 443;
+
+		// Get the key and the certificate for the HTTPS server
 		try {
-			options.key = fs.readFileSync(options.key);
 			options.cert = fs.readFileSync(options.cert);
+			options.key = fs.readFileSync(options.key);
 			server = https.Server(options, requestListener);
-			if (options.redirect) {
-				redirect = http.Server(function (request, response) {
-					response.writeHead(302, {
-						'Location': 'https://' + url.parse(request.headers.host).hostname + request.url
-					}).listen(80);
-				});
-			}
+			http.Server(utils.redirectRequestListener).listen(80);
 		} catch (error) {
 			console.log('simpleS: Could not read data for HTTPS');
-			console.log('HTTP server will be created on port ' + port);
 			console.log(error.message + '\n');
-			server = http.Server(requestListener);
 			return;
 		}
 	} else {
@@ -366,8 +369,14 @@ var simples = function (port, options) {
 		// Process received data
 		socket.on('readable', function () {
 
+			var newData = this.read();
+
+			if (!newData) {
+				return;
+			}
+
 			// Buffer data
-			data = Buffer.concat([data, this.read()]);
+			data = Buffer.concat([data, newData]);
 
 			// Wait for header
 			if (parseState === 0 && data.length >= 2) {
@@ -553,22 +562,18 @@ simples.prototype = Object.create(host.prototype, {
 
 // Create a new host and save it to the hosts object
 simples.prototype.host = function (name) {
-	'use strict';
-
 	this.hosts[name] = new host(this, name);
 	return this.hosts[name];
 };
 
 // Start simples server
 simples.prototype.start = function (port, callback) {
-	'use strict';
 
 	// Shortcut to this context
 	var that = this;
 
 	// Set the server to listen the port
 	function listen() {
-
 		var i;
 
 		// Start all existing hosts
@@ -605,14 +610,12 @@ simples.prototype.start = function (port, callback) {
 
 // Stop simpleS server
 simples.prototype.stop = function (callback) {
-	'use strict';
 
 	// Shortcut to this context
 	var that = this;
 
 	// Stop the server
 	function stop() {
-
 		var i;
 
 		// Set status flags
@@ -642,6 +645,5 @@ simples.prototype.stop = function (callback) {
 
 // Export a new simples instance
 module.exports = function (port, options) {
-	'use strict';
 	return new simples(port, options);
 };

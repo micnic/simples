@@ -18,27 +18,12 @@ simpleS needs only the port number and it sets up a HTTP server on this port.
 var server = simples(80);
 ```
 
-To set up a HTTPS server the options object is needed with `key` and `cert` attributes, these will be the paths to the `.pem` files. To create a really good HTTPS server it will be needed to add a redirect for the simple HTTP connections, if the `redirect` attribute is set to `true` a HTTP server will be created on port 80 and will redirect all the requests to the HTTPS server.
+To set up a HTTPS server the options object is needed with `key` and `cert` attributes, these will be the paths to the `.pem` files. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will redirect all requests to the HTTPS.
 
 ```javascript
 var server = simples(443, {
     key: 'path/to/key.pem',
-    cert: 'path/to/certificate.pem',
-    redirect: true
-});
-```
-
-For more freedom in development, it is possible to create a simpleS instance which will redirect in a complex way the HTTP requests.
-
-```javascript
-var redirect = simples(80);
-
-redirect.get('/', function (connection) {
-    connection.end('Please try HTTPS');
-});
-
-redirect.error(404, function (connection) {
-    connection.redirect('https://' + connection.host + connection.url.href);
+    cert: 'path/to/certificate.pem'
 });
 ```
 
@@ -128,16 +113,13 @@ server.referer('example.com', 'test.com'); // Will respond only to these 2 refer
 
 ### Templating
 
-`.engine(engine[, prefix])`
+`.engine(engine)`
 
 engine: object
 
-prefix: string
-
-simpleS provide a simple way to use template engines for response rendering, for this it is necessary to define the needed template engine, the `.render()` method if available or the template engine itself  will be used to render the response. The templates are rendered using the `.render()` method of Response Interface and by adding the prefix it is possible to define a path to the container folder with the templates. The rendering method should accept 2 parameters, `source` and `imports`, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT/).
+To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 2 parameters, `source` and `imports`, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates. The templates are rendered using the `.render()` method of Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
 
 ```javascript
-// In all examples the templates will be taken from "'templates/' + source"
 
 var noopEngine = {
     render: function (source) {
@@ -146,20 +128,13 @@ var noopEngine = {
     }
 };
 
-server.engine(noopEngine, 'templates');
+server.engine(noopEngine);
 
-// Another example
-var noopRender = function (source) {
-    console.log(source);
-    return source;
-};
-
-server.engine(noopRender, 'templates');
-
-// Wrapped engine example
+// Wrapped unsupported template engine example
 var unsupportedEngine = {
     renderFile: function (imports, source) {
-        // Some code
+        console.log(source);
+        return source;
     }
 };
 
@@ -167,7 +142,7 @@ server.engine({
     render: function (source, imports) {
         unsupportedEngine.renderFile(imports, source);
     }
-}, 'templates');
+});
 ```
 
 ## Routing
@@ -195,50 +170,64 @@ All the methods described below are applicable on each host independently (see [
 
 ### All Requests
 
-`.all(route, callback)`
+`.all(route, result)`
 
-route: string
+route: array[strings] or string
 
-callback: function(connection)
+result: string or function(connection)
 
-Listen for both `GET` and `POST` requests and uses the callback function with request and response as parameters, this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
+Listen for both `GET` and `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
+
+### GET Requests
+
+`.get(route, result)`
+
+route: array[strings] or string
+
+result: string or function(connection)
+
+Listen for get requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+
+### POST Requests
+
+`.post(route, result)`
+
+route: array[strings] or string
+
+result: string or function(connection)
+
+Listen for post requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+
+### Error Routes
+
+`.error(code, result)`
+
+code: 404, 405 or 500
+
+result: string or function(connection)
+
+Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
+
+#### Examples for `.all()`, `.get()`, `.post()` and `.error()` methods:
 
 ```javascript
 server.all('/', function (connection) {
     // Application logic
 });
-```
 
-### GET Requests
-
-`.get(route, callback)`
-
-route: string
-
-callback: function(connection)
-
-Listen for get requests and uses the callback function with request and response as parameters.
-
-```javascript
-server.get('/', function (connection) {
+server.get([
+    '/',
+    '/index'
+], function (connection) {
     // Application logic
 });
-```
 
-### POST Requests
+server.error(404, 'not_found.ejs');
 
-`.post(route, callback)`
-
-route: string
-
-callback: function(connection)
-
-Listen for post requests and uses the callback function with request and response as parameters.
-
-```javascript
-server.post('/', function (connection) {
-    // Application logic
-});
+server.post([
+    '/',
+    '/index'
+], 'index.ejs');
 ```
 
 ### Static Files
@@ -257,31 +246,15 @@ server.serve('root', function (connection) {
 });
 ```
 
-### Error Routes
-
-`.error(code, callback)`
-
-code: 404, 405 or 500
-
-callback: function(connection)
-
-Use the callback function with request and response as parameters for errors that can have place. Only one callback function can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
-
-```javascript
-server.error(404, function (connection) {
-    // Application logic
-});
-```
-
 ### Removing Routes
 
 `.leave([type, route])`
 
 type: 'all', 'error', 'get', 'post' or 'serve'
 
-route: 404, 405, 500 or string
+route: 404, 405, 500, array[strings] or string
 
-Removes a specific route, a specific type of routes or all routes. If the type and the route is specified, then the route of this type is removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
+Removes a specific route, a set od routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
 
 ### Connection Interface
 
@@ -321,7 +294,7 @@ The parameter provided in callbacks for routing requests is an object that conta
         */
         host: 'localhost:12345',
         hostname: 'localhost',
-        href: '/',
+        href: 'http://localhost:12345/',
         pathname: '/',
         path: '/',
         port: '12345',
@@ -397,11 +370,11 @@ Sets the cookies sent to the client, providing a name, a value and an object to 
 
 ```javascript
 connection.cookie('user', 'me', {
-    expires: 3600, // or maxAge: 3600, Set the expiration time of the cookie in seconds
-    path: '/path/', // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
-    domain: 'localhost', // Domain of the cookie, should be defined only if it is different from the current host
-    secure: false, // Set if the cookie is secured, used by HTTPS
-    httpOnly: false, // Set if the cookie can not be changed from client-side
+    expires: 3600,          // or maxAge: 3600, Set the expiration time of the cookie in seconds
+    path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
+    domain: 'localhost',    // Domain of the cookie, should be defined only if it is different from the current host
+    secure: false,          // Set if the cookie is secured, used by HTTPS
+    httpOnly: false,        // Set if the cookie can not be changed from client-side
 });
 ```
 
@@ -409,7 +382,7 @@ connection.cookie('user', 'me', {
 
 name: string
 
-value: string or array of strings
+value: string or array[strings]
 
 Sets the header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings.
 
@@ -433,7 +406,7 @@ path: string
 
 permanent: boolean
 
-Redirects the client to the provided path. If the redirect is permanent then the `redirect` parameter should be set as true. For temporary redirects the code `302` is set, for permanent redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
+Redirects the client to the provided path. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
 
 ```javascript
 connection.redirect('/index', true);
@@ -451,11 +424,15 @@ Sets the type of the content of the response. Default is 'html'. By default uses
 connection.type('html');
 ```
 
-#### .send(data)
+#### .send(data[, replacer, space])
 
 data: any value
 
-Writes preformatted data to the response stream and ends the response, useful for sending JSON format. Arrays, booleans, numbers and objects are stringified. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+replacer: array[numbers or strings] or function(key, value)
+
+space: number of string
+
+Writes preformatted data to the response stream and ends the response, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
 connection.send(['Hello', 'World']);
@@ -480,7 +457,9 @@ imports: object
 Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
-connection.render('HelloWorld');
+connection.render('Hello <%= world %>', {
+    world: 'World'
+});
 ```
 
 ## WebSocket
@@ -693,7 +672,7 @@ request.stop();
 
 host: string
 
-protocols: array
+protocols: array[strings]
 
 raw: boolean
 

@@ -47,7 +47,7 @@ window.onload = function () {
 		}).progress(function () {
 			document.getElementById('result').innerHTML = 'Loading...';
 		}).success(function (response) {
-			document.getElementById('result').innerHTML = 'Result:<br><br>' + response.replace(/\n/g, '<br>');
+			document.getElementById('result').innerHTML = 'Result:<br><br>' + response.replace(/\n/g, '<br>').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 		});
 	};
 

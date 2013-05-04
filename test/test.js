@@ -74,16 +74,7 @@ server
 			url: connection.url
 		};
 
-		connection.end(JSON.stringify(response, null, '\t'));
-
-		/*connection.write('body: ' + connection.body + '\n');
-		connection.write('cookies: ' + JSON.stringify(connection.cookies) + '\n');
-		connection.write('headers: ' + JSON.stringify(connection.headers) + '\n');
-		connection.write('langs: ' + JSON.stringify(connection.langs) + '\n');
-		connection.write('method: ' + connection.method + '\n');
-		connection.write('query: ' + JSON.stringify(connection.query) + '\n');
-		connection.write('url: ' + JSON.stringify(connection.url) + '\n');
-		connection.end();*/
+		connection.send(response, null, '\t');
 	})
 	.get('render', function (connection) {
 		connection.render('Rendered string');
@@ -108,15 +99,23 @@ server
 		connection.end('End');
 	})
 	.post('post', function (connection) {
-		connection.write('body: ' + connection.body + '\n');
-		connection.write('cookies: ' + JSON.stringify(connection.cookies) + '\n');
-		connection.write('files: ' + JSON.stringify(connection.files) + '\n');
-		connection.write('headers: ' + JSON.stringify(connection.headers) + '\n');
-		connection.write('langs: ' + JSON.stringify(connection.langs) + '\n');
-		connection.write('method: ' + connection.method + '\n');
-		connection.write('query: ' + JSON.stringify(connection.query) + '\n');
-		connection.write('url: ' + JSON.stringify(connection.url) + '\n');
-		connection.end();
+		var response = {
+			body: connection.body,
+			cookies: connection.cookies,
+			files: connection.files,
+			headers: connection.headers,
+			host: connection.host,
+			ip: connection.ip,
+			langs: connection.langs,
+			method: connection.method,
+			query: connection.query,
+			params: connection.params,
+			path: connection.path,
+			session: connection.session,
+			url: connection.url
+		};
+
+		connection.send(response, null, '\t');
 	});
 
 var echoSocket = server.ws('/echo', {

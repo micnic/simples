@@ -43,7 +43,7 @@ var ajax = simples.ajax = function (url, data, method) {
 	}
 
 	var hashIndex = url.indexOf('#');
-	var sufix;
+	var sufix = '';
 	if (~hashIndex) {
 		sufix = url.substr(hashIndex);
 		url = url.substr(0, hashIndex);
@@ -165,8 +165,8 @@ ws.prototype.open = function (host, protocols) {
 	'use strict';
 
 	// Shortcut to this context
-	var that = this;
-	var protocol = 'ws';
+	var protocol = 'ws',
+		that = this;
 
 	host = host || this.host;
 	protocols = protocols || this.protocols;
@@ -198,14 +198,41 @@ ws.prototype.open = function (host, protocols) {
 		that.emit('error', 'simpleS: can not connect to the WebSocket server');
 	};
 
+	// Transform Node.JS buffer to browser blob
+	function bufferToBlob(buffer) {
+		var string = '',
+			i;
+		for (i = 0; i < buffer.length; i++) {
+			string += String.fromCharCode(buffer[i]);
+		}
+		return new Blob([string]);
+	}
+
+	// Parse the JSON message and transform binary data if needed
+	function parseMessage(data) {
+		var message = JSON.parse(data);
+
+		// Check for binary data
+		if (message.binary) {
+			message.data = bufferToBlob(message.data);
+		}
+
+		return message;
+	}
+
 	// Listen for incoming messages
 	this.socket.onmessage = function (event) {
+		var message;
+
+		// Emit raw data
 		if (that.raw) {
 			that.emit('message', event.data);
 			return;
 		}
+
+		// Parse and emit complex data
 		try {
-			var message = JSON.parse(event.data);
+			message = parseMessage(event.data);
 			that.emit(message.event, message.data);
 		} catch (error) {
 			that.emit('error', 'simpleS: can not parse incoming message');
