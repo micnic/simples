@@ -28,7 +28,8 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h1>simpleS 0.4.0</h1>
+          <h1>
+<a name="simples-041" class="anchor" href="#simples-041"><span class="octicon octicon-link"></span></a>simpleS 0.4.1</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
@@ -44,44 +45,56 @@
 <li>Template engine connection</li>
 <li>WebSocket implementation (version 13, RFC 6455)</li>
 <li>Client-side simple API for AJAX and WebSocket</li>
-</ul><h4>Works in Node.JS 0.10+</h4>
+</ul><h4>
+<a name="works-in-nodejs-010" class="anchor" href="#works-in-nodejs-010"><span class="octicon octicon-link"></span></a>Works in Node.JS 0.10+</h4>
 
-<h4>Any feedback is welcome!</h4>
+<h4>
+<a name="any-feedback-is-welcome" class="anchor" href="#any-feedback-is-welcome"><span class="octicon octicon-link"></span></a>Any feedback is welcome!</h4>
 
-<h4>More simple modules:</h4>
+<h4>
+<a name="more-simple-modules" class="anchor" href="#more-simple-modules"><span class="octicon octicon-link"></span></a>More simple modules:</h4>
 
 <ul>
 <li><a href="http://micnic.github.com/simpleR/">simpleR</a></li>
 <li><a href="http://micnic.github.com/simpleT/">simpleT</a></li>
-</ul><h3><a href="https://github.com/micnic/simpleS/wiki/Changelog">Changelog</a></h3>
+</ul><h3>
+<a name="changelog" class="anchor" href="#changelog"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Changelog">Changelog</a>
+</h3>
 
-<h3><a href="https://github.com/micnic/simpleS/wiki/Documentation">Documentation</a></h3>
+<h3>
+<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Documentation">Documentation</a>
+</h3>
 
-<h2>Instalation</h2>
+<h2>
+<a name="instalation" class="anchor" href="#instalation"><span class="octicon octicon-link"></span></a>Instalation</h2>
 
 <pre><code>npm install simples
 </code></pre>
 
-<h2>Testing</h2>
+<h2>
+<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h2>
 
 <pre><code>npm test simples
 </code></pre>
 
-<h2>Start Demo Server</h2>
+<h2>
+<a name="start-demo-server" class="anchor" href="#start-demo-server"><span class="octicon octicon-link"></span></a>Start Demo Server</h2>
 
 <pre><code>npm start simples
 </code></pre>
 
 <p>Then try <a href="http://localhost:12345">http://localhost:12345</a> in your browser</p>
 
-<h2>Usage</h2>
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">simples</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'simples'</span><span class="p">);</span>
 
 <span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span> <span class="c1">// Your server is set up on port 12345</span>
 </pre></div>
 
-<h2>Routing</h2>
+<h2>
+<a name="routing" class="anchor" href="#routing"><span class="octicon octicon-link"></span></a>Routing</h2>
 
 <div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
@@ -94,7 +107,8 @@
 <span class="p">});</span>
 </pre></div>
 
-<h2>Virtual Hosting</h2>
+<h2>
+<a name="virtual-hosting" class="anchor" href="#virtual-hosting"><span class="octicon octicon-link"></span></a>Virtual Hosting</h2>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">mainHost</span> <span class="o">=</span> <span class="nx">server</span><span class="p">;</span> <span class="c1">// Main host</span>
 <span class="kd">var</span> <span class="nx">host1</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example.com'</span><span class="p">);</span> <span class="c1">// Other hosts</span>
@@ -114,7 +128,8 @@
 <span class="p">});</span>
 </pre></div>
 
-<h2>WebSocket</h2>
+<h2>
+<a name="websocket" class="anchor" href="#websocket"><span class="octicon octicon-link"></span></a>WebSocket</h2>
 
 <div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
     <span class="nx">length</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
@@ -155,7 +170,8 @@
 <span class="nx">socket</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="s1">'ECHO'</span><span class="p">);</span>
 </pre></div>
 
-<h2>Template engine connection</h2>
+<h2>
+<a name="template-engine-connection" class="anchor" href="#template-engine-connection"><span class="octicon octicon-link"></span></a>Template engine connection</h2>
 
 <div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">engine</span><span class="p">(</span><span class="nx">bestTemplateEngine</span><span class="p">);</span>
 </pre></div>
@@ -173,7 +189,7 @@
 
           <p class="repo-owner"><a href="https://github.com/micnic/simpleS"></a> is maintained by <a href="https://github.com/micnic">micnic</a>.</p>
 
-          <p>This page was generated by <a href="pages.github.com">GitHub Pages</a> using the Architect theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.</p>
+          <p>This page was generated by <a href="pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
         </aside>
       </div>
     </div>
