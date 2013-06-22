@@ -18,12 +18,24 @@ simpleS needs only the port number and it sets up a HTTP server on this port.
 var server = simples(80);
 ```
 
-To set up a HTTPS server the options object is needed with `key` and `cert` attributes, these will be the paths to the `.pem` files. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will redirect all requests to the HTTPS.
+To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) core module for more details. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
 ```javascript
 var server = simples(443, {
     key: 'path/to/key.pem',
-    cert: 'path/to/certificate.pem'
+    cert: 'path/to/cert.pem'
+});
+```
+
+To redirect the client to HTTPS, use a structure like this:
+
+```javascript
+server.get('/secured', function (connection) {
+    if (connection.protocol === 'http') {
+        connection.redirect('https://' + connection.url.host + connection.url.path, true);
+    } else {
+        // Application logic
+    }
 });
 ```
 
@@ -238,7 +250,7 @@ path: string
 
 callback: function(connection)
 
-`path` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files, if more `.serve()` methods will be called only the last will be used to serve static files. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, this parameter is optional. All files are dynamically cached for better performance.
+`path` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, this parameter is optional. All files are dynamically cached for better performance.
 
 ```javascript
 server.serve('root', function (connection) {
@@ -256,6 +268,19 @@ route: 404, 405, 500, array[strings] or string
 
 Removes a specific route, a set od routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
 
+```javascript
+server.leave('post');
+
+server.leave('get', '/nothing');
+
+server.leave('serve');
+
+serve.leave('all', [
+    '/home',
+    '/index'
+]);
+```
+
 ### Connection Interface
 
 The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a writable stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
@@ -269,7 +294,7 @@ The parameter provided in callbacks for routing requests is an object that conta
     },
     files: {},
     headers: {
-        host: 'localhost',
+        host: 'localhost:12345',
         'user-agent': 'myBrowser',
         accept: 'text/html',
         'accept-language': 'ro;q=0.8,en;q=0.6',
@@ -285,7 +310,8 @@ The parameter provided in callbacks for routing requests is an object that conta
     method: 'GET',
     query: {},
     params: {},
-    path: '/'
+    path: '/',
+    protocol: 'http',
     session: {},
     url: {
         /* These will never be filled
@@ -345,6 +371,10 @@ The object that contains named parameters from the route. This object is only po
 #### .path
 
 The pathname of the url of the request.
+
+#### .protocol
+
+The name of the protocol of the request.
 
 #### .query
 
@@ -668,7 +698,7 @@ request.stop();
 
 ### WS (WebSocket)
 
-`simples.ws(host, protocols, raw)`
+`simples.ws(host[, protocols, raw])`
 
 host: string
 

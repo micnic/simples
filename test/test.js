@@ -14,7 +14,7 @@ var noopEngine = {
 
 server
 	.engine(noopEngine)
-	.accept('*')
+	.accept('null')
 	.referer('*', 'null.com')
 	.serve(__dirname + '/root', function (connection) {
 		connection.end('You are in the root of the folder ' + connection.path);
@@ -129,7 +129,9 @@ var echoSocket = server.ws('/echo', {
 		console.log(message.data.length + ' bytes received on echoSocket');
 	});
 
-	console.log('connection from echoSocket closed');
+	connection.on('close', function () {
+		console.log('connection from echoSocket closed');
+	});
 });
 
 var chatSocket = server.ws('/chat', {

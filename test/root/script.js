@@ -4,28 +4,6 @@ var string;
 
 window.onload = function () {
 
-	var radios = document.getElementsByName('size');
-
-	function setSum() {
-		var sum = 0;
-		string = '';
-		for (var j = 0; j < radios.length; j++) {
-			if (radios[j].checked) {
-				sum += Number(radios[j].value);
-			}
-		}
-		document.getElementById('sum').innerHTML = sum;
-		while (sum--) {
-			string += ' ';
-		}
-	}
-
-	for (var i = 0; i < radios.length; i++) {
-		radios[i].onchange = setSum;
-	}
-
-	setSum();
-
 	document.getElementById('get').onclick = function () {
 		simples.ajax('get#hash', {
 			textinput: document.getElementById('textinput').value
@@ -70,6 +48,11 @@ window.onload = function () {
 		if (document.getElementsByName('type')[0].checked) {
 			echoSocket.send(document.getElementById('textinput').value);
 		} else {
+			var string = '';
+			var i = Number(document.getElementById('textinput').value);
+			while (i--) {
+				string += ' ';
+			}
 			echoSocket.send(string);
 		}
 	};

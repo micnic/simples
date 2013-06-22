@@ -1,7 +1,6 @@
 'use strict';
 
-var cluster = require('cluster'),
-	crypto = require('crypto'),
+var crypto = require('crypto'),
 	fs = require('fs'),
 	http = require('http'),
 	httpConnection = require('./lib/http/connection'),
@@ -14,513 +13,185 @@ var cluster = require('cluster'),
 
 // SimpleS prototype constructor
 var simples = function (port, options) {
-	var server,
-		that = this;
 
-	// Call host in this context and set it as the main host
-	host.call(this, 'main');
+	var redirect,
+		server,
+		that = this;
 
 	// The listener for the HTTP requests
 	function requestListener(request, response) {
+
 		var connection,
-			get = request.method === 'GET' || request.method === 'HEAD',
-			headers = request.headers,
-			host,
-			hostname,
-			index,
-			isHost,
-			origin,
-			parsedUrl,
-			post = request.method === 'POST',
-			protocol = request.connection.encrypted ? 'https' : 'http',
-			requestURL,
-			routes;
+			host = that.hosts[request.headers.host.split(':')[0]];
 
-		parsedUrl = url.parse(protocol + '://' + headers.host + request.url, true);
-		hostname = parsedUrl.hostname;
-		isHost = that.hosts[hostname];
-		requestURL = parsedUrl.pathname.substr(1);
-
-		host = isHost && isHost.started && isHost || that.hosts.main;
-		routes = host.routes;
-
-		// CORS limitation
-		if (headers.origin) {
-			origin = url.parse('http://' + headers.origin).hostname;
-			index = ~host.origins.indexOf(origin);
-			origin = (index || host.origins[0] === '*' && !index) && origin;
-			origin = origin || hostname;
-
-			response.setHeader('Access-Control-Allow-Credentials', 'True');
-			response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-			response.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST');
-			response.setHeader('Access-Control-Allow-Origin', origin);
-			response.end();
-			return;
+		// Get the main host if the other one does not exist or is inactive
+		if (!host || !host.started) {
+			host = that.hosts.main;
 		}
 
+		// Set up the HTTP connection
 		connection = new httpConnection(host, request, response);
-		connection.host = hostname;
-		connection.path = parsedUrl.pathname;
-		connection.query = parsedUrl.query;
-		connection.url = parsedUrl;
 
-		// Route static files and directories
-		function staticRouting() {
-			var referer = hostname,
-				isBanned = false;
-
-			// Verify referer
-			if (headers.referer && host.referers.length) {
-				referer = url.parse(headers.referer).hostname;
-				index = ~host.referers.indexOf(referer);
-				isBanned = host.referers[0] === '*' && index || !index;
-			}
-
-			// Response with 404 code to banned referers
-			if (hostname !== referer && isBanned) {
-				response.statusCode = 404;
-				routes.error[404].call(host, connection);
-				return;
-			}
-
-			// Check for client-side api file request
-			if (requestURL === 'simples.js') {
-				requestURL = __dirname + '/utils/simples.js';
-			} else {
-				requestURL = path.join(routes.serve.path, requestURL);
-			}
-
-			// Verify the stats of the path
-			fs.stat(requestURL, function (error, stats) {
-				if (!error && (stats.isFile() || stats.isSymbolicLink())) {
-
-					// Set the headers for static files
-					connection.type(path.extname(requestURL).substr(1));
-					connection.header('Last-Modified', stats.mtime.valueOf());
-
-					// Set status code and serve the content
-					if (Number(headers['if-modified-since']) === stats.mtime.valueOf()) {
-						response.statusCode = 304;
-						connection.end();
-					} else {
-						response.statusCode = 200;
-						utils.handleCache(that.cache, requestURL, connection);
-					}
-				} else if (!error && routes.serve.callback && stats.isDirectory()) {
-					routes.serve.callback.call(host, connection);
-				} else {
-					response.statusCode = 404;
-					routes.error[404].call(host, connection);
-				}
-			});
-		}
-
-		// Routing for parametrized urls and static files
-		function advancedRouting() {
-			var urlSlices = requestURL.split('/'),
-				found = utils.findAdvancedRoute(routes.all.advanced, urlSlices);
-
-			// Search for an advanced route in all, get and post routes
-			if (!found && get) {
-				found = utils.findAdvancedRoute(routes.get.advanced, urlSlices);
-			} else if (!found && post) {
-				found = utils.findAdvancedRoute(routes.post.advanced, urlSlices);
-			}
-
-			// Apply callback if found one
-			if (found) {
-				connection.params = found.params;
-				if (typeof found.route.callback === 'string') {
-					connection.render(found.route.callback);
-				} else {
-					found.route.callback.call(host, connection);
-				}
-			} else if (get && (routes.serve.path || requestURL === 'simples.js')) {
-				staticRouting();
-			} else {
-				response.statusCode = 404;
-				routes.error[404].call(host, connection);
-			}
-		}
-
-		// All requests routing
-		function routing() {
-			if ((get || post) && routes.all.raw[requestURL]) {
-				if (typeof routes.all.raw[requestURL] === 'string') {
-					connection.render(routes.all.raw[requestURL], {
-						connection: connection
-					});
-				} else {
-					routes.all.raw[requestURL].call(host, connection);
-				}
-			} else if (get && routes.get.raw[requestURL]) {
-				if (typeof routes.get.raw[requestURL] === 'string') {
-					connection.render(routes.get.raw[requestURL], {
-						connection: connection
-					});
-				} else {
-					routes.get.raw[requestURL].call(host, connection);
-				}
-			} else if (post && routes.post.raw[requestURL]) {
-				if (typeof routes.post.raw[requestURL] === 'string') {
-					connection.render(routes.post.raw[requestURL], {
-						connection: connection
-					});
-				} else {
-					routes.post.raw[requestURL].call(host, connection);
-				}
-			} else if (get || post) {
-				advancedRouting();
-			} else {
-				response.writeHead(405, {
-					'Allow': 'GET,HEAD,POST'
-				});
-				routes.error[405].call(host, connection);
-			}
-		}
-
-		// Handler for internal errors of the server
-		function errorHandler(error) {
-			console.log('simpleS: Internal Server Error');
-			console.log(parsedUrl.href);
-			console.log(error.stack + '\n');
-			response.statusCode = 500;
-			try {
-				routes.error[500].call(host, connection);
-			} catch (stop) {
-				console.log('simpleS: can not apply route for error 500');
-				console.log(stop.stack + '\n');
-			}
-		}
-
-		// Set the keep alive timeout of the socket to 5 seconds
+		// Set the keep alive timeout of the request socket to 5 seconds
 		request.connection.setTimeout(5000);
 
 		// Wait for string data from the request
 		request.setEncoding('utf8');
 
-		// Populate the body of the connection when the request is readable
+		// Populate the body of the requet, parse post data and route requests
 		request.on('readable', function () {
 			connection.body += this.read();
-		});
-
-		// Start acting when the request ended
-		request.on('end', function () {
+		}).on('end', function () {
 
 			// Populate the files and the query of POST requests
-			if (this.method === 'POST') {
-				utils.parsePOST(this, connection);
-			}
+			utils.parsePOST(this, connection);
 
-			// Vulnerable code handling
-			try {
-				routing();
-			} catch (error) {
-				errorHandler(error);
-			}
+			// Route the requests
+			utils.routing(host, connection, that);
 		});
 	}
 
+	// Call host in this context and set it as the main host
+	host.call(this, 'main');
+
 	// Prepare the server
-	if (options && options.key && options.cert) {
+	if (options) {
 
 		// Set HTTPS port
 		port = 443;
 
+		// Check for HTTPS data
+		if (!((options.cert && options.key) || options.pfx)) {
+			console.log('\nsimpleS: not enough data for HTTPS\n');
+			return;
+		}
+
 		// Get the key and the certificate for the HTTPS server
 		try {
-			options.cert = fs.readFileSync(options.cert);
-			options.key = fs.readFileSync(options.key);
-			server = https.Server(options, requestListener);
-			http.Server(utils.redirectRequestListener).listen(80);
+			options.cert = options.cert && fs.readFileSync(options.cert);
+			options.key = options.key && fs.readFileSync(options.key);
+			options.pfx = options.pfx && fs.readFileSync(options.pfx);
 		} catch (error) {
-			console.log('simpleS: Could not read data for HTTPS');
+			console.log('\nsimpleS: can not read data for HTTPS');
 			console.log(error.message + '\n');
 			return;
 		}
+
+		// Create the HTTP and the HTTPS servers
+		server = https.Server(options, requestListener);
+		redirect = http.Server(requestListener);
+
+		// Manage the HTTP server depending on HTTPS events
+		server.on('open', function () {
+			redirect.listen(80);
+		}).on('close', function () {
+			redirect.close();
+		});
 	} else {
 		server = http.Server(requestListener);
 	}
 
-	// Catch runtime errors
+	// Listen for server events error, release and upgrade related to WebSocket
 	server.on('error', function (error) {
-		console.log('simpleS: Server Error');
+		console.log('\nsimpleS: server error');
 		console.log(error.message + '\n');
-		that.started  = false;
+		that.started = false;
 		that.busy = false;
-	});
-
-	// Inform when the server is not busy
-	server.on('release', function (callback) {
+	}).on('release', function (callback) {
 		that.busy = false;
 		if (callback) {
 			callback.call(that);
 		}
-	});
+	}).on('upgrade', function (request, socket) {
 
-	// Listen for upgrade connections dedicated for WebSocket
-	server.on('upgrade', function (request, socket) {
+		var connection,
+			headers = request.headers,
+			host,
+			hostname = headers.host.split(':')[0],
+			parsedUrl = url.parse(request.url, true),
+			wsHost;
 
 		// Set socket keep alive time to 25 seconds
 		socket.setTimeout(25000);
 
-		// Prepare data for WebSocket host
-		var config,
-			close = new Buffer([136, 0]),
-			connection,
-			data = new Buffer(0),
-			fin,
-			handshake,
-			hash,
-			headers = request.headers,
-			host,
-			hostname = url.parse('http://' + headers.host).hostname,
-			i,
-			index,
-			isHost = that.hosts[hostname],
-			keepAliveTimer,
-			key,
-			mask,
-			maskingKey,
-			message = new Buffer(0),
-			opcode,
-			origin,
-			parsedUrl = url.parse(request.url, true),
-			parseState = 0,
-			payloadData,
-			payloadLength,
-			pingData = new Buffer([137, 0]),
-			protocols,
-			reserved,
-			type,
-			unknownType,
-			wsHost;
+		host = that.hosts[hostname];
 
-		// Get the host
-		host = isHost && isHost.started && isHost || that.hosts.main;
+		// Get the main host if the other one does not exist or is inactive
+		if (!host || !host.started) {
+			host = that.hosts.main;
+		}
+
+		// Select the WebSocket host
 		wsHost = host.wsHosts[parsedUrl.pathname];
 
-		// Inactive WebSocket host
+		// Check for WebSocket host
 		if (!wsHost || !wsHost.started) {
+			console.log('\nsimpleS: received request to an inactive\n');
 			socket.destroy();
 			return;
 		}
 
-		// Shortcuts
-		config = wsHost.config;
-		if (headers.origin) {
-			origin = url.parse(headers.origin).host;
-			index = ~host.origins.indexOf(origin);
-		}
-		if (headers['sec-websocket-protocol']) {
-			protocols = headers['sec-websocket-protocol'].split(/\s*,\s*/).sort();
-		}
-
-		// Check for valid connection handshake
-		if (!headers.origin ||
-			headers.upgrade !== 'websocket' ||
-			headers['sec-websocket-version'] !== '13' ||
-			!headers['sec-websocket-protocol'] ||
-			headers.host !== origin &&
-			(!index || host.origins[0] !== '*' && index) ||
-			(protocols < config.protocols || protocols > config.protocols)) {
+		// Check for valid upgrade header
+		if (headers.upgrade !== 'websocket') {
+			console.log('\nsimpleS: unsupported upgrade header received\n');
 			socket.destroy();
 			return;
 		}
 
-		// Prepare response hash
-		hash = crypto.Hash('sha1');
-		key = headers['sec-websocket-key'];
-		hash.update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', 'utf8');
+		// Check for WebSocket handshake key
+		if (!headers['sec-websocket-key']) {
+			console.log('\nsimpleS: no WebSocket handshake key received');
+			socket.destroy();
+			return;
+		}
 
-		// WebSocket HandShake
-		handshake = [
-			'HTTP/1.1 101 Web Socket Protocol Handshake',
-			'Connection: Upgrade',
-			'Upgrade: WebSocket',
-			'Sec-WebSocket-Accept: ' + hash.digest('base64'),
-			'Sec-WebSocket-Protocol: ' + headers['sec-websocket-protocol'],
-			'Origin: ' + headers.origin,
-			'\r\n'
-		].join('\r\n');
-		socket.write(handshake);
+		// Check for WebSocket subprotocols
+		if (!headers['sec-websocket-protocol']) {
+			console.log('\nsimpleS: no WebSocket subprotocols received');
+			socket.destroy();
+			return;
+		}
+
+		// Check for valid WebSocket protocol version
+		if (headers['sec-websocket-version'] !== '13') {
+			console.log('\nsimpleS: unsupported WebSocket version requested\n');
+			socket.destroy();
+			return;
+		}
+
+		// Check for accepted origin
+		if (headers.origin && !utils.accepts(host, hostname, headers.origin)) {
+			console.log('\nsimpleS: WebSocket origin not accepted\n');
+			socket.destroy();
+			return;
+		}
 
 		// Current connection object
-		connection = new wsConnection(host, request, protocols);
-		connection.host = hostname;
-		connection.path = parsedUrl.pathname;
-		connection.query = parsedUrl.query;
-		connection.raw = config.raw;
-		connection.url = parsedUrl;
-
-		connection.on('close', function () {
-			clearTimeout(keepAliveTimer);
-		});
+		connection = new wsConnection(host, wsHost, request);
 
 		wsHost.connections.push(connection);
+
+		// WebSocket handshake
+		socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n');
+		socket.write('Connection: Upgrade\r\n');
+		socket.write('Upgrade: WebSocket\r\n');
+		socket.write('Sec-WebSocket-Accept: ' + crypto.Hash('sha1')
+			.update(request.headers['sec-websocket-key'])
+			.update('258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
+			.digest('base64') + '\r\n');
+
+		// Write origin only if requested
+		if (headers.origin) {
+			socket.write('Origin: ' + headers.origin + '\r\n\r\n');
+		}
+
+		// Execute user defined code for the WebSocket host
 		try {
 			wsHost.callback.call(host, connection);
 		} catch (error) {
 			console.log('\nsimpleS: error in WebSocket host');
-			console.log(error.message + '\n');
+			console.log(error.stack + '\n');
 		}
-
-		// Process received data
-		socket.on('readable', function () {
-
-			var newData = this.read();
-
-			if (!newData) {
-				return;
-			}
-
-			// Buffer data
-			data = Buffer.concat([data, newData]);
-
-			// Wait for header
-			if (parseState === 0 && data.length >= 2) {
-
-				// Header components
-				fin = data[0] & 128;
-				opcode = data[0] & 15;
-				mask = data[1] & 128;
-				payloadLength = data[1] & 127;
-
-				// Extensions, unknown frame type or unmasked message
-				reserved = data[0] & 112;
-				unknownType = (opcode > 2 && opcode < 8) || opcode > 10;
-				if (reserved || unknownType || !mask) {
-					this.end(close);
-					return;
-				}
-
-				// Control frames should be <= 125 bits and not be fragmented
-				if (opcode > 7 && opcode < 11 && (payloadLength > 125 || !fin)) {
-					this.end(close);
-					return;
-				}
-
-				// Extend payload length or wait for masking key
-				if (payloadLength === 126) {
-					parseState = 1;
-				} else if (payloadLength === 127) {
-					parseState = 2;
-				} else {
-					parseState = 3;
-				}
-
-				// Throw away header
-				data = data.slice(2);
-			}
-
-			// Wait for 16bit, 64bit payload length
-			if (parseState === 1 && data.length >= 2) {
-				payloadLength = data[0] << 8 | data[1];
-				data = data.slice(2);
-				parseState = 3;
-			} else if (parseState === 2 && data.length >= 8) {
-
-				// Most significant bit  should not be 1
-				if (data[0] & 128) {
-					this.end(close);
-					return;
-				}
-
-				// Concatenate payload length
-				payloadLength = data[0] << 56;
-				payloadLength |= data[1] << 48;
-				payloadLength |= data[2] << 40;
-				payloadLength |= data[3] << 32;
-				payloadLength |= data[4] << 24;
-				payloadLength |= data[5] << 16;
-				payloadLength |= data[6] << 8;
-				payloadLength |= data[7];
-				data = data.slice(8);
-				parseState = 3;
-			}
-
-			// Wait for masking key
-			if (parseState === 3 && data.length >= 4) {
-				maskingKey = data.slice(0, 4);
-				data = data.slice(4);
-				parseState = 4;
-			}
-
-			// Wait for payload data
-			if (parseState === 4 && data.length >= payloadLength) {
-
-				// Keep the connection alive
-				clearTimeout(keepAliveTimer);
-				keepAliveTimer = setTimeout(function () {
-					socket.write(pingData);
-				}, 20000);
-
-				// Check for non-control frame
-				if (opcode < 3) {
-
-					// Allocate buffer for payload data
-					payloadData = new Buffer(payloadLength);
-
-					// Unmasking payload data
-					i = payloadLength;
-					while (i--) {
-						payloadData[i] = data[i] ^ maskingKey[i % 4];
-					}
-
-					// Concatenate payload data to the message
-					data = data.slice(payloadLength);
-					message = Buffer.concat([message, payloadData]);
-
-					// Check for last frame
-					if (fin) {
-
-						// Emit messages
-						type = 'binary';
-						if (opcode === 1) {
-							message = message.toString();
-							type = 'text';
-						}
-						if (opcode === 2 || config.raw) {
-							connection.emit('message', {
-								data: message,
-								type: type
-							});
-						} else {
-							try {
-								message = JSON.parse(message);
-								connection.emit(message.event, message.data);
-							} catch (error) {
-								console.log('simpleS: cannot parse incoming WebSocket message');
-								console.log('message: ' + message);
-								console.log(error.stack);
-							}
-						}
-						message = new Buffer(0);
-					} else if (message.length > config.length) {
-
-						// Message too big
-						this.end(close);
-						return;
-					}
-				} else if (opcode === 8) {
-					this.end(close);
-				}
-
-				// Reset state
-				parseState = 0;
-			}
-		});
-
-		// Update connection list on client disconnect
-		socket.on('close', function () {
-			var index = 0;
-			while (wsHost.connections[index] !== connection) {
-				index++;
-			}
-			wsHost.connections.splice(index, 1);
-			connection.emit('close');
-		});
 	});
 
 	// Set simpleS properties
@@ -529,13 +200,9 @@ var simples = function (port, options) {
 			value: false,
 			writable: true
 		},
-		cache: {
-			value: {}
-		},
 		hosts: {
-			value: {
-				main: this
-			}
+			value: null,
+			writable: true
 		},
 		server: {
 			value: server
@@ -569,21 +236,20 @@ simples.prototype.host = function (name) {
 // Start simples server
 simples.prototype.start = function (port, callback) {
 
-	// Shortcut to this context
 	var that = this;
 
 	// Set the server to listen the port
 	function listen() {
-		var i;
 
 		// Start all existing hosts
-		for (i in that.hosts) {
-			that.hosts[i].open();
-		}
+		Object.keys(that.hosts).forEach(function (element) {
+			that.hosts[element].open();
+		});
 
 		// Start listening the port
 		that.server.listen(port, function () {
 			that.server.emit('release', callback);
+			that.server.emit('open');
 		});
 	}
 
@@ -596,6 +262,13 @@ simples.prototype.start = function (port, callback) {
 			that.started = true;
 			utils.getSessions(that, listen);
 		}
+	}
+
+	// Initialize the hosts
+	if (!this.hosts) {
+		this.hosts = {
+			main: this
+		};
 	}
 
 	// If the server is busy wait for release
@@ -611,21 +284,19 @@ simples.prototype.start = function (port, callback) {
 // Stop simpleS server
 simples.prototype.stop = function (callback) {
 
-	// Shortcut to this context
 	var that = this;
 
 	// Stop the server
 	function stop() {
-		var i;
 
 		// Set status flags
 		that.started = false;
 		that.busy = true;
 
 		// Close all existing hosts
-		for (i in that.hosts) {
-			that.hosts[i].close();
-		}
+		Object.keys(that.hosts).forEach(function (element) {
+			that.hosts[element].close();
+		});
 
 		// Close the server
 		that.server.close(function () {

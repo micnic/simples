@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Simple HTTP(S) Server",
 	"keywords": [
 		"cors",
@@ -18,7 +18,7 @@
 		"url": "https://github.com/micnic/simples/issues",
 		"email": "micnic90@gmail.com"
 	},
-	"license": "GPL 3",
+	"license": "GPL-3.0",
 	"author": {
 		"name": "Micleusanu Nicu",
 		"email": "micnic90@gmail.com",
@@ -31,7 +31,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "http://github.com/micnic/simples"
+		"url": "https://github.com/micnic/simpleS"
 	},
 	"engines": {
 		"node": ">=0.10"

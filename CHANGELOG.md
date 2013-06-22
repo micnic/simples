@@ -1,3 +1,11 @@
+## 0.4.1
+- Improved dynamic caching
+- Changed the behavior of pair HTTP + HTTPS servers
+- Optimized routing
+- Optimized WebSocket parser
+- Added `connection.protocol`
+- Fixed a lot of small bugs
+
 ## 0.4.0
 - New template engine connection rules
 - Multiple routes apply / remove
