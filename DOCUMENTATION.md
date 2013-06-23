@@ -454,6 +454,14 @@ Sets the type of the content of the response. Default is 'html'. By default uses
 connection.type('html');
 ```
 
+#### .write(chunk[, encoding, callback])
+
+Writes to the response stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
+
+#### .end([chunk, encoding, callback])
+
+Ends the response stream, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
+
 #### .send(data[, replacer, space])
 
 data: any value
@@ -498,7 +506,7 @@ The WebSocket host is linked to the current or the main HTTP host (see Virtual H
 
 ### WebSocket Host
 
-`.ws(path, config, callback)`
+`.ws(path, [config, ]callback)`
 
 path: string
 

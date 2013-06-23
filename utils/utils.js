@@ -4,6 +4,7 @@ var client,
 	fs = require('fs'),
 	mime = require('./mime'),
 	path = require('path'),
+	qs = require('querystring'),
 	url = require('url'),
 	zlib = require('zlib');
 
