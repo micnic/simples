@@ -1,12 +1,104 @@
 ***simpleS is under active development, the API may change from version to version, it is highly recommended to read the documentation of the current version as there may me be some radical changes***
 
+## Table of Contents:
+
+### [New simpleS Instance](#server)
+### [Server Management](#server-management)
+> ##### [Starting and Restarting](#server-start)
+
+> ##### [Stopping](#server-stop)
+
+> ##### [Virtual Hosting](#server-host)
+
+> ##### [Host Management](#server-host-management)
+
+> ##### [CORS (Cross-Origin Resource Sharing) and Referers](#server-cors-referer)
+
+> ##### [Templating](#server-templating)
+
+### [Routing](#host-routing)
+>##### [All Requests](#host-all)
+
+>##### [GET Requests](#host-get)
+
+>##### [POST Requests](#host-post)
+
+>##### [Error Routes](#host-error)
+
+>##### [Examples for routes](#example-routes)
+
+>##### [Static Files](#host-serve)
+
+>##### [Removing Routes](#host-leave)
+
+### [Connection Interface](#http-connection)
+>##### [.body](#http-connection-body)
+
+>##### [.cookies](#http-connection-cookies)
+
+>##### [.files](#http-connection-files)
+
+>##### [.headers](#http-connection-headers)
+
+>##### [.host](#http-connection-host)
+
+>##### [.ip](#http-connection-ip)
+
+>##### [.langs](#http-connection-langs)
+
+>##### [.method](#http-connection-method)
+
+>##### [.params](#http-connection-params)
+
+>##### [.path](#http-connection-path)
+
+>##### [.protocol](#http-connection-protocol)
+
+>##### [.query](#http-connection-query)
+
+>##### [.session](#http-connection-session)
+
+>##### [.url](#http-connection-url)
+
+>##### [.cookie(name, value[, attributes])](#http-connection-cookie)
+
+>##### [.header(name, value)](#http-connection-cookie)
+
+>##### [.lang(language)](#http-connection-lang)
+
+>##### [.redirect(path[, permanent])](#http-connection-redirect)
+
+>##### [.type(type[, override])](#http-connection-type)
+
+>##### [.write(chunk[, encoding, callback])](#http-connection-write)
+
+>##### [.end(chunk[, encoding, callback])](#http-connection-end)
+
+>##### [.send(data[, replacer, space])](#http-connection-send)
+
+>##### [.drain(path)](#http-connection-drain)
+
+>##### [.render(source[, imports])](#http-connection-render)
+
+### [WebSocket](#websocket)
+>##### [WebSocket Host](#ws-host)
+
+>##### [WebSocket Connection](#ws-connection)
+
+>##### [WebSocket Channel](#ws-channel)
+
+### [Client-Side Simple API](#client-side)
+>##### [AJAX (Asynchronous JavaScript and XML)](#client-side-ajax)
+
+>##### [WS (WebSocket)](#client-side-ws)
+
 ```javascript
 var simples = require('simples');
 ```
 
-# New simpleS Instance
+# <a name="server"/> New simpleS Instance
 
-`simples(port[, options])`
+`simples([port, options])`
 
 port: number
 
@@ -16,12 +108,23 @@ simpleS needs only the port number and it sets up a HTTP server on this port.
 
 ```javascript
 var server = simples(80);
+
+// or simpler
+
+var server = simples(); // will be set on the port 80
 ```
 
 To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) core module for more details. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
 ```javascript
 var server = simples(443, {
+    key: 'path/to/key.pem',
+    cert: 'path/to/cert.pem'
+});
+
+// or just
+
+var server = simples({ // will be set on port 443
     key: 'path/to/key.pem',
     cert: 'path/to/cert.pem'
 });
@@ -39,11 +142,11 @@ server.get('/secured', function (connection) {
 });
 ```
 
-## Server Management
+## <a name="server-management"/> Server Management
 
-### Starting and Restarting
+### <a name="server-start"/> Starting and Restarting
 
-`.start(port[, callback])`
+`.start([port, callback])`
 
 port: number
 
@@ -57,7 +160,7 @@ server.start(80, function () {
 });
 ```
 
-### Stopping
+### <a name="server-stop"/> Stopping
 
 `.stop([callback])`
 
@@ -71,7 +174,7 @@ server.stop(function () {
 });
 ```
 
-### Virtual Hosting
+### <a name="server-host"/> Virtual Hosting
 
 `.host(name)`
 
@@ -83,7 +186,7 @@ simpleS can serve multiple domains on the same server and port, using `.host()` 
 var host = server.host('example.com');
 ```
 
-#### Host Management
+#### <a name="server-host-management"/> Host Management
 
 `.open()`
 
@@ -97,7 +200,7 @@ Closes all the child WebSocket hosts and make the host inactive.
 
 Close the host and removes it from the server. Can not destroy the main host, for the main host all routes will be cleaned as it would be a new created host.
 
-### CORS (Cross-Origin Resource Sharing) and Referers
+### <a name="server-cors-referer"/> CORS (Cross-Origin Resource Sharing) and Referers
 
 `.accept(host[, ...])`
 
@@ -123,7 +226,7 @@ server.referer('*', 'example.com'); // will respond to all referers except 'exam
 server.referer('example.com', 'test.com'); // Will respond only to these 2 referers
 ```
 
-### Templating
+### <a name="server-templating"/> Templating
 
 `.engine(engine)`
 
@@ -157,7 +260,7 @@ server.engine({
 });
 ```
 
-## Routing
+## <a name="host-routing"/> Routing
 
 All the methods described below are applicable on each host independently (see [Virtual Hosting](#virtual-hosting)). All route paths are case sensitive and should contain only paths without queries to exclude possible unexpected behavior and to ensure improved performance, undesired data will be cut off. All routes are relative to the host root and may not begin with `/`, simpleS will ignore it anyway. The routes may be fixed or can contain named parameters. Fixed routes are fast and simple, while the second ones are more flexible and handy in complex applications. The named parameters in the advanced routes are mandatory, if at least one component of the route is absent in the url then the url is not routed.
 
@@ -180,7 +283,7 @@ All the methods described below are applicable on each host independently (see [
 */
 ```
 
-### All Requests
+### <a name="host-all"/> All Requests
 
 `.all(route, result)`
 
@@ -190,7 +293,7 @@ result: string or function(connection)
 
 Listen for both `GET` and `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
 
-### GET Requests
+### <a name="host-get"/> GET Requests
 
 `.get(route, result)`
 
@@ -200,7 +303,7 @@ result: string or function(connection)
 
 Listen for get requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
-### POST Requests
+### <a name="host-post"/> POST Requests
 
 `.post(route, result)`
 
@@ -210,7 +313,7 @@ result: string or function(connection)
 
 Listen for post requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
-### Error Routes
+### <a name="host-error"/> Error Routes
 
 `.error(code, result)`
 
@@ -220,7 +323,7 @@ result: string or function(connection)
 
 Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
 
-#### Examples for `.all()`, `.get()`, `.post()` and `.error()` methods:
+#### <a name="example-routes"/> Examples for `.all()`, `.get()`, `.post()` and `.error()` methods:
 
 ```javascript
 server.all('/', function (connection) {
@@ -242,7 +345,7 @@ server.post([
 ], 'index.ejs');
 ```
 
-### Static Files
+### <a name="host-serve"/> Static Files
 
 `.serve(path[, callback])`
 
@@ -258,7 +361,7 @@ server.serve('root', function (connection) {
 });
 ```
 
-### Removing Routes
+### <a name="host-leave"/>  Removing Routes
 
 `.leave([type, route])`
 
@@ -281,7 +384,7 @@ serve.leave('all', [
 ]);
 ```
 
-### Connection Interface
+### <a name="http-connection"/>  Connection Interface
 
 The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a writable stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
 
@@ -333,62 +436,62 @@ The parameter provided in callbacks for routing requests is an object that conta
 }
 ```
 
-#### .body
+#### <a name="http-connection-body"/>  .body
 
 The content of the body of the request, for `GET` requests it is empty, for `POST` request it will contain plain data, parsed data is contained in `connection.query` or `connection.files`.
 
-#### .cookies
+#### <a name="http-connection-cookies"/> .cookies
 
 An object that contains the cookies provided by the client.
 
-#### .files
+#### <a name="http-connection-files"/> .files
 
 An object that contains files sent using POST method with `multipart/form-data` content type.
 
-#### .headers
+#### <a name="http-connection-headers"/> .headers
 
 An object that contains the HTTP headers of the request.
 
-#### .host
+#### <a name="http-connection-host"/> .host
 The hostname from the `Host` header.
 
-#### .ip
+#### <a name="http-connection-ip"/> .ip
 
 The remote ip address of the request.
 
-#### .langs
+#### <a name="http-connection-langs"/> .langs
 
 An array of strings that represents languages accepted by the client in the order of their relevance.
 
-#### .method
+#### <a name="http-connection-method"/> .method
 
 The HTTP method of the request, it can be `GET`, `HEAD` or `POST` for usual requests, but can have a different value on error `405`.
 
-#### .params
+#### <a name="http-connection-params"/> .params
 
 The object that contains named parameters from the route. This object is only populated when the request url match a specific route with named parameters. The named parameters represents strings that are limited only by `/` or the end of the url.
 
-#### .path
+#### <a name="http-connection-path"/> .path
 
 The pathname of the url of the request.
 
-#### .protocol
+#### <a name="http-connection-protocol"/> .protocol
 
 The name of the protocol of the request.
 
-#### .query
+#### <a name="http-connection-query"/> .query
 
 The object that contains queries from both GET and POST methods, it is recommended to use different names for queries from both methods, if there are two queries with the same name then the GET query will be overwritten.
 
-#### .session
+#### <a name="http-connection-session"/> .session
 
 A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 16 `0-9a-zA-Z` characters which will ensure security for `4.76 * 10 ^ 28` values. This is a getter and the session is initialized only when it is called, this is made for more performance.
 
-#### .url
+#### <a name="http-connection-url"/> .url
 
 The url of the request split in components, see [`url`](http://nodejs.org/api/url.html) core module for more details.
 
-#### .cookie(name, value[, attributes])
+#### <a name="http-connection-cookie"/> .cookie(name, value[, attributes])
 
 name: string
 
@@ -408,7 +511,7 @@ connection.cookie('user', 'me', {
 });
 ```
 
-#### .header(name, value)
+#### <a name="http-connection-header"/> .header(name, value)
 
 name: string
 
@@ -420,7 +523,7 @@ Sets the header of the response. Usually simpleS manages the headers of the resp
 connection.header('ETag', '0123456789');
 ```
 
-#### .lang(language)
+#### <a name="http-connection-lang"/> .lang(language)
 
 language: string
 
@@ -430,7 +533,7 @@ Sets the language of the response. Should be used before the `.write()` method. 
 connection.lang('ro');
 ```
 
-#### .redirect(path[, permanent])
+#### <a name="http-connection-redirect"/> .redirect(path[, permanent])
 
 path: string
 
@@ -442,7 +545,7 @@ Redirects the client to the provided path. If the redirect is permanent then the
 connection.redirect('/index', true);
 ```
 
-#### .type(type[, override])
+#### <a name="http-connection-type"/> .type(type[, override])
 
 type: string
 
@@ -454,15 +557,15 @@ Sets the type of the content of the response. Default is 'html'. By default uses
 connection.type('html');
 ```
 
-#### .write(chunk[, encoding, callback])
+#### <a name="http-connection-write"/> .write(chunk[, encoding, callback])
 
 Writes to the response stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
 
-#### .end([chunk, encoding, callback])
+#### <a name="http-connection-body"/> .end([chunk, encoding, callback])
 
 Ends the response stream, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
 
-#### .send(data[, replacer, space])
+#### <a name="http-connection-send"/> .send(data[, replacer, space])
 
 data: any value
 
@@ -476,7 +579,7 @@ Writes preformatted data to the response stream and ends the response, implement
 connection.send(['Hello', 'World']);
 ```
 
-#### .drain(path)
+#### <a name="http-connection-drain"/> .drain(path)
 
 path: string
 
@@ -486,7 +589,7 @@ Get the content of the file located on the specified path and write it to the re
 connection.drain('path/to/index.html');
 ```
 
-#### .render(source, imports)
+#### <a name="http-connection-render"/> .render(source[, imports])
 
 source: string
 
@@ -500,11 +603,11 @@ connection.render('Hello <%= world %>', {
 });
 ```
 
-## WebSocket
+## <a name="websocket"/> WebSocket
 
 The WebSocket host is linked to the current or the main HTTP host (see Virtual Hosting).
 
-### WebSocket Host
+### <a name="ws-host"/> WebSocket Host
 
 `.ws(path, [config, ]callback)`
 
@@ -526,7 +629,7 @@ var echo = server.ws('/', {
 });
 ```
 
-#### .open([config, callback])
+#### <a name="ws-host-open"/> .open([config, callback])
 
 config: object
 
@@ -543,15 +646,15 @@ echo.start({
 });
 ```
 
-#### .close()
+#### <a name="ws-host-close"/> .close()
 
 Stops the WebSocket host. Will close all existing connections and will not receive new connections.
 
-#### .destroy()
+#### <a name="ws-host-destroy"/> .destroy()
 
 Will stop the current WebSocket host and will remove it from the WebSocket hosts list.
 
-#### .broadcast([event, ]data[, filter])
+#### <a name="ws-host-broadcast"/> .broadcast([event, ]data[, filter])
 
 event: string
 
@@ -567,17 +670,17 @@ echo.broadcast('HelloWorld', function (element, index, array) {
 });
 ```
 
-#### .channel(name)
+#### <a name="ws-host-channel"/> .channel(name)
 
 name: string
 
 Opens a new channel with the provided name. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
 
-### WebSocket Connection
+### <a name="ws-connection"/> WebSocket Connection
 
 The object that represents the current WebSocket connection. The WebSocket connection is an event emitter, see [`events`](http://nodejs.org/api/events.html) core module for more details, and has some attributes from connection interface to handle needed data from the handshake request.
 
-#### WebSocket Connection Members
+#### <a name="ws-connection-members"/> WebSocket Connection Members
 
 `.cookies`
 
@@ -626,7 +729,7 @@ data: any value
 
 Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
 
-#### WebSocket Connection Events
+#### <a name="ws-connection-events"/> WebSocket Connection Events
 
 `message`
 
@@ -636,27 +739,27 @@ Emitted when the server receives a message from the client. The callback functio
 
 Emitted when the connection is closed. The callback function does not have any parameter.
 
-### WebSocket Channel
+### <a name="ws-channel"/> WebSocket Channel
 
 The object that groups a set of connections. This is useful for sending messages to a group of connections in a better way than the `.broadcast()` method of the WebSocket host. WebSocket channel is an event emitter, see [`events`](http://nodejs.org/api/events.html) core module for more details.
 
-#### .bind(connection)
+#### <a name="ws-channel-bind"/> .bind(connection)
 
 connection: WebSocket Connection Instance
 
 Adds the connection to the channel. Emits `bind` event with the `connection` as parameter.
 
-#### .unbind(connection)
+#### <a name="ws-channel-unbind"/> .unbind(connection)
 
 connection: WebSocket Connection Instance
 
 Removes the connection from the channel. The connection remains alive. Emits `unbind` event with `connection` as parameter.
 
-#### .close()
+#### <a name="ws-channel-close"/> .close()
 
 Drops all the connections from the channel and removes the channel from the WebSocket host. Channels are automatically closed if there are no bound connections. Emits `close` event with no parameters.
 
-#### .broadcast([event, ]data[, filter])
+#### <a name="ws-channel-broadcast"/> .broadcast([event, ]data[, filter])
 
 event: string
 
@@ -666,7 +769,7 @@ filter: function(element, index, array)
 
 Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters.
 
-## Client-Side Simple API
+## <a name="client-side"/> Client-Side Simple API
 
 To have access to the simpleS client-side API it is necessary to add
 
@@ -676,7 +779,7 @@ To have access to the simpleS client-side API it is necessary to add
 
 in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
 
-### AJAX (Asynchronous JavaScript and XML)
+### <a name="client-side-ajax"/> AJAX (Asynchronous JavaScript and XML)
 
 `simples.ajax(url, params[, method])`
 
@@ -704,7 +807,7 @@ var request = simples.ajax('/', {
 request.stop();
 ```
 
-### WS (WebSocket)
+### <a name="client-side-ws"/> WS (WebSocket)
 
 `simples.ws(host[, protocols, raw])`
 
@@ -722,7 +825,7 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 });
 ```
 
-#### Socket Management
+#### <a name="client-side-ws-management"/> Socket Management
 
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
@@ -730,7 +833,7 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 
 `.close()` - closes the WebSocket connection.
 
-#### Listeners Management
+#### <a name="client-side-ws-listeners"/> Listeners Management
 `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, see [`events`](http://nodejs.org/api/events.html) core module for more details:
 
 `.emit(event[, data])` - triggers locally an event, does not send data to the server, is useful for triggering instantly the event on the client or for debugging.
@@ -739,7 +842,7 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 
 `.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event.
 
-##### Events
+##### <a name="client-side-ws-events"/> Events
 
 `message` - default event received in raw mode or in advanced mode if the incoming message could not be parsed, the callback function has one parameter, the received data.
 
@@ -747,7 +850,7 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 
 `close` - triggered when the WebSocket connection is closed, the callback function has no parameters.
 
-#### Data Management
+#### <a name="client-side-ws-modes"/> Data Management
 
 Based on the third parameter in `simples.ws()` the communication with the server can be made in advanced or raw mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
 

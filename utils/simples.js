@@ -154,7 +154,7 @@ simples.ajax.prototype.progress = function (listener) {
 simples.ajax.prototype.stop = function () {
     'use strict';
 
-    this.xhr.abord();
+    this.xhr.abort();
 };
 
 // Set the succes listener
@@ -335,9 +335,9 @@ simples.ws.prototype.addListener = function (event, listener) {
     if (!listeners) {
         this.listeners[event] = listener;
     } else if (typeof listeners === 'function') {
-        listeners = [listeners, listener];
+		this.listeners = [listeners, listener];
     } else {
-        listeners[listeners.length] = listener;
+		this.listeners[listeners.length] = listener;
     }
 
     return this;
@@ -402,7 +402,7 @@ simples.ws.prototype.removeListener = function (event, listener) {
 
     // If only one listener remains make it function
     if (listeners.length === 1) {
-        listeners = listeners[0];
+        this.listeners = listeners[0];
     }
 
     return this;

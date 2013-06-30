@@ -2,11 +2,9 @@
 
 var client,
 	fs = require('fs'),
-	mime = require('./mime'),
 	path = require('path'),
 	qs = require('querystring'),
-	url = require('url'),
-	zlib = require('zlib');
+	url = require('url');
 
 // Prepare client-side simples.js content
 fs.stat(__dirname + '/simples.js', function (error, stats) {
@@ -70,8 +68,11 @@ function findAdvancedRoute(routes, url) {
 
 // Handle for static files content cache
 function getCache(object, location) {
+
+	// Get the location components
 	location = location.split('/');
 
+	// Get the content of the files
 	for (var i = 0; i < location.length; i++) {
 		if (object.files[location[i]]) {
 			object = object.files[location[i]];
@@ -85,8 +86,11 @@ function getCache(object, location) {
 
 // Returns the named parameters of an advanced route
 function getNamedParams(route, url) {
+
 	var index = route.length,
 		params = {};
+
+	// Populate parameters
 	while (index--) {
 		if (route[index].charAt(0) === ':') {
 			params[route[index].substr(1)] = url[index];
@@ -95,10 +99,12 @@ function getNamedParams(route, url) {
 			break;
 		}
 	}
+
 	return params;
 }
 
 function cacheAtom(object, directory, name) {
+
 	var location = path.join(directory, name);
 
 	// Check file and folder stats
@@ -158,303 +164,12 @@ function cacheAtom(object, directory, name) {
 	});
 }
 
-// Check if the origin is accepted by the host (CORS)
-exports.accepts = function (host, hostname, origin) {
-
-	// Get the hostname from the origin
-	origin = url.parse(origin).hostname || origin;
-
-	// Check if the origin is accepted
-	if (host.origins.indexOf(origin) >= 0) {
-		return host.origins[0] !== '*' || origin === hostname;
-	} else {
-		return host.origins[0] === '*' || origin === hostname;
-	}
-};
-
-// Add all kinds of routes
-exports.addRoutes = function (type, routes, callback) {
-
-	// Add the routes to the host
-	if (Array.isArray(routes)) {
-		for (var i = 0; i < routes.length; i++) {
-			if (routes[i].charAt(0) === '/') {
-				routes[i] = routes[i].substr(1);
-			}
-			routes[i] = url.parse(routes[i]).pathname || '';
-
-			// Check for routes with named parameters
-			if (~routes[i].indexOf(':')) {
-				this.routes[type].advanced[routes[i]] = {
-					slices: routes[i].split('/'),
-					callback: callback
-				};
-			} else {
-				this.routes[type].raw[routes[i]] = callback;
-			}
-		}
-	} else if (typeof routes === 'string') {
-		if (routes.charAt(0) === '/') {
-			routes = routes.substr(1);
-		}
-		routes = url.parse(routes).pathname || '';
-
-		// Check for routes with named parameters
-		if (~routes.indexOf(':')) {
-			this.routes[type].advanced[routes] = {
-				slices: routes.split('/'),
-				callback: callback
-			};
-		} else {
-			this.routes[type].raw[routes] = callback;
-		}
-	}
-};
-
-// Populate object with directory content
-exports.cache = function (object, directory) {
-	object.files = {};
-
-	// Read the directory content
-	fs.readdir(directory, function (error, files) {
-
-		// Stop on error
-		if (error) {
-			console.log('\nsimpleS: can not read directory "' + directory + '" for caching');
-			console.log(error.stack + '\n');
-			return;
-		}
-		var index = files.length;
-
-		// Loop through all files
-		while (index--) {
-			cacheAtom(object, directory, files[index]);
-		}
-	});
-};
-
-// Generate empty routes
-exports.defaultRoutes = function () {
-
-	return {
-		all: {
-			advanced: [],
-			raw: {}
-		},
-		error: {
-			404: e404,
-			405: e405,
-			500: e500
-		},
-		get: {
-			advanced: [],
-			raw: {}
-		},
-		post: {
-			advanced: [],
-			raw: {}
-		},
-		serve: null
-	};
-};
-
-// Return a random session name of 16 characters
-exports.generateSessionName = function () {
-	var chrs = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-		count = 16,
-		name = '';
-
-	// Append a random character to the name in loop
-	while (count--) {
-		name += chrs.charAt(Math.random() * 62 | 0);
-	}
-
-	return name;
-};
-
-// Get sessions from file and activate them in the hosts
-exports.getSessions = function (instance, callback) {
-
-	var i,
-		j;
-
-	// Read and parse the sessions file
-	fs.readFile('.sessions', 'utf8', function (error, data) {
-
-		// Catch error at reading
-		if (error) {
-			callback();
-			return;
-		}
-
-		// Supervise session file parsing
-		try {
-			data = JSON.parse(data);
-		} catch (error) {
-			console.log('\nsimpleS: can not parse sessions file');
-			console.log(error.message + '\n');
-		}
-
-		// If data was not parsed
-		if (typeof data === 'string') {
-			callback();
-			return;
-		}
-
-		// Activate the sessions from the file
-		for (i in instance.hosts) {
-			instance.hosts[i].sessions = data[i];
-
-			for (j in data[i]) {
-				instance.hosts[i].timers[j] = setTimeout(function (host, index) {
-					delete host.sessions[index];
-					delete host.timers[index];
-				}, 3600000, instance.hosts[i], j);
-			}
-		}
-
-		// Continue to port listening
-		callback();
-	});
-};
-
-// Get the cookies and the session
-exports.parseCookies = function (request) {
-	var content,
-		cookies = {},
-		currentChar,
-		index,
-		name,
-		session = '',
-		value;
-
-	// Populate cookies and session
-	if (request.headers.cookie) {
-		content = request.headers.cookie;
-		index = 0;
-		while (currentChar = content.charAt(index)) {
-			while (currentChar = content.charAt(index), currentChar === ' ') {
-				index++;
-			}
-			if (!currentChar) {
-				break;
-			}
-			name = '';
-			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== '=') {
-				name += currentChar;
-				index++;
-			}
-			if (!currentChar) {
-				break;
-			}
-			while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
-				index++;
-			}
-			if (!currentChar) {
-				break;
-			}
-			value = '';
-			while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
-				value += currentChar;
-				index++;
-			}
-			value = decodeURIComponent(value);
-			if (name === '_session') {
-				session = value;
-			} else {
-				cookies[name] = value;
-			}
-			index++;
-		}
-	}
-
-	return {
-		cookies: cookies,
-		session: session
-	}
-};
-
-// Get the languages accepted by the client
-exports.parseLangs = function (request) {
-
-	var content = request.headers['accept-language'],
-		currentChar,
-		index = 0,
-		lang,
-		langs = [],
-		quality;
-
-	// Return an empty array if no accept language header
-	if (!request.headers['accept-language']) {
-		return [];
-	}
-
-	while (currentChar = content.charAt(index)) {
-		lang = '';
-		quality = '';
-		while (currentChar = content.charAt(index), currentChar === ' ') {
-			index++;
-		}
-		if (!currentChar) {
-			break;
-		}
-		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',' && currentChar !== ';') {
-			lang += currentChar;
-			index++;
-		}
-		index++;
-		if (!currentChar || currentChar === ',') {
-			langs.push({
-				lang: lang,
-				quality: 1
-			});
-			continue;
-		}
-		while (currentChar = content.charAt(index), currentChar === ' ') {
-			index++;
-		}
-		if (currentChar !== 'q') {
-			break;
-		}
-		index++;
-		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
-			index++;
-		}
-		if (!currentChar) {
-			break;
-		}
-		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',') {
-			quality += currentChar;
-			index++;
-		}
-		langs.push({
-			lang: lang,
-			quality: Number(quality)
-		});
-		index++;
-	}
-
-	langs = langs.sort(function (first, second) {
-		return second.quality - first.quality;
-	});
-
-	index = langs.length;
-
-	while (index--) {
-		langs[index] = langs[index].lang;
-	}
-
-	return langs;
-};
-
 // Parse data sent via POST method
-exports.parsePOST = function (request, connection) {
-	if (request.method !== 'POST' || !request.headers['content-type']) {
-		return;
-	}
+function parsePOST(connection) {
+
 	var boundary,
 		boundaryLength,
-		content = request.headers['content-type'],
+		content = connection.request.headers['content-type'],
 		contentType,
 		currentChar,
 		filecontent,
@@ -464,6 +179,7 @@ exports.parsePOST = function (request, connection) {
 		POSTquery,
 		tempIndex,
 		type;
+
 	while (currentChar = content.charAt(index), currentChar === ' ') {
 		index++;
 	}
@@ -549,6 +265,285 @@ exports.parsePOST = function (request, connection) {
 	}
 }
 
+// Check if the origin is accepted by the host (CORS)
+exports.accepts = function (host, request) {
+
+	var hostname = request.headers.host.split(':')[0],
+		origin = request.headers.origin;
+
+	// Get the hostname from the origin
+	origin = url.parse(origin).hostname || origin;
+
+	// Check if the origin is accepted
+	if (host.origins.indexOf(origin) >= 0) {
+		return host.origins[0] !== '*' || origin === hostname;
+	} else {
+		return host.origins[0] === '*' || origin === hostname;
+	}
+};
+
+// Add all kinds of routes
+exports.addRoutes = function (type, routes, callback) {
+
+	// Add the routes to the host
+	if (Array.isArray(routes)) {
+		for (var i = 0; i < routes.length; i++) {
+			if (routes[i].charAt(0) === '/') {
+				routes[i] = routes[i].substr(1);
+			}
+			routes[i] = url.parse(routes[i]).pathname || '';
+
+			// Check for routes with named parameters
+			if (~routes[i].indexOf(':')) {
+				this.routes[type].advanced[routes[i]] = {
+					slices: routes[i].split('/'),
+					callback: callback
+				};
+			} else {
+				this.routes[type].raw[routes[i]] = callback;
+			}
+		}
+	} else if (typeof routes === 'string') {
+		if (routes.charAt(0) === '/') {
+			routes = routes.substr(1);
+		}
+		routes = url.parse(routes).pathname || '';
+
+		// Check for routes with named parameters
+		if (~routes.indexOf(':')) {
+			this.routes[type].advanced[routes] = {
+				slices: routes.split('/'),
+				callback: callback
+			};
+		} else {
+			this.routes[type].raw[routes] = callback;
+		}
+	}
+};
+
+// Populate object with directory content
+exports.cache = function (object, directory) {
+
+	// Prepare container for directory files
+	object.files = {};
+
+	// Read the directory content
+	fs.readdir(directory, function (error, files) {
+
+		// Stop on error
+		if (error) {
+			console.log('\nsimpleS: can not read directory "' + directory + '" for caching');
+			console.log(error.stack + '\n');
+			return;
+		}
+		var index = files.length;
+
+		// Loop through all files
+		while (index--) {
+			cacheAtom(object, directory, files[index]);
+		}
+	});
+};
+
+// Generate empty routes
+exports.defaultRoutes = function () {
+
+	return {
+		all: {
+			advanced: [],
+			raw: {}
+		},
+		error: {
+			404: e404,
+			405: e405,
+			500: e500
+		},
+		get: {
+			advanced: [],
+			raw: {}
+		},
+		post: {
+			advanced: [],
+			raw: {}
+		},
+		serve: null
+	};
+};
+
+// Return a random session name of 16 characters
+exports.generateSessionName = function () {
+
+	var chrs = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+		count = 16,
+		name = '';
+
+	// Append a random character to the name in loop
+	while (count--) {
+		name += chrs.charAt(Math.random() * 62 | 0);
+	}
+
+	return name;
+};
+
+// Get sessions from file and activate them in the hosts
+exports.getSessions = function (instance, callback) {
+
+	var i,
+		j;
+
+	// Read and parse the sessions file
+	fs.readFile('.sessions', 'utf8', function (error, data) {
+
+		// Catch error at reading
+		if (error) {
+			callback();
+			return;
+		}
+
+		// Supervise session file parsing
+		try {
+			data = JSON.parse(data);
+		} catch (error) {
+			console.log('\nsimpleS: can not parse sessions file');
+			console.log(error.message + '\n');
+		}
+
+		// If data was not parsed
+		if (typeof data === 'string') {
+			callback();
+			return;
+		}
+
+		// Activate the sessions from the file
+		for (i in instance.hosts) {
+			instance.hosts[i].sessions = data[i];
+
+			for (j in data[i]) {
+				instance.hosts[i].timers[j] = setTimeout(function (host, index) {
+					delete host.sessions[index];
+					delete host.timers[index];
+				}, 3600000, instance.hosts[i], j);
+			}
+		}
+
+		// Continue to port listening
+		callback();
+	});
+};
+
+// Get the cookies and the session
+exports.parseCookies = function (content) {
+
+	var cookies = {},
+		currentChar,
+		index = 0,
+		name,
+		value;
+
+	// Populate cookies and session
+	while (currentChar = content.charAt(index)) {
+		while (currentChar = content.charAt(index), currentChar === ' ') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		name = '';
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== '=') {
+			name += currentChar;
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		value = '';
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ';') {
+			value += currentChar;
+			index++;
+		}
+		value = decodeURIComponent(value);
+		if (name === '_session') {
+			Object.defineProperty(cookies, '_session', {
+				value: value
+			});
+		} else {
+			cookies[name] = value;
+		}
+		index++;
+	}
+
+	return cookies;
+};
+
+// Get the languages accepted by the client
+exports.parseLangs = function (content) {
+
+	var currentChar,
+		index = 0,
+		lang,
+		langs = [],
+		quality;
+
+	// Start parsing
+	while (currentChar = content.charAt(index)) {
+		lang = '';
+		quality = '';
+		while (currentChar = content.charAt(index), currentChar === ' ') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',' && currentChar !== ';') {
+			lang += currentChar;
+			index++;
+		}
+		index++;
+		if (!currentChar || currentChar === ',') {
+			langs.push({
+				lang: lang,
+				quality: 1
+			});
+			continue;
+		}
+		while (currentChar = content.charAt(index), currentChar === ' ') {
+			index++;
+		}
+		if (currentChar !== 'q') {
+			break;
+		}
+		index++;
+		while (currentChar = content.charAt(index), currentChar === ' ' || currentChar === '=') {
+			index++;
+		}
+		if (!currentChar) {
+			break;
+		}
+		while (currentChar = content.charAt(index), currentChar && currentChar !== ' ' && currentChar !== ',') {
+			quality += currentChar;
+			index++;
+		}
+		langs.push({
+			lang: lang,
+			quality: Number(quality)
+		});
+		index++;
+	}
+
+	// Sort the languages in the order of their importance and return them
+	return langs.sort(function (first, second) {
+		return second.quality - first.quality;
+	}).map(function (element) {
+		return element.lang;
+	});
+};
+
 // Parse data received via WebSocket
 exports.parseWS = function (connection, frame, data) {
 
@@ -597,28 +592,28 @@ exports.parseWS = function (connection, frame, data) {
 		if (frame.data[0] & 112) {
 			console.log('\nsimpleS: WebSocket does not support extensions\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		// Check for unknown frame type
 		if ((frame.opcode & 7) > 2) {
 			console.log('\nsimpleS: unknown WebSocket frame type\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		// Control frames should be <= 125 bits and not be fragmented
 		if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
 			console.log('\nsimpleS: invalid WebSocket control frame\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		// Check for mask flag
 		if (!(frame.data[1] & 128)) {
 			console.log('\nsimpleS: unmasked frame received\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		// Extend payload length or wait for masking key
@@ -633,10 +628,11 @@ exports.parseWS = function (connection, frame, data) {
 		// Throw away header
 		if (frame.opcode === 8) {
 			connection.socket.end(new Buffer([136, 0]));
+			frame.state = -1;
 		} else if (frame.opcode === 9) {
 			console.log('\nsimpleS: ping frame received\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		} else if (frame.opcode === 10) {
 			connection.keep();
 			frame.data = frame.data.slice(6 + frame.length);
@@ -657,7 +653,7 @@ exports.parseWS = function (connection, frame, data) {
 		if (frame.data.readUInt32BE(2)) {
 			console.log('\nsimpleS: can not use 64bit payload length\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		// Limit payload length to 32bit (4GB)
@@ -673,7 +669,7 @@ exports.parseWS = function (connection, frame, data) {
 		if (frame.length + frame.message.length > connection.config.length) {
 			console.log('\nsimpleS: too big WebSocket message\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
-			return;
+			frame.state = -1;
 		}
 
 		frame.mask = frame.data.slice(frame.index, frame.index + 4);
@@ -714,16 +710,14 @@ exports.parseWS = function (connection, frame, data) {
 
 	// Continue parsing if more data available
 	if (frame.state === 0 && frame.data.length >= 2) {
-		setImmediate(function () {
-			exports.parseWS(connection, frame, frame.data);
-		});
+		setImmediate(exports.parseWS, connection, frame, frame.data);
 	}
 };
 
 // Remove the routes from the host
 exports.removeRoutes = function (type, routes) {
 
-	var defaultRoutes = utils.defaultRoutes();
+	var defaultRoutes = exports.defaultRoutes();
 
 	// Check what to remove
 	if (routes) {
@@ -777,15 +771,10 @@ exports.removeRoutes = function (type, routes) {
 // Routes all the requests
 exports.routing = function (host, connection) {
 
-	var accepted,
-		found,
+	var found,
 		get,
-		headers,
-		hostname,
-		isBanned,
 		post,
 		origin,
-		referer,
 		request = connection.request,
 		requestURL = connection.path.substr(1),
 		response = connection.response,
@@ -794,16 +783,19 @@ exports.routing = function (host, connection) {
 		urlSlices;
 
 	get = request.method === 'GET' || request.method === 'HEAD';
-	headers = request.headers;
-	hostname = headers.host.split(':')[0];
 	post = request.method === 'POST';
 
+	// Populate the files and the query of POST requests
+	if (post && request.headers['content-type']) {
+		parsePOST(connection);
+	}
+
 	// Check for CORS requests
-	if (headers.origin) {
+	if (request.headers.origin) {
 
 		// Check if the origin is accepted
-		if (exports.accepts(host, hostname, headers.origin)) {
-			origin = headers.origin;
+		if (exports.accepts(host, request)) {
+			origin = request.headers.origin;
 		} else {
 			origin = connection.protocol + '://' + connection.host;
 		}
@@ -815,7 +807,7 @@ exports.routing = function (host, connection) {
 		response.setHeader('Access-Control-Allow-Origin', origin);
 
 		// End the response
-		if (!accepted || request.method === 'OPTIONS') {
+		if (request.method === 'OPTIONS') {
 			response.end();
 			return;
 		}
@@ -862,7 +854,7 @@ exports.routing = function (host, connection) {
 						connection.type(path.extname(requestURL).substr(1));
 						var mtime = file.stats.mtime.valueOf();
 						connection.header('Last-Modified', mtime);
-						if (Number(headers['if-modified-since']) === mtime) {
+						if (Number(request.headers['if-modified-since']) === mtime) {
 							response.statusCode = 304;
 							connection.end();
 						} else {

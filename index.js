@@ -1,12 +1,10 @@
 'use strict';
 
-var crypto = require('crypto'),
-	fs = require('fs'),
+var fs = require('fs'),
 	http = require('http'),
 	httpConnection = require('./lib/http/connection'),
 	https = require('https'),
 	host = require('./lib/http/host'),
-	path = require('path'),
 	url = require('url'),
 	utils = require('./utils/utils'),
 	wsConnection = require('./lib/ws/connection');
@@ -21,38 +19,26 @@ var simples = function (port, options) {
 	// The listener for the HTTP requests
 	function requestListener(request, response) {
 
-		var connection,
-			host = that.hosts[request.headers.host.split(':')[0]];
+		var host = that.hosts[request.headers.host.split(':')[0]];
 
 		// Get the main host if the other one does not exist or is inactive
-		if (!host || !host.started) {
+		if (!host || !host.active) {
 			host = that.hosts.main;
 		}
 
 		// Set up the HTTP connection
-		connection = new httpConnection(host, request, response);
-
-		// Set the keep alive timeout of the request socket to 5 seconds
-		request.connection.setTimeout(5000);
-
-		// Wait for string data from the request
-		request.setEncoding('utf8');
-
-		// Populate the body of the requet, parse post data and route requests
-		request.on('readable', function () {
-			connection.body += this.read();
-		}).on('end', function () {
-
-			// Populate the files and the query of POST requests
-			utils.parsePOST(this, connection);
-
-			// Route the requests
-			utils.routing(host, connection, that);
-		});
+		new httpConnection(host, request, response);
 	}
 
-	// Call host in this context and set it as the main host
-	host.call(this, 'main');
+	// Set the port to be optional
+	if (typeof port !== 'number' || typeof port !== 'string') {
+		if (port && typeof port === 'object') {
+			options = port;
+			port = 443;
+		} else {
+			port = 80;
+		}
+	}
 
 	// Prepare the server
 	if (options) {
@@ -66,7 +52,7 @@ var simples = function (port, options) {
 			return;
 		}
 
-		// Get the key and the certificate for the HTTPS server
+		// Get the data for the HTTPS server
 		try {
 			options.cert = options.cert && fs.readFileSync(options.cert);
 			options.key = options.key && fs.readFileSync(options.key);
@@ -105,19 +91,17 @@ var simples = function (port, options) {
 	}).on('upgrade', function (request, socket) {
 
 		var connection,
-			headers = request.headers,
 			host,
-			hostname = headers.host.split(':')[0],
 			parsedUrl = url.parse(request.url, true),
 			wsHost;
 
 		// Set socket keep alive time to 25 seconds
 		socket.setTimeout(25000);
 
-		host = that.hosts[hostname];
+		host = that.hosts[request.headers.host.split(':')[0]];
 
 		// Get the main host if the other one does not exist or is inactive
-		if (!host || !host.started) {
+		if (!host || !host.active) {
 			host = that.hosts.main;
 		}
 
@@ -125,42 +109,42 @@ var simples = function (port, options) {
 		wsHost = host.wsHosts[parsedUrl.pathname];
 
 		// Check for WebSocket host
-		if (!wsHost || !wsHost.started) {
-			console.log('\nsimpleS: received request to an inactive\n');
+		if (!wsHost || !wsHost.active) {
+			console.log('\nsimpleS: received request to an inactive host\n');
 			socket.destroy();
 			return;
 		}
 
 		// Check for valid upgrade header
-		if (headers.upgrade !== 'websocket') {
+		if (request.headers.upgrade !== 'websocket') {
 			console.log('\nsimpleS: unsupported upgrade header received\n');
 			socket.destroy();
 			return;
 		}
 
 		// Check for WebSocket handshake key
-		if (!headers['sec-websocket-key']) {
+		if (!request.headers['sec-websocket-key']) {
 			console.log('\nsimpleS: no WebSocket handshake key received');
 			socket.destroy();
 			return;
 		}
 
 		// Check for WebSocket subprotocols
-		if (!headers['sec-websocket-protocol']) {
+		if (!request.headers['sec-websocket-protocol']) {
 			console.log('\nsimpleS: no WebSocket subprotocols received');
 			socket.destroy();
 			return;
 		}
 
 		// Check for valid WebSocket protocol version
-		if (headers['sec-websocket-version'] !== '13') {
+		if (request.headers['sec-websocket-version'] !== '13') {
 			console.log('\nsimpleS: unsupported WebSocket version requested\n');
 			socket.destroy();
 			return;
 		}
 
 		// Check for accepted origin
-		if (headers.origin && !utils.accepts(host, hostname, headers.origin)) {
+		if (request.headers.origin && !utils.accepts(host, request)) {
 			console.log('\nsimpleS: WebSocket origin not accepted\n');
 			socket.destroy();
 			return;
@@ -169,25 +153,12 @@ var simples = function (port, options) {
 		// Current connection object
 		connection = new wsConnection(host, wsHost, request);
 
+		// Append the connection to the WebSocket host
 		wsHost.connections.push(connection);
-
-		// WebSocket handshake
-		socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n');
-		socket.write('Connection: Upgrade\r\n');
-		socket.write('Upgrade: WebSocket\r\n');
-		socket.write('Sec-WebSocket-Accept: ' + crypto.Hash('sha1')
-			.update(request.headers['sec-websocket-key'])
-			.update('258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
-			.digest('base64') + '\r\n');
-
-		// Write origin only if requested
-		if (headers.origin) {
-			socket.write('Origin: ' + headers.origin + '\r\n\r\n');
-		}
 
 		// Execute user defined code for the WebSocket host
 		try {
-			wsHost.callback.call(host, connection);
+			wsHost.callback.call(wsHost, connection);
 		} catch (error) {
 			console.log('\nsimpleS: error in WebSocket host');
 			console.log(error.stack + '\n');
@@ -201,7 +172,10 @@ var simples = function (port, options) {
 			writable: true
 		},
 		hosts: {
-			value: null,
+			value: {}
+		},
+		port: {
+			value: port,
 			writable: true
 		},
 		server: {
@@ -213,8 +187,11 @@ var simples = function (port, options) {
 		}
 	});
 
+	// Call host in this context and set it as the main host
+	host.call(this, this, 'main');
+
 	// Start the server on the provided port
-	this.start(port);
+	this.start();
 };
 
 // Inherit from host
@@ -227,10 +204,9 @@ simples.prototype = Object.create(host.prototype, {
 	}
 });
 
-// Create a new host and save it to the hosts object
+// Create a new host
 simples.prototype.host = function (name) {
-	this.hosts[name] = new host(this, name);
-	return this.hosts[name];
+	return new host(this, name);
 };
 
 // Start simples server
@@ -255,7 +231,11 @@ simples.prototype.start = function (port, callback) {
 
 	// Start or restart the server
 	function start() {
+
+		// Set the busy flag
 		that.busy = true;
+
+		// Check if server is started
 		if (that.started) {
 			that.server.close(listen);
 		} else {
@@ -264,11 +244,12 @@ simples.prototype.start = function (port, callback) {
 		}
 	}
 
-	// Initialize the hosts
-	if (!this.hosts) {
-		this.hosts = {
-			main: this
-		};
+	// Set the port to be optional
+	if (typeof port !== 'number' && typeof port !== 'string') {
+		if (typeof port === 'function') {
+			callback = port;
+		}
+		port = this.port;
 	}
 
 	// If the server is busy wait for release

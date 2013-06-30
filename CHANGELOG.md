@@ -1,3 +1,8 @@
+## 0.4.2
+- Bugfixes
+- Some improvements in code structure
+- Improved documentation
+
 ## 0.4.1
 - Improved dynamic caching
 - Changed the behavior of pair HTTP + HTTPS servers
