@@ -11,8 +11,8 @@ fs.stat(__dirname + '/simples.js', function (error, stats) {
 
 	// Log error
 	if (error) {
-		console.log('\nsimpleS: can not check "simples.js" stats');
-		console.log(error.stack + '\n');
+		console.error('\nsimpleS: Can not find "simples.js"');
+		console.error(error.stack + '\n');
 		return;
 	}
 
@@ -20,8 +20,8 @@ fs.stat(__dirname + '/simples.js', function (error, stats) {
 	fs.readFile(__dirname + '/simples.js', function (error, content) {
 
 		if (error) {
-			console.log('\nsimpleS: can not read "simples.js" content');
-			console.log(error.stack + '\n');
+			console.error('\nsimpleS: Can not read "simples.js" content');
+			console.error(error.stack + '\n');
 			return;
 		}
 
@@ -32,6 +32,27 @@ fs.stat(__dirname + '/simples.js', function (error, stats) {
 		};
 	});
 });
+
+// Check if the origin header is accepted by the host (CORS)
+function accepts(host, request) {
+
+	var accepted = true,
+		origin = request.headers.origin;
+
+	// Get the hostname from the origin
+	origin = url.parse(origin).hostname || origin;
+
+	// Check if the origin is accepted
+	if (origin !== request.headers.host.split(':')[0]) {
+		if (host.conf.origins.indexOf(origin) < 0) {
+			accepted = host.conf.origins[0] === '*' ;
+		} else {
+			accepted = host.conf.origins[0] !== '*';
+		}
+	}
+
+	return accepted;
+}
 
 // Default callback for "Not Found"
 function e404(connection) {
@@ -103,6 +124,45 @@ function getNamedParams(route, url) {
 	return params;
 }
 
+// Return the route to the static files
+function getStaticRoute(host, location) {
+
+	var file;
+
+	// Callback for a static file route
+	function staticRoute(connection) {
+		var mtime = file.stats.mtime.valueOf();
+		connection.header('Last-Modified', mtime);
+		connection.type(path.extname(location).substr(1));
+
+		// Check if modification time coincides on the client and the server
+		if (Number(connection.request.headers['if-modified-since']) === mtime) {
+			connection.response.statusCode = 304;
+			connection.end();
+		} else {
+			connection.end(file.content);
+		}
+	};
+
+	// Check for client-side script file
+	if (location === 'simples.js') {
+		file = client;
+	} else if (host.cache) {
+		file = getCache(host.cache, location);
+	}
+
+	// Return the route
+	if (file) {
+		if (file.stats.isDirectory()) {
+			return host.routes.serve;
+		}
+
+		return staticRoute;
+	}
+
+	return null;
+}
+
 function cacheAtom(object, directory, name) {
 
 	var location = path.join(directory, name);
@@ -112,8 +172,8 @@ function cacheAtom(object, directory, name) {
 
 		// Log error
 		if (error) {
-			console.log('\nsimpleS: can not check path "' + location + '" for caching');
-			console.log(error.stack + '\n');
+			console.error('\nsimpleS: Can not check path "' + location + '" for caching');
+			console.error(error.stack + '\n');
 			return;
 		}
 
@@ -133,15 +193,17 @@ function cacheAtom(object, directory, name) {
 					stats: stats
 				};
 				fs.ReadStream(location).on('error', function (error) {
-					console.log('\nsimpleS: can not read file "' + location + '" for caching');
-					console.log(error.stack + '\n');
+					console.error('\nsimpleS: Can not read file "' + location + '" for caching');
+					console.error(error.stack + '\n');
 				}).on('readable', function () {
-					object.files[name].content = Buffer.concat([object.files[name].content, this.read()]);
+					object.files[name].content = Buffer.concat([object.files[name].content, this.read() || new Buffer(0)]);
 				});
 			}
 
 			// Create a file watcher
-			fs.watchFile(location, function (current, previous) {
+			fs.watchFile(location, {
+				persistent: false
+			}, function (current, previous) {
 				if (!current.nlink) {
 					delete object.files[name];
 					fs.unwatchFile(location);
@@ -153,10 +215,10 @@ function cacheAtom(object, directory, name) {
 						stats: current
 					};
 					fs.ReadStream(location).on('error', function (error) {
-						console.log('\nsimpleS: can not read file "' + location + '" for caching');
-						console.log(error.stack + '\n');
+						console.error('\nsimpleS: Can not read file "' + location + '" for caching');
+						console.error(error.stack + '\n');
 					}).on('readable', function () {
-						object.files[name].content = Buffer.concat([object.files[name].content, this.read()]);
+						object.files[name].content = Buffer.concat([object.files[name].content, this.read() || new Buffer(0)]);
 					});
 				}
 			});
@@ -265,22 +327,25 @@ function parsePOST(connection) {
 	}
 }
 
-// Check if the origin is accepted by the host (CORS)
-exports.accepts = function (host, request) {
+// Check if the referer header is accepted by the host
+function refers(host, connection) {
 
-	var hostname = request.headers.host.split(':')[0],
-		origin = request.headers.origin;
+	var accepted = true,
+		referer,
+		request = connection.request;
 
-	// Get the hostname from the origin
-	origin = url.parse(origin).hostname || origin;
+	if (request.headers.referer && host.conf.referers.length) {
+		referer = url.parse(request.headers.referer).hostname;
 
-	// Check if the origin is accepted
-	if (host.origins.indexOf(origin) >= 0) {
-		return host.origins[0] !== '*' || origin === hostname;
-	} else {
-		return host.origins[0] === '*' || origin === hostname;
+		if (host.conf.referers.indexOf(referer) < 0) {
+			accepted = host.conf.referers[0] === '*';
+		} else {
+			accepted = host.conf.referers[0] !== '*';
+		}
 	}
-};
+
+	return accepted || referer === connection.host;
+}
 
 // Add all kinds of routes
 exports.addRoutes = function (type, routes, callback) {
@@ -332,8 +397,8 @@ exports.cache = function (object, directory) {
 
 		// Stop on error
 		if (error) {
-			console.log('\nsimpleS: can not read directory "' + directory + '" for caching');
-			console.log(error.stack + '\n');
+			console.error('\nsimpleS: can not read directory "' + directory + '" for caching');
+			console.error(error.stack + '\n');
 			return;
 		}
 		var index = files.length;
@@ -388,9 +453,6 @@ exports.generateSessionName = function () {
 // Get sessions from file and activate them in the hosts
 exports.getSessions = function (instance, callback) {
 
-	var i,
-		j;
-
 	// Read and parse the sessions file
 	fs.readFile('.sessions', 'utf8', function (error, data) {
 
@@ -404,8 +466,8 @@ exports.getSessions = function (instance, callback) {
 		try {
 			data = JSON.parse(data);
 		} catch (error) {
-			console.log('\nsimpleS: can not parse sessions file');
-			console.log(error.message + '\n');
+			console.error('\nsimpleS: can not parse sessions file');
+			console.error(error.message + '\n');
 		}
 
 		// If data was not parsed
@@ -415,16 +477,16 @@ exports.getSessions = function (instance, callback) {
 		}
 
 		// Activate the sessions from the file
-		for (i in instance.hosts) {
-			instance.hosts[i].sessions = data[i];
+		Object.keys(instance.hosts).forEach(function (host) {
+			instance.hosts[host].sessions = data[host];
 
-			for (j in data[i]) {
-				instance.hosts[i].timers[j] = setTimeout(function (host, index) {
-					delete host.sessions[index];
-					delete host.timers[index];
-				}, 3600000, instance.hosts[i], j);
-			}
-		}
+			Object.keys(data[host]).forEach(function (timer) {
+				instance.hosts[host].timers[timer] = setTimeout(function () {
+					delete instance.hosts[host].sessions[timer];
+					delete instance.hosts[host].timers[timer];
+				}, 3600000);
+			});
+		});
 
 		// Continue to port listening
 		callback();
@@ -571,8 +633,8 @@ exports.parseWS = function (connection, frame, data) {
 				frame.message = JSON.parse(frame.message);
 				connection.emit(frame.message.event, frame.message.data);
 			} catch (error) {
-				console.log('\nsimpleS: cannot parse incoming WebSocket message');
-				console.log(error.stack + '\n');
+				console.error('\nsimpleS: cannot parse incoming WebSocket message');
+				console.error(error.stack + '\n');
 			}
 		}
 	}
@@ -590,28 +652,28 @@ exports.parseWS = function (connection, frame, data) {
 
 		// Check for extensions (reserved bits)
 		if (frame.data[0] & 112) {
-			console.log('\nsimpleS: WebSocket does not support extensions\n');
+			console.error('\nsimpleS: WebSocket does not support extensions\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
 
 		// Check for unknown frame type
 		if ((frame.opcode & 7) > 2) {
-			console.log('\nsimpleS: unknown WebSocket frame type\n');
+			console.error('\nsimpleS: Unknown WebSocket frame type\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
 
 		// Control frames should be <= 125 bits and not be fragmented
 		if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
-			console.log('\nsimpleS: invalid WebSocket control frame\n');
+			console.error('\nsimpleS: Invalid WebSocket control frame\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
 
 		// Check for mask flag
 		if (!(frame.data[1] & 128)) {
-			console.log('\nsimpleS: unmasked frame received\n');
+			console.error('\nsimpleS: Unmasked frame received\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
@@ -630,7 +692,7 @@ exports.parseWS = function (connection, frame, data) {
 			connection.socket.end(new Buffer([136, 0]));
 			frame.state = -1;
 		} else if (frame.opcode === 9) {
-			console.log('\nsimpleS: ping frame received\n');
+			console.error('\nsimpleS: Ping frame received\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		} else if (frame.opcode === 10) {
@@ -651,7 +713,7 @@ exports.parseWS = function (connection, frame, data) {
 
 		// Don't accept payload length bigger than 32bit
 		if (frame.data.readUInt32BE(2)) {
-			console.log('\nsimpleS: can not use 64bit payload length\n');
+			console.error('\nsimpleS: Can not use 64bit payload length\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
@@ -666,8 +728,8 @@ exports.parseWS = function (connection, frame, data) {
 	if (frame.state === 3 && frame.data.length - frame.index >= 4) {
 
 		// Check if message is not too big
-		if (frame.length + frame.message.length > connection.config.length) {
-			console.log('\nsimpleS: too big WebSocket message\n');
+		if (frame.length + frame.message.length > connection.config.limit) {
+			console.error('\nsimpleS: Too big WebSocket message\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
 		}
@@ -775,6 +837,7 @@ exports.routing = function (host, connection) {
 		get,
 		post,
 		origin,
+		referer,
 		request = connection.request,
 		requestURL = connection.path.substr(1),
 		response = connection.response,
@@ -794,7 +857,7 @@ exports.routing = function (host, connection) {
 	if (request.headers.origin) {
 
 		// Check if the origin is accepted
-		if (exports.accepts(host, request)) {
+		if (accepts(host, request)) {
 			origin = request.headers.origin;
 		} else {
 			origin = connection.protocol + '://' + connection.host;
@@ -831,41 +894,22 @@ exports.routing = function (host, connection) {
 			found = findAdvancedRoute(routes.post.advanced, urlSlices);
 		}
 
+		// Populate the connection parameters and use the selected route
 		if (found) {
 			connection.params = found.params;
 			route = found.route.callback;
 		}
 	}
 
+	// Check for an allowed HTTP method
 	if (!route && (get || post)) {
 
-		if (get) {
-			var file;
-			if (requestURL === 'simples.js') {
-				file = client;
-			} else if (host.cache) {
-				file = getCache(host.cache, requestURL);
-			}
-			if (file) {
-				if (file.stats.isDirectory()) {
-					route = routes.serve;
-				} else {
-					route = function (connection) {
-						connection.type(path.extname(requestURL).substr(1));
-						var mtime = file.stats.mtime.valueOf();
-						connection.header('Last-Modified', mtime);
-						if (Number(request.headers['if-modified-since']) === mtime) {
-							response.statusCode = 304;
-							connection.end();
-						} else {
-							response.statusCode = 200;
-							connection.end(file.content);
-						}
-					};
-				}
-			}
+		// Check for requests for static files
+		if (get && refers(host, connection)) {
+			route = getStaticRoute(host, requestURL);
 		}
 
+		// Check for an existent route
 		if (!route) {
 			response.statusCode = 404;
 			route = routes.error[404];
@@ -877,24 +921,22 @@ exports.routing = function (host, connection) {
 	}
 
 	// Vulnerable code handling
-	try { // request, host, connection
+	try {
 		if (typeof route === 'string') {
-			connection.render(route, {
-				connection: connection
-			});
+			connection.render(route);
 		} else {
 			route.call(host, connection);
 		}
 	} catch (error) {
-		console.log('\nsimpleS: Internal Server Error');
-		console.log(connection.url.href);
-		console.log(error.stack + '\n');
+		console.error('\nsimpleS: Internal Server Error');
+		console.error(connection.url.href);
+		console.error(error.stack + '\n');
 		response.statusCode = 500;
 		try {
 			routes.error[500].call(host, connection);
 		} catch (stop) {
-			console.log('\nsimpleS: can not apply route for error 500');
-			console.log(stop.stack + '\n');
+			console.error('\nsimpleS: Can not apply route for error 500');
+			console.error(stop.stack + '\n');
 		}
 	}
 };
@@ -903,18 +945,16 @@ exports.routing = function (host, connection) {
 exports.saveSessions = function (instance, callback) {
 
 	// Sessions container
-	var i,
-		j,
-		sessions = {};
+	var sessions = {};
 
 	// Select and deactivate sessions
-	for (i in instance.hosts) {
-		for (j in instance.hosts[i].timers) {
-			clearTimeout(instance.hosts[i].timers[j]);
-		}
-		instance.hosts[i].timers = {};
-		sessions[i] = instance.hosts[i].sessions;
-	}
+	Object.keys(instance.hosts).forEach(function (host) {
+		Object.keys(instance.hosts[host].timers).forEach(function (timer) {
+			clearTimeout(instance.hosts[host].timers[timer]);
+		});
+		instance.hosts[host].timers = {};
+		sessions[host] = instance.hosts[host].sessions;
+	});
 
 	// Prepare sessions for writing on file
 	sessions = JSON.stringify(sessions);
@@ -927,12 +967,50 @@ exports.saveSessions = function (instance, callback) {
 
 		// Log the error
 		if (error) {
-			console.log('\nsimpleS: can not write sessions to file\n');
-			console.log(error.message + '\n');
+			console.error('\nsimpleS: Can not write sessions to file\n');
+			console.error(error.message + '\n');
 			return;
 		}
 
 		// Lot the sessions file creation
-		console.log('\nsimpleS: file with sessions created\n');
+		console.log('\nsimpleS: File with sessions created\n');
 	});
+};
+
+// Check for a valide WebSocket handshake
+exports.validateWS = function (host, wsHost, request) {
+
+	var error;
+
+	// Check for WebSocket host
+	if (!wsHost || !wsHost.active) {
+		error = '\nsimpleS: Request to an inactive WebSocket host\n';
+	}
+
+	// Check for valid upgrade header
+	if (request.headers.upgrade !== 'websocket') {
+		error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
+	}
+
+	// Check for WebSocket handshake key
+	if (!request.headers['sec-websocket-key']) {
+		error = '\nsimpleS: No WebSocket handshake key\n';
+	}
+
+	// Check for WebSocket subprotocols
+	if (!request.headers['sec-websocket-protocol']) {
+		error = '\nsimpleS: No WebSocket subprotocols\n';
+	}
+
+	// Check for valid WebSocket protocol version
+	if (request.headers['sec-websocket-version'] !== '13') {
+		error = '\nsimpleS: Unsupported WebSocket version\n';
+	}
+
+	// Check for accepted origin
+	if (request.headers.origin && !accepts(host, request)) {
+		error = '\nsimpleS: WebSocket origin not accepted\n';
+	}
+
+	return error;
 };

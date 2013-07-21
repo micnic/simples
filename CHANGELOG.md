@@ -1,3 +1,9 @@
+## 0.4.3
+- Changed the internal log system
+- Added a placeholder for render method
+- `.render()` method now always imports connection object
+- Added `.config()` method and removed `.accept()` and `.referer()` methods for host
+
 ## 0.4.2
 - Bugfixes
 - Some improvements in code structure

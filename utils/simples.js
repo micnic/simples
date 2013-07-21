@@ -201,7 +201,7 @@ simples.ws.prototype.open = function (host, protocols) {
     // Catch connection errors
     this.socket.onerror = function () {
         that.started = false;
-        that.emit('error', 'simpleS: can not connect to the WebSocket server');
+        that.emit('error', 'simpleS: Can not connect to the WebSocket server');
     };
 
     // Transform Node.JS buffer to browser blob
@@ -241,7 +241,7 @@ simples.ws.prototype.open = function (host, protocols) {
             message = parseMessage(event.data);
             that.emit(message.event, message.data);
         } catch (error) {
-            that.emit('error', 'simpleS: can not parse incoming message');
+            that.emit('error', 'simpleS: Can not parse incoming message');
             that.emit('message', event.data);
         }
     };

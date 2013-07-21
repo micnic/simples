@@ -14,8 +14,12 @@ var noopEngine = {
 
 server
 	.engine(noopEngine)
-	.accept('null')
-	.referer('*', 'null.com')
+	.config({
+		compression: true,
+		limit: 1024,
+		origins: ['null'],
+		referers: ['*', 'null.com']
+	})
 	.serve(__dirname + '/root', function (connection) {
 		connection.end('You are in the root of the folder ' + connection.path);
 	})

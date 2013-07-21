@@ -12,8 +12,6 @@
 
 > ##### [Host Management](#server-host-management)
 
-> ##### [CORS (Cross-Origin Resource Sharing) and Referers](#server-cors-referer)
-
 > ##### [Templating](#server-templating)
 
 ### [Routing](#host-routing)
@@ -200,30 +198,28 @@ Closes all the child WebSocket hosts and make the host inactive.
 
 Close the host and removes it from the server. Can not destroy the main host, for the main host all routes will be cleaned as it would be a new created host.
 
-### <a name="server-cors-referer"/> CORS (Cross-Origin Resource Sharing) and Referers
+`.config(config)`
 
-`.accept(host[, ...])`
+config: object
 
-host: string
+Change the configuration of the host. Possible attributes:
 
-simpleS provide a very simple way to accept cross-origin requests. It will automatically check the origin of the request and if it is in the list then it will response positively. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. This method is applicable on each host independently (see Virtual Hosting). These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests.
+`compression: boolean // true` - switch the compression of the response content, default is true
 
+`limit: number // 1048576` - set the limit of the request body in bytes, default is 1MB.
+
+`origins: array of strings // []` - set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
 ```javascript
-server.accept('null', 'localhost', 'example.com'); // Will accept requests only from these 3 hosts
+['null', 'localhost', 'example.com'] // Will accept requests only from these 3 hosts
 
-server.accept('*', 'example.com'); // Will accept requests from all hosts except 'example.com'
+['*', 'example.com'] // Will accept requests from all hosts except 'example.com'
 ```
 
-`.referer(host[, ...])`
-
-host: string
-
-To block other domains from using host's static resources like images, css or js files, it is possible to define a list of accepted referers. By default, the server will response to all request from different host referers. To a accept only specific referers, their list should be defined as parameters to this method, to accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
-
+`referers: array of strings // []` - set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
 ```javascript
-server.referer('*', 'example.com'); // will respond to all referers except 'example.com'
+['*', 'example.com'] // will respond to all referers except 'example.com'
 
-server.referer('example.com', 'test.com'); // Will respond only to these 2 referers
+['example.com', 'test.com'] // Will respond only to these 2 referers
 ```
 
 ### <a name="server-templating"/> Templating
@@ -617,11 +613,11 @@ config: object
 
 callback: function(connection)
 
-Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `.accept()` method from the simpleS instance should be used. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
+Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `origins` parameter from the configuration object of the host must bedefined. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too by the value of `limit` parameter, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
 
 ```javascript
 var echo = server.ws('/', {
-    length: 1024,
+    limit: 1024,
     protocols: ['', 'echo'],
     raw: true
 }, function (connection) {
@@ -639,7 +635,7 @@ Restarts the WebSocket host with new configuration and callback. The missing con
 
 ```javascript
 echo.start({
-    length: 512,
+    limit: 512,
     protocols: ['', 'echo']
 }, function (connection) {
     // Application logic

@@ -1,12 +1,12 @@
-# simpleS 0.4.2
+# simpleS 0.4.3
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
 - Simple structure with minimum configuration
 - No dependencies and high performance
 - Advanced routing for http GET and POST requests, static files and errors
-- Automatic response compression (deflate and gzip)
 - Unique interface for requests and responses
+- Response compression (deflate and gzip)
 - Virtual Hosting
 - CORS support and Referer blocking
 - Sessions

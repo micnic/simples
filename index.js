@@ -12,7 +12,7 @@ var fs = require('fs'),
 // SimpleS prototype constructor
 var simples = function (port, options) {
 
-	var redirect,
+	var aux,
 		server,
 		that = this;
 
@@ -26,15 +26,14 @@ var simples = function (port, options) {
 			host = that.hosts.main;
 		}
 
-		// Set up the HTTP connection
+		// Create the HTTP connection
 		new httpConnection(host, request, response);
 	}
 
 	// Set the port to be optional
-	if (typeof port !== 'number' || typeof port !== 'string') {
+	if (typeof port !== 'number' && typeof port !== 'string') {
 		if (port && typeof port === 'object') {
 			options = port;
-			port = 443;
 		} else {
 			port = 80;
 		}
@@ -43,13 +42,12 @@ var simples = function (port, options) {
 	// Prepare the server
 	if (options) {
 
-		// Set HTTPS port
+		// Always listen HTTPS on port 443
 		port = 443;
 
 		// Check for HTTPS data
-		if (!((options.cert && options.key) || options.pfx)) {
-			console.log('\nsimpleS: not enough data for HTTPS\n');
-			return;
+		if (!options.cert && !options.key || !options.pfx) {
+			throw new Error('simpleS: Invalid data for the HTTPS server');
 		}
 
 		// Get the data for the HTTPS server
@@ -58,20 +56,25 @@ var simples = function (port, options) {
 			options.key = options.key && fs.readFileSync(options.key);
 			options.pfx = options.pfx && fs.readFileSync(options.pfx);
 		} catch (error) {
-			console.log('\nsimpleS: can not read data for HTTPS');
-			console.log(error.message + '\n');
-			return;
+			throw new Error('simpleS: Can not read data for the HTTPS server');
 		}
 
 		// Create the HTTP and the HTTPS servers
 		server = https.Server(options, requestListener);
-		redirect = http.Server(requestListener);
+		aux = http.Server(requestListener);
+
+		// Catch the errors in the auxiliary HTTP server
+		aux.on('error', function (error) {
+			that.busy = false;
+			that.started = false;
+			throw new Error('simpleS: HTTP server error > ' + error.message);
+		});
 
 		// Manage the HTTP server depending on HTTPS events
 		server.on('open', function () {
-			redirect.listen(80);
+			aux.listen(80);
 		}).on('close', function () {
-			redirect.close();
+			aux.close();
 		});
 	} else {
 		server = http.Server(requestListener);
@@ -79,26 +82,25 @@ var simples = function (port, options) {
 
 	// Listen for server events error, release and upgrade related to WebSocket
 	server.on('error', function (error) {
-		console.log('\nsimpleS: server error');
-		console.log(error.message + '\n');
-		that.started = false;
 		that.busy = false;
+		that.started = false;
+		throw new Error('simpleS: Server error > ' + error.message);
 	}).on('release', function (callback) {
 		that.busy = false;
+
+		// Call the callback when the server is free
 		if (callback) {
 			callback.call(that);
 		}
 	}).on('upgrade', function (request, socket) {
 
-		var connection,
-			host,
+		var error,
+			host = that.hosts[request.headers.host.split(':')[0]],
 			parsedUrl = url.parse(request.url, true),
 			wsHost;
 
 		// Set socket keep alive time to 25 seconds
 		socket.setTimeout(25000);
-
-		host = that.hosts[request.headers.host.split(':')[0]];
 
 		// Get the main host if the other one does not exist or is inactive
 		if (!host || !host.active) {
@@ -108,60 +110,14 @@ var simples = function (port, options) {
 		// Select the WebSocket host
 		wsHost = host.wsHosts[parsedUrl.pathname];
 
-		// Check for WebSocket host
-		if (!wsHost || !wsHost.active) {
-			console.log('\nsimpleS: received request to an inactive host\n');
+		error = utils.validateWS(host, wsHost, request);
+
+		// Check for error and create the WebSocket connection
+		if (error) {
+			console.error(error);
 			socket.destroy();
-			return;
-		}
-
-		// Check for valid upgrade header
-		if (request.headers.upgrade !== 'websocket') {
-			console.log('\nsimpleS: unsupported upgrade header received\n');
-			socket.destroy();
-			return;
-		}
-
-		// Check for WebSocket handshake key
-		if (!request.headers['sec-websocket-key']) {
-			console.log('\nsimpleS: no WebSocket handshake key received');
-			socket.destroy();
-			return;
-		}
-
-		// Check for WebSocket subprotocols
-		if (!request.headers['sec-websocket-protocol']) {
-			console.log('\nsimpleS: no WebSocket subprotocols received');
-			socket.destroy();
-			return;
-		}
-
-		// Check for valid WebSocket protocol version
-		if (request.headers['sec-websocket-version'] !== '13') {
-			console.log('\nsimpleS: unsupported WebSocket version requested\n');
-			socket.destroy();
-			return;
-		}
-
-		// Check for accepted origin
-		if (request.headers.origin && !utils.accepts(host, request)) {
-			console.log('\nsimpleS: WebSocket origin not accepted\n');
-			socket.destroy();
-			return;
-		}
-
-		// Current connection object
-		connection = new wsConnection(host, wsHost, request);
-
-		// Append the connection to the WebSocket host
-		wsHost.connections.push(connection);
-
-		// Execute user defined code for the WebSocket host
-		try {
-			wsHost.callback.call(wsHost, connection);
-		} catch (error) {
-			console.log('\nsimpleS: error in WebSocket host');
-			console.log(error.stack + '\n');
+		} else {
+			new wsConnection(host, wsHost, request);
 		}
 	});
 
@@ -218,8 +174,8 @@ simples.prototype.start = function (port, callback) {
 	function listen() {
 
 		// Start all existing hosts
-		Object.keys(that.hosts).forEach(function (element) {
-			that.hosts[element].open();
+		Object.keys(that.hosts).forEach(function (host) {
+			that.hosts[host].open();
 		});
 
 		// Start listening the port
@@ -271,12 +227,12 @@ simples.prototype.stop = function (callback) {
 	function stop() {
 
 		// Set status flags
-		that.started = false;
 		that.busy = true;
+		that.started = false;
 
 		// Close all existing hosts
-		Object.keys(that.hosts).forEach(function (element) {
-			that.hosts[element].close();
+		Object.keys(that.hosts).forEach(function (host) {
+			that.hosts[host].close();
 		});
 
 		// Close the server
@@ -295,7 +251,7 @@ simples.prototype.stop = function (callback) {
 	return this;
 };
 
-// Export a new simples instance
+// Export a new simpleS instance
 module.exports = function (port, options) {
 	return new simples(port, options);
 };
