@@ -29,7 +29,7 @@
       <div class="inner clearfix">
         <section id="main-content">
           <h1>
-<a name="simples-043" class="anchor" href="#simples-043"><span class="octicon octicon-link"></span></a>simpleS 0.4.3</h1>
+<a name="simples-044" class="anchor" href="#simples-044"><span class="octicon octicon-link"></span></a>simpleS 0.4.4</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
@@ -132,7 +132,7 @@
 <a name="websocket" class="anchor" href="#websocket"><span class="octicon octicon-link"></span></a>WebSocket</h2>
 
 <div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
-    <span class="nx">length</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
+    <span class="nx">limit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
     <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
     <span class="nx">raw</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
 <span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
