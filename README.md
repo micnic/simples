@@ -1,4 +1,4 @@
-# simpleS 0.4.3
+# simpleS 0.4.4
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
@@ -85,7 +85,7 @@ host2.get('/', function (connection) {
 
 ```javascript
 server.ws('/', {
-    length: 1024, // The maximum size of a message
+    limit: 1024, // The maximum size of a message
     protocols: ['echo'], // The accepted protocols
     raw: true // Connections in raw mode, see docs for more info
 }, function (connection) {

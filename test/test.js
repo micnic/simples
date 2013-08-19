@@ -20,7 +20,8 @@ server
 		origins: ['null'],
 		referers: ['*', 'null.com']
 	})
-	.serve(__dirname + '/root', function (connection) {
+	.serve(__dirname + '/root', function (connection, files) {
+		connection.write(JSON.stringify(files));
 		connection.end('You are in the root of the folder ' + connection.path);
 	})
 	.error(404, function (connection) {
@@ -71,9 +72,9 @@ server
 			ip: connection.ip,
 			langs: connection.langs,
 			method: connection.method,
-			query: connection.query,
 			params: connection.params,
 			path: connection.path,
+			query: connection.query,
 			session: connection.session,
 			url: connection.url
 		};

@@ -1,8 +1,24 @@
+## 0.4.4
+- Added routes for PUT and DELETE http methods
+- Added `.status()` method for http connection
+- Added `files` parameter for static files directory callback
+- Added Node.JS event emitter implementation on client-side as `simples.ee`
+- Fixed bug related to advanced routing
+- Fixed `.drain()` streaming on error
+- Fixed auxiliar server in HTTPS server pair WebSocket handling
+- Improved dynamic caching
+- Improved `.config()` method of http host by adding session time to live
+- Improved `.drain()` method by adding parameters for setting the type of the content
+- Improved the WebSocket channel creation
+- Improved general error emitting
+- Improved WebSocket handshake
+- Improved internal structure
+
 ## 0.4.3
 - Changed the internal log system
 - Added a placeholder for render method
 - `.render()` method now always imports connection object
-- Added `.config()` method and removed `.accept()` and `.referer()` methods for host
+- Added `.config()` method and removed `.accept()` and `.referer()` methods for http host
 
 ## 0.4.2
 - Bugfixes

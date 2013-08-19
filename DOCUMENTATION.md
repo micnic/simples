@@ -17,9 +17,13 @@
 ### [Routing](#host-routing)
 >##### [All Requests](#host-all)
 
+>##### [DELETE Requests](#host-del)
+
 >##### [GET Requests](#host-get)
 
 >##### [POST Requests](#host-post)
+
+>##### [PUT Requests](#host-put)
 
 >##### [Error Routes](#host-error)
 
@@ -64,7 +68,9 @@
 
 >##### [.lang(language)](#http-connection-lang)
 
->##### [.redirect(path[, permanent])](#http-connection-redirect)
+>##### [.redirect(location[, permanent])](#http-connection-redirect)
+
+>##### [.status(code)](#http-connection-status)
 
 >##### [.type(type[, override])](#http-connection-type)
 
@@ -74,7 +80,7 @@
 
 >##### [.send(data[, replacer, space])](#http-connection-send)
 
->##### [.drain(path)](#http-connection-drain)
+>##### [.drain(location[, type, override])](#http-connection-drain)
 
 >##### [.render(source[, imports])](#http-connection-render)
 
@@ -87,6 +93,8 @@
 
 ### [Client-Side Simple API](#client-side)
 >##### [AJAX (Asynchronous JavaScript and XML)](#client-side-ajax)
+
+>##### [Event Emitter](#client-side-ee)
 
 >##### [WS (WebSocket)](#client-side-ws)
 
@@ -112,7 +120,7 @@ var server = simples(80);
 var server = simples(); // will be set on the port 80
 ```
 
-To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) core module for more details. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
+To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
 ```javascript
 var server = simples(443, {
@@ -285,9 +293,19 @@ All the methods described below are applicable on each host independently (see [
 
 route: array[strings] or string
 
-result: string or function(connection)
+result: function(connection) or string
 
-Listen for both `GET` and `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for both types of requests. This method is prioritized against `.get()` and `.post()` methods.
+Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method is prioritized against all other methods for routing.
+
+### <a name="host-del"/> DELETE Requests
+
+`.del(route, result)`
+
+route: array[strings] or string
+
+result: function(connection) or string
+
+Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
 ### <a name="host-get"/> GET Requests
 
@@ -295,9 +313,9 @@ Listen for both `GET` and `POST` requests and uses a callback function with conn
 
 route: array[strings] or string
 
-result: string or function(connection)
+result: function(connection) or string
 
-Listen for get requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `GET` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
 ### <a name="host-post"/> POST Requests
 
@@ -305,9 +323,19 @@ Listen for get requests and uses a callback function with connection as paramete
 
 route: array[strings] or string
 
-result: string or function(connection)
+result: function(connection) or string
 
-Listen for post requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+
+### <a name="host-put"/> PUT Requests
+
+`.put(route, result)`
+
+route: array[strings] or string
+
+result: function(connection) or string
+
+Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
 ### <a name="host-error"/> Error Routes
 
@@ -315,11 +343,11 @@ Listen for post requests and uses a callback function with connection as paramet
 
 code: 404, 405 or 500
 
-result: string or function(connection)
+result: function(connection) or string
 
 Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
 
-#### <a name="example-routes"/> Examples for `.all()`, `.get()`, `.post()` and `.error()` methods:
+#### <a name="example-routes"/> Examples for routing methods:
 
 ```javascript
 server.all('/', function (connection) {
@@ -343,13 +371,13 @@ server.post([
 
 ### <a name="host-serve"/> Static Files
 
-`.serve(path[, callback])`
+`.serve(directory[, callback])`
 
-path: string
+directory: string
 
-callback: function(connection)
+callback: function(connection, files)
 
-`path` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, this parameter is optional. All files are dynamically cached for better performance.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
 
 ```javascript
 server.serve('root', function (connection) {
@@ -357,7 +385,7 @@ server.serve('root', function (connection) {
 });
 ```
 
-### <a name="host-leave"/>  Removing Routes
+### <a name="host-leave"/> Removing Routes
 
 `.leave([type, route])`
 
@@ -382,7 +410,7 @@ serve.leave('all', [
 
 ### <a name="http-connection"/>  Connection Interface
 
-The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a writable stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
+The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a transform stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
 
 ```javascript
 {
@@ -529,17 +557,23 @@ Sets the language of the response. Should be used before the `.write()` method. 
 connection.lang('ro');
 ```
 
-#### <a name="http-connection-redirect"/> .redirect(path[, permanent])
+#### <a name="http-connection-redirect"/> .redirect(location[, permanent])
 
-path: string
+location: string
 
 permanent: boolean
 
-Redirects the client to the provided path. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
+Redirects the client to the provided location. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
 
 ```javascript
 connection.redirect('/index', true);
 ```
+
+#### <a name="http-connection-status"/> .status(code)
+
+code: number
+
+Sets the status code of the response
 
 #### <a name="http-connection-type"/> .type(type[, override])
 
@@ -575,14 +609,18 @@ Writes preformatted data to the response stream and ends the response, implement
 connection.send(['Hello', 'World']);
 ```
 
-#### <a name="http-connection-drain"/> .drain(path)
+#### <a name="http-connection-drain"/> .drain(location[, type, override])
 
-path: string
+location: string
 
-Get the content of the file located on the specified path and write it to the response. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+type: string
+
+override: boolean
+
+Get the content of the file located on the specified location and write it to the response. Will set the content type of the file, can have the parameters from the `.type()` method. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
-connection.drain('path/to/index.html');
+connection.drain('path/to/index.html', 'text/html', true);
 ```
 
 #### <a name="http-connection-render"/> .render(source[, imports])
@@ -605,9 +643,9 @@ The WebSocket host is linked to the current or the main HTTP host (see Virtual H
 
 ### <a name="ws-host"/> WebSocket Host
 
-`.ws(path, [config, ]callback)`
+`.ws(location, [config, ]callback)`
 
-path: string
+location: string
 
 config: object
 
@@ -634,9 +672,9 @@ callback: function(connection)
 Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. This method is called automatically when a new WebSocket host is created, it is not needed to call it explicitly on WebSocket host creation.
 
 ```javascript
-echo.start({
+echo.open({
     limit: 512,
-    protocols: ['', 'echo']
+    protocols: ['echo']
 }, function (connection) {
     // Application logic
 });
@@ -666,11 +704,13 @@ echo.broadcast('HelloWorld', function (element, index, array) {
 });
 ```
 
-#### <a name="ws-host-channel"/> .channel(name)
+#### <a name="ws-host-channel"/> .channel(name[, filter])
 
 name: string
 
-Opens a new channel with the provided name. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
+filter: function(element, index, array)
+
+Opens a new channel with the provided name. If `filter` is defined, then all the connections of the WebSocket host that respect the filter callback will be bound to the channel. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
 
 ### <a name="ws-connection"/> WebSocket Connection
 
@@ -725,6 +765,15 @@ data: any value
 
 Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
 
+`.render([event, ]source[, imports])`
+event: string
+
+source: string
+
+imports: object
+
+Using the template engine, send data through the WebSocket connection.
+
 #### <a name="ws-connection-events"/> WebSocket Connection Events
 
 `message`
@@ -773,7 +822,7 @@ To have access to the simpleS client-side API it is necessary to add
 <script src="simples.js"></script>
 ```
 
-in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, which are described below.
+in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, also a simplified implementation of Node.JS event emitter.
 
 ### <a name="client-side-ajax"/> AJAX (Asynchronous JavaScript and XML)
 
@@ -783,9 +832,9 @@ url: string
 
 params: object
 
-method: 'get' or 'post'
+method: 'delete', 'get', 'head', 'post' or 'put'
 
-`simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url, will send the needed parameters using the methods GET (default) or POST. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. The AJAX request can also be aborted by the `.stop()` method.
+`simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url, will send the needed parameters using the methods DELETE, GET (default), HEAD, POST or PUT. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. The AJAX request can also be aborted by the `.stop()` method.
 
 ```javascript
 var request = simples.ajax('/', {
@@ -803,6 +852,18 @@ var request = simples.ajax('/', {
 request.stop();
 ```
 
+### <a name="client-side-ee"> Event Emitter
+
+`simples.ee()`
+
+`simples.ee()` is a simplified implementation of Node.JS event emitter in the browser, which would be useful to create new objects or to inherit in object constructors. See [`events`](http://nodejs.org/api/events.html) core module for more details. Implemented methods:
+
+`.emit(event[, data, ...])` - triggers an event with some specific data.
+
+`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener.
+
+`.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event.
+
 ### <a name="client-side-ws"/> WS (WebSocket)
 
 `simples.ws(host[, protocols, raw])`
@@ -813,7 +874,7 @@ protocols: array[strings]
 
 raw: boolean
 
-`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default is advanced mode.
+`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default is advanced mode. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
 ```javascript
 var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
@@ -828,15 +889,6 @@ var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
 `.open([host, protocols])` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection and to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost.
 
 `.close()` - closes the WebSocket connection.
-
-#### <a name="client-side-ws-listeners"/> Listeners Management
-`simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, see [`events`](http://nodejs.org/api/events.html) core module for more details:
-
-`.emit(event[, data])` - triggers locally an event, does not send data to the server, is useful for triggering instantly the event on the client or for debugging.
-
-`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener.
-
-`.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event.
 
 ##### <a name="client-side-ws-events"/> Events
 
