@@ -29,14 +29,15 @@
       <div class="inner clearfix">
         <section id="main-content">
           <h1>
-<a name="simples-044" class="anchor" href="#simples-044"><span class="octicon octicon-link"></span></a>simpleS 0.4.4</h1>
+<a name="simples-045" class="anchor" href="#simples-045"><span class="octicon octicon-link"></span></a>simpleS 0.4.5</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
 <ul>
 <li>Simple structure with minimum configuration</li>
 <li>No dependencies and high performance</li>
-<li>Advanced routing for http GET and POST requests, static files and errors</li>
+<li>Advanced routing for http requests, static files and errors</li>
+<li>Restful verbs</li>
 <li>Unique interface for requests and responses</li>
 <li>Response compression (deflate and gzip)</li>
 <li>Virtual Hosting</li>
@@ -88,7 +89,7 @@
 <h2>
 <a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">simples</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'simples'</span><span class="p">);</span>
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">simples</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'simples'</span><span class="p">);</span>
 
 <span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span> <span class="c1">// Your server is set up on port 12345</span>
 </pre></div>
@@ -96,7 +97,7 @@
 <h2>
 <a name="routing" class="anchor" href="#routing"><span class="octicon octicon-link"></span></a>Routing</h2>
 
-<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
 <span class="p">});</span>
 
@@ -110,7 +111,7 @@
 <h2>
 <a name="virtual-hosting" class="anchor" href="#virtual-hosting"><span class="octicon octicon-link"></span></a>Virtual Hosting</h2>
 
-<div class="highlight"><pre><span class="kd">var</span> <span class="nx">mainHost</span> <span class="o">=</span> <span class="nx">server</span><span class="p">;</span> <span class="c1">// Main host</span>
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">mainHost</span> <span class="o">=</span> <span class="nx">server</span><span class="p">;</span> <span class="c1">// Main host</span>
 <span class="kd">var</span> <span class="nx">host1</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example.com'</span><span class="p">);</span> <span class="c1">// Other hosts</span>
 <span class="kd">var</span> <span class="nx">host2</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example2.com'</span><span class="p">);</span>
 
@@ -131,7 +132,7 @@
 <h2>
 <a name="websocket" class="anchor" href="#websocket"><span class="octicon octicon-link"></span></a>WebSocket</h2>
 
-<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
+<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
     <span class="nx">limit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
     <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
     <span class="nx">raw</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
@@ -151,7 +152,7 @@
 
 <p>On client:</p>
 
-<div class="highlight"><pre><span class="c1">// Use browser built-in API</span>
+<div class="highlight highlight-javascript"><pre><span class="c1">// Use browser built-in API</span>
 <span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">'ws://localhost:12345/'</span><span class="p">,</span> <span class="s1">'echo'</span><span class="p">);</span> <span class="c1">// Enjoy the real-time connection</span>
 
 <span class="nx">socket</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
@@ -173,7 +174,7 @@
 <h2>
 <a name="template-engine-connection" class="anchor" href="#template-engine-connection"><span class="octicon octicon-link"></span></a>Template engine connection</h2>
 
-<div class="highlight"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">engine</span><span class="p">(</span><span class="nx">bestTemplateEngine</span><span class="p">);</span>
+<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">engine</span><span class="p">(</span><span class="nx">bestTemplateEngine</span><span class="p">);</span>
 </pre></div>
         </section>
 
