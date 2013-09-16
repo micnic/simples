@@ -25,6 +25,15 @@ exports.accepts = function (host, request) {
 	return accepted;
 };
 
+// Create a new Buffer instance from a list of buffers
+exports.buffer = function () {
+
+	var args = arguments,
+		buffers = Array.prototype.slice.call(args, 0, args.length - 1);
+
+	return Buffer.concat(buffers, args[args.length - 1]);
+};
+
 // Return a random session name of 16 characters
 exports.generateSessionName = function () {
 

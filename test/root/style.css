@@ -10,10 +10,6 @@ body :nth-child(3n+2) {
 	color: #00007f;
 }
 
-img {
-	border: 1px #7f7f7f solid;
-}
-
 #fileinput {
 	display: none;
 }

@@ -1,3 +1,10 @@
+## 0.4.5
+- Added logger functionality
+- Improved WebSocket unmasking
+- Improved dynamic cache functionality
+- Fixed missing host header that could break down the server
+- Fixed error 404 routing
+
 ## 0.4.4
 - Added routes for PUT and DELETE http methods
 - Added `.status()` method for http connection

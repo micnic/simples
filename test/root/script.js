@@ -57,6 +57,27 @@ window.onload = function () {
 		}
 	};
 
+	document.getElementById('ws_file').onclick = function () {
+		if (!echoSocket) {
+			echoSocket = simples.ws(window.location.host + '/echo', ['echo'], true)
+				.on('message', function (message) {
+					if (document.getElementsByName('type')[0].checked) {
+						document.getElementById('result').innerHTML = 'Result:<br><br>' + message;
+					} else {
+						document.getElementById('result').innerHTML = 'Result:<br><br>' + message.length + ' bytes received';
+					}
+				}).on('error', function (error) {
+					console.log(error);
+				}).on('close', function () {
+					console.log('closed');
+				});
+		}
+
+		if (document.getElementById('fileinput').files[0]) {
+			echoSocket.send(document.getElementById('fileinput').files[0]);
+		}
+	};
+
 	document.getElementById('filebutton').onclick = function () {
 		document.getElementById('fileinput').click();
 	};

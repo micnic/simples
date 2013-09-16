@@ -305,7 +305,7 @@ simples.ws = function (host, protocols, raw) {
 			writable: true
 		},
 		raw: {
-			value: !!raw
+			value: Boolean(raw)
 		},
 		socket: {
 			value: null,

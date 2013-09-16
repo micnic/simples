@@ -1,7 +1,6 @@
 'use strict';
 
-var fs = require('fs'),
-	host = require('./lib/http/host'),
+var host = require('./lib/http/host'),
 	httpUtils = require('./lib/http'),
 	utils = require('./utils/utils');
 
@@ -19,11 +18,6 @@ var simples = function (port, options) {
 		}
 	}
 
-	// Always listen on port 443 for HTTPS
-	if (options) {
-		port = 443;
-	}
-
 	// Define special properties for simpleS
 	Object.defineProperties(this, {
 		busy: {
@@ -35,6 +29,10 @@ var simples = function (port, options) {
 		},
 		port: {
 			value: port,
+			writable: true
+		},
+		secured: {
+			value: false,
 			writable: true
 		},
 		server: {
@@ -49,35 +47,18 @@ var simples = function (port, options) {
 
 	// Call host in this context and set it as the main host
 	host.call(this, this, 'main');
+	this.hosts.main = this;
 
-	// Server error listener
-	function onServerError(error) {
-		that.busy = false;
-		that.started = false;
-		throw new Error('simpleS: Server error > ' + error.message);
+	// Always listen on port 443 for HTTPS
+	if (options && (options.cert && options.key || options.pfx)) {
+		this.port = 443;
+		this.secured = true;
 	}
 
-	// Server release listener
-	function onServerRelease(callback) {
-		that.busy = false;
-
-		// Call the callback when the server is free
-		if (callback) {
-			callback.call(that);
-		}
-	}
-
-	// Create the server
-	httpUtils.httpCreateServer(options, function (server) {
-
-		// Bind the server to the simpleS instance
+	// Create and configure the server
+	httpUtils.createServer(options, function (server) {
 		that.server = server;
 		server.parent = that;
-
-		// Listen for server events
-		server.on('error', onServerError).on('release', onServerRelease);
-
-		// Start the server on the provided port
 		that.start();
 	});
 };
@@ -89,20 +70,15 @@ simples.prototype = Object.create(host.prototype, {
 	}
 });
 
-// Create a new host
+// Create a new host or return an existing one
 simples.prototype.host = function (name) {
 
-	var result;
-
-	// Check if the host name is defined and is a string
-	if (typeof name !== 'string') {
-		console.error('\nsimpleS: The name of the host must be a string\n');
-		result = this.hosts.main;
-	} else {
-		result = new host(this, name);
+	// Check if the host name is a string and create a new host
+	if (typeof name === 'string') {
+		this.hosts[name] = new host(this, name);
 	}
 
-	return result;
+	return this.hosts[name] || this.hosts.main;
 };
 
 // Start simples server
@@ -120,6 +96,7 @@ simples.prototype.start = function (port, callback) {
 
 		// Start listening the port
 		that.server.listen(port, function () {
+			that.port = port;
 			that.server.emit('release', callback);
 			that.server.emit('open');
 		});
@@ -146,6 +123,8 @@ simples.prototype.start = function (port, callback) {
 			callback = port;
 		}
 		port = this.port;
+	} else if (this.secured) {
+		port = 443;
 	}
 
 	// Check if callback is defined and is a function

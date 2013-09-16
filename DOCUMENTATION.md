@@ -33,6 +33,8 @@
 
 >##### [Removing Routes](#host-leave)
 
+>##### [Connections logging](#host-log)
+
 ### [Connection Interface](#http-connection)
 >##### [.body](#http-connection-body)
 
@@ -406,6 +408,20 @@ serve.leave('all', [
     '/home',
     '/index'
 ]);
+```
+
+### <a name="host-log"/> Logging
+
+`.log(callback)`
+
+callback: function(connection)
+
+Allows to log data about the established connections, will write data to the `process.stdout` using `console.log` interface. The callback should return data which will be shown in the console. The callback function is triggered on HTTP and WS requests.
+
+```javascript
+server.log(function (connection) {
+    return connection.url.href;
+});
 ```
 
 ### <a name="http-connection"/>  Connection Interface
