@@ -1,3 +1,8 @@
+## 0.4.6
+- Fixed POST requests behavior
+- Made that `.host()` method will create or return an existing host or the main host
+- Documented `.route()` method as another way to create routes
+
 ## 0.4.5
 - Added logger functionality
 - Improved WebSocket unmasking

@@ -79,10 +79,12 @@ cache.prototype.addFile = function (object, location) {
 // Check the stats of the provided location
 cache.prototype.checkElement = function (object, location) {
 
-	var element = object.files[name],
+	var element,
 		modified = true,
 		name = location.substr(location.lastIndexOf('/') + 1),
 		that = this;
+
+	element = object.files[name];
 
 	// Check file and folder stats
 	fs.stat(location, function (error, stats) {
@@ -231,7 +233,7 @@ fs.stat(__dirname + '/simples.js', function (error, stats) {
 		client = {
 			stats: stats,
 			content: content
-		}
+		};
 		client.content = content;
 	});
 });

@@ -1,7 +1,6 @@
 'use strict';
 
 var host = require('./lib/http/host'),
-	httpUtils = require('./lib/http'),
 	utils = require('./utils/utils');
 
 // SimpleS prototype constructor
@@ -56,7 +55,7 @@ var simples = function (port, options) {
 	}
 
 	// Create and configure the server
-	httpUtils.createServer(options, function (server) {
+	utils.http.createServer(options, function (server) {
 		that.server = server;
 		server.parent = that;
 		that.start();
@@ -74,7 +73,7 @@ simples.prototype = Object.create(host.prototype, {
 simples.prototype.host = function (name) {
 
 	// Check if the host name is a string and create a new host
-	if (typeof name === 'string') {
+	if (typeof name === 'string' && name !== 'main' && !this.hosts[name]) {
 		this.hosts[name] = new host(this, name);
 	}
 

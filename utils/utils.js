@@ -92,6 +92,9 @@ exports.getSessions = function (instance, callback) {
 	});
 };
 
+// Export http utils
+exports.http = require('./http');
+
 // Get the cookies and the session
 exports.parseCookies = function (content) {
 
@@ -252,3 +255,6 @@ exports.saveSessions = function (instance, callback) {
 		console.log('\nsimpleS: File with sessions created\n');
 	});
 };
+
+// Export ws utils
+exports.ws = require('./ws');

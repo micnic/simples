@@ -15,6 +15,8 @@
 > ##### [Templating](#server-templating)
 
 ### [Routing](#host-routing)
+>##### [General Routing](#host-route)
+
 >##### [All Requests](#host-all)
 
 >##### [DELETE Requests](#host-del)
@@ -288,6 +290,17 @@ All the methods described below are applicable on each host independently (see [
     }
 */
 ```
+
+### <a name="host-route"/> General routing
+`.route(type, route, result)`
+
+type: 'all', 'del', 'get', 'put' or 'post'
+
+route: array[strings] or string
+
+result: function(connection) or string
+
+Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts.
 
 ### <a name="host-all"/> All Requests
 

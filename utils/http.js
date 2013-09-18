@@ -1,15 +1,14 @@
 'use strict';
 
-var cache = require('../utils/cache'),
+var cache = require('./cache'),
 	fs = require('fs'),
 	http = require('http'),
 	https = require('https'),
-	httpConnection = require('./http/connection'),
+	httpConnection = require('../lib/http/connection'),
 	qs = require('querystring'),
 	stream = require('stream'),
 	url = require('url'),
-	utils = require('../utils/utils'),
-	wsUtils = require('./ws');
+	utils = require('./utils');
 
 // Default callback for "Not Found"
 function e404(connection) {
@@ -39,7 +38,7 @@ function httpAddListeners(server) {
 		if (callback) {
 			callback.call(this.parent);
 		}
-	}).on('upgrade', wsUtils.wsRequestListener);
+	}).on('upgrade', utils.ws.wsRequestListener);
 }
 
 // Check if the referer header is accepted by the host
@@ -282,7 +281,7 @@ function routing(host, connection) {
 	if (request.headers.origin) {
 
 		// Check if the origin is accepted
-		if (exports.accepts(host, request)) {
+		if (utils.accepts(host, request)) {
 			origin = request.headers.origin;
 		} else {
 			origin = connection.protocol + '://' + connection.host;
@@ -377,7 +376,7 @@ function routing(host, connection) {
 		log = host.logger(log);
 
 		// Check if the logger has defined a result
-		if (typeof log !== 'undefined') {
+		if (log !== undefined) {
 			console.log(log);
 		}
 	}
@@ -563,8 +562,7 @@ exports.httpDefaultRoutes = function () {
 // Create the HTTP or the HTTPS server
 exports.createServer = function (options, callback) {
 
-	var files,
-		server;
+	var server;
 
 	// Create the HTTPS server
 	function httpsServer(options) {
@@ -576,7 +574,7 @@ exports.createServer = function (options, callback) {
 		// Catch the errors in the auxiliary HTTP server
 		aux.on('error', function (error) {
 			server.emit('error', error);
-		}).on('upgrade', wsUtils.wsRequestListener);
+		}).on('upgrade', utils.ws.wsRequestListener);
 
 		// Manage the HTTP server depending on HTTPS events
 		server.on('open', function () {
