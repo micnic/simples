@@ -1,6 +1,7 @@
 'use strict';
 
 var cache = require('./cache'),
+	domain = require('domain'),
 	fs = require('fs'),
 	http = require('http'),
 	https = require('https'),
@@ -48,13 +49,13 @@ function refers(host, connection) {
 		referer,
 		request = connection.request;
 
-	if (request.headers.referer && host.conf.referers.length) {
+	if (request.headers.referer && host.conf.acceptedReferers.length) {
 		referer = url.parse(request.headers.referer).hostname;
 
-		if (host.conf.referers.indexOf(referer) < 0) {
-			accepted = host.conf.referers[0] === '*';
+		if (host.conf.acceptedReferers.indexOf(referer) < 0) {
+			accepted = host.conf.acceptedReferers[0] === '*';
 		} else {
-			accepted = host.conf.referers[0] !== '*';
+			accepted = host.conf.acceptedReferers[0] !== '*';
 		}
 	}
 
@@ -177,7 +178,7 @@ function parsePOST(connection) {
 		if (!boundary) {
 			return;
 		}
-		content = connection.body;
+		content = connection.body.toString();
 		index = 0;
 		currentChar = content.charAt(index);
 		boundaryLength = boundary.length;
@@ -217,7 +218,7 @@ function parsePOST(connection) {
 			index += 2;
 		}
 	} else {
-		POSTquery = qs.parse(connection.body);
+		POSTquery = qs.parse(connection.body.toString());
 		Object.keys(POSTquery).forEach(function (element) {
 			connection.query[element] = POSTquery[element];
 		});
@@ -231,7 +232,6 @@ function routing(host, connection) {
 		file,
 		found,
 		get,
-		log,
 		post,
 		put,
 		origin,
@@ -240,6 +240,11 @@ function routing(host, connection) {
 		response = connection.response,
 		route,
 		routes = host.routes;
+
+	// Route HTTP Server Error
+	function routeServerError() {
+		routes.error[500].call(host, connection);
+	}
 
 	// Callback for a static file route
 	function staticRoute(connection) {
@@ -272,6 +277,7 @@ function routing(host, connection) {
 		}
 	}
 
+	// Cache the methods
 	del = request.method === 'DELETE';
 	get = request.method === 'GET' || request.method === 'HEAD';
 	post = request.method === 'POST';
@@ -347,42 +353,25 @@ function routing(host, connection) {
 		route = routes.error[405];
 	}
 
-	// Listen for internal errors
-	connection.on('error', function (error) {
-		console.error('\nsimpleS: Internal Server Error > ' + this.url.href);
-		console.error(error.stack + '\n');
-		response.statusCode = 500;
-
-		// Try to apply the route for error 500
-		try {
-			routes.error[500].call(host, this);
-		} catch (stop) {
+	// Wrap the connection inside a domain
+	domain.create().on('error', function (error) {
+		if (response.statusCode === 500) {
 			console.error('\nsimpleS: Can not apply route for error 500');
-			console.error(stop.stack + '\n');
+			console.error(error.stack + '\n');
+		} else {
+			console.error('\nsimpleS: Internal Server Error > ' + connection.url.href);
+			console.error(error.stack + '\n');
+			response.statusCode = 500;
+			this.run(routeServerError);
 		}
-	});
+	}).run(function () {
 
-	// Check if any logger is defined
-	if (host.logger) {
-
-		log = {};
-
-		Object.keys(connection).filter(function (attribute) {
-			return typeof connection[attribute] !== 'function';
-		}).forEach(function (attribute) {
-			log[attribute] = connection[attribute];
-		});
-
-		log = host.logger(log);
-
-		// Check if the logger has defined a result
-		if (log !== undefined) {
-			console.log(log);
+		// Check if any logger is defined and log data
+		if (host.logger.callback) {
+			utils.log(host, connection);
 		}
-	}
 
-	// Vulnerable code handling
-	try {
+		// Use the routes
 		if (typeof route === 'string') {
 			connection.render(route);
 		} else {
@@ -397,58 +386,6 @@ function routing(host, connection) {
 				route.call(host, connection);
 			}
 		}
-	} catch (error) {
-		connection.emit(error);
-	}
-}
-
-// Populate the body of the requet and route requests
-function httpPopulateBody(host, connection) {
-
-	var body = new Buffer(0),
-		request = connection.request;
-
-	// Check for too big request body
-	function limitLength(length, callback) {
-		if ((length | 0) > host.conf.limit) {
-			console.error('\nsimpleS: Request Entity Too Large\n');
-			request.destroy();
-		} else if (callback) {
-			callback();
-		}
-	}
-
-	// Listener for request end event
-	function onEnd() {
-
-		// Convert buffer data to UTF-8 encoded string
-		connection.body = body.toString();
-
-		// Populate the files and the query of POST requests
-		if (this.method === 'POST' && this.headers['content-type']) {
-			parsePOST(connection);
-		}
-
-		// Route the requests
-		routing(host, connection);
-	}
-
-	// Listener for request readable event
-	function onRead() {
-
-		var data = this.read() || new Buffer(0),
-			length = body.length + data.length;
-
-		// Concatenate body chunks
-		body = utils.buffer(body, data, length);
-
-		// Check for request body limit
-		limitLength(body.length);
-	}
-
-	// Listen for incoming data
-	limitLength(request.headers['content-length'], function () {
-		request.on('readable', onRead).on('end', onEnd);
 	});
 }
 
@@ -458,13 +395,41 @@ function httpRequestListener(request, response) {
 	var connection,
 		host;
 
+	// Listener for request end event
+	function onEnd() {
+
+		// Populate the files and the query of POST requests
+		if (request.headers['content-type']) {
+			parsePOST(connection);
+		}
+
+		// Route the requests
+		routing(host, connection);
+	}
+
+	// Listener for request readable event
+	function onReadable() {
+
+		var data = request.read() || new Buffer(0),
+			length = connection.body.length + data.length;
+
+		// Concatenate body chunks
+		connection.body = utils.buffer(connection.body, data, length);
+
+		// Check for request body limit
+		if (connection.body.length > host.conf.requestLimit) {
+			console.error('\nsimpleS: Request Entity Too Large\n');
+			request.destroy();
+		}
+	}
+
 	// Check if host is provided by the host header
 	if (request.headers.host) {
 		host = this.parent.hosts[request.headers.host.split(':')[0]];
 	}
 
-	// Get the main host if the other one does not exist or is inactive
-	if (!host || !host.active) {
+	// Get the main host if the other one does not exist
+	if (!host) {
 		host = this.parent.hosts.main;
 	}
 
@@ -477,11 +442,18 @@ function httpRequestListener(request, response) {
 	// Set the default content type to HTML and charset UTF-8
 	response.setHeader('Content-Type', 'text/html;charset=utf-8');
 
-	// Route the request and parse them if needed
+	// Route the request and parse it if needed
 	if (request.method === 'GET' || request.method === 'HEAD') {
 		routing(host, connection);
 	} else {
-		httpPopulateBody(host, connection);
+
+		// Listen for incoming data
+		if ((request.headers['content-length'] | 0) > host.conf.requestLimit) {
+			console.error('\nsimpleS: Request Entity Too Large\n');
+			request.destroy();
+		} else {
+			request.on('readable', onReadable).on('end', onEnd);
+		}
 	}
 }
 
@@ -587,7 +559,7 @@ exports.createServer = function (options, callback) {
 		httpAddListeners(server);
 
 		// Send the server object through the callback
-		callback(server);
+		callback(server, true);
 	}
 
 	// Check the options and read the files for the HTTPS server
@@ -598,6 +570,6 @@ exports.createServer = function (options, callback) {
 	} else {
 		server = http.Server(httpRequestListener);
 		httpAddListeners(server);
-		callback(server);
+		callback(server, false);
 	}
 };

@@ -1,3 +1,11 @@
+## 0.4.7
+- API clean up, removed `.open()`, `.close()` methods for HTTP and WS hosts
+- Added `.config()` method for WS host
+- Improved logger, added configurable stream
+- Renamed configuration names for HTTP and WS hosts (some changes may still be made here)
+- Fixed WebSocket parsing when receiving a bunch of frames
+- Other small bugfixes
+
 ## 0.4.6
 - Fixed POST requests behavior
 - Made that `.host()` method will create or return an existing host or the main host

@@ -8,15 +8,6 @@ var simples = function (port, options) {
 
 	var that = this;
 
-	// Set the port to be optional
-	if (typeof port !== 'number') {
-		if (port && typeof port === 'object') {
-			options = port;
-		} else {
-			port = 80;
-		}
-	}
-
 	// Define special properties for simpleS
 	Object.defineProperties(this, {
 		busy: {
@@ -27,7 +18,7 @@ var simples = function (port, options) {
 			value: {}
 		},
 		port: {
-			value: port,
+			value: 80,
 			writable: true
 		},
 		secured: {
@@ -48,17 +39,12 @@ var simples = function (port, options) {
 	host.call(this, this, 'main');
 	this.hosts.main = this;
 
-	// Always listen on port 443 for HTTPS
-	if (options && (options.cert && options.key || options.pfx)) {
-		this.port = 443;
-		this.secured = true;
-	}
-
 	// Create and configure the server
-	utils.http.createServer(options, function (server) {
-		that.server = server;
+	utils.http.createServer(options, function (server, secured) {
 		server.parent = that;
-		that.start();
+		that.secured = secured;
+		that.server = server;
+		that.start(port);
 	});
 };
 
@@ -70,11 +56,13 @@ simples.prototype = Object.create(host.prototype, {
 });
 
 // Create a new host or return an existing one
-simples.prototype.host = function (name) {
+simples.prototype.host = function (name, config) {
 
 	// Check if the host name is a string and create a new host
 	if (typeof name === 'string' && name !== 'main' && !this.hosts[name]) {
-		this.hosts[name] = new host(this, name);
+		this.hosts[name] = new host(this, name, config);
+	} else if (this.hosts[name]) {
+		this.hosts[name].config(config);
 	}
 
 	return this.hosts[name] || this.hosts.main;
@@ -88,12 +76,10 @@ simples.prototype.start = function (port, callback) {
 	// Set the server to listen the port
 	function listen() {
 
-		// Start all existing hosts
-		Object.keys(that.hosts).forEach(function (host) {
-			that.hosts[host].open();
-		});
+		// Set the started flag
+		that.started = true;
 
-		// Start listening the port
+		// Listen on the port
 		that.server.listen(port, function () {
 			that.port = port;
 			that.server.emit('release', callback);
@@ -104,6 +90,16 @@ simples.prototype.start = function (port, callback) {
 	// Start or restart the server
 	function start() {
 
+		// Set the port to be optional
+		if (typeof port !== 'number') {
+			port = that.port;
+		}
+
+		// Always use port 443 for HTTPS
+		if (that.secured) {
+			port = 443;
+		}
+
 		// Set the busy flag
 		that.busy = true;
 
@@ -111,25 +107,18 @@ simples.prototype.start = function (port, callback) {
 		if (that.started) {
 			that.server.close(listen);
 		} else {
-			that.started = true;
-			utils.getSessions(that, listen);
+			listen();
 		}
-	}
-
-	// Set the port to be optional
-	if (typeof port !== 'number') {
-		if (typeof port === 'function') {
-			callback = port;
-		}
-		port = this.port;
-	} else if (this.secured) {
-		port = 443;
 	}
 
 	// Check if callback is defined and is a function
 	if (callback && typeof callback !== 'function') {
-		console.error('\nsimpleS: The callback parameter is not a function\n');
 		callback = null;
+	}
+
+	// Get callback as the only parameter
+	if (typeof port === 'function') {
+		callback = port;
 	}
 
 	// If the server is busy wait for release
@@ -154,28 +143,24 @@ simples.prototype.stop = function (callback) {
 		that.busy = true;
 		that.started = false;
 
-		// Close all existing hosts
-		Object.keys(that.hosts).forEach(function (host) {
-			that.hosts[host].close();
-		});
-
 		// Close the server
 		that.server.close(function () {
-			utils.saveSessions(that, callback);
+			that.server.emit('release', callback);
 		});
 	}
 
 	// Check if callback is defined and is a function
 	if (callback && typeof callback !== 'function') {
-		console.error('\nsimpleS: The callback parameter is not a function\n');
 		callback = null;
 	}
 
 	// Stop the server only if it is running
-	if (this.busy && this.started) {
-		this.server.once('release', stop);
-	} else if (this.started) {
-		stop();
+	if (this.started) {
+		if (this.busy) {
+			this.server.once('release', stop);
+		} else {
+			stop();
+		}
 	}
 
 	return this;

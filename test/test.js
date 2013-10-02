@@ -13,12 +13,15 @@ var noopEngine = {
 };
 
 server
+	/*.log(function (connection) {
+		return connection.url.href;
+	})*/
 	.engine(noopEngine)
 	.config({
-		compression: true,
-		limit: 1024,
-		origins: ['null'],
-		referers: ['*', 'null.com']
+		useCompression: true,
+		requestLimit: 1024,
+		acceptedOrigins: ['null'],
+		acceptedReferers: ['*', 'null.com']
 	})
 	.serve(__dirname + '/root', function (connection, files) {
 		connection.write(JSON.stringify(files));
@@ -65,7 +68,7 @@ server
 		console.log(connection.session.name);
 
 		var response = {
-			body: connection.body,
+			body: connection.body.toString(),
 			cookies: connection.cookies,
 			headers: connection.headers,
 			host: connection.host,
@@ -105,7 +108,7 @@ server
 	})
 	.post('post', function (connection) {
 		var response = {
-			body: connection.body,
+			body: connection.body.toString(),
 			cookies: connection.cookies,
 			files: connection.files,
 			headers: connection.headers,
@@ -124,8 +127,8 @@ server
 	});
 
 var echoSocket = server.ws('/echo', {
-	protocols: ['echo'],
-	raw: true
+	usedProtocols: ['echo'],
+	rawMode: true
 }, function (connection) {
 	console.log('new connection on echoSocket');
 

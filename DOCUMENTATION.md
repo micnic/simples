@@ -10,13 +10,11 @@
 
 > ##### [Virtual Hosting](#server-host)
 
-> ##### [Host Management](#server-host-management)
+> ##### [Host Configuration](#server-host-config)
 
 > ##### [Templating](#server-templating)
 
 ### [Routing](#host-routing)
->##### [General Routing](#host-route)
-
 >##### [All Requests](#host-all)
 
 >##### [DELETE Requests](#host-del)
@@ -26,6 +24,8 @@
 >##### [POST Requests](#host-post)
 
 >##### [PUT Requests](#host-put)
+
+>##### [General Routing](#host-route)
 
 >##### [Error Routes](#host-error)
 
@@ -162,7 +162,7 @@ port: number
 
 callback: function()
 
-Start listening for requests on the provided port. If the server was started before, simpleS will get sessions from the `.sessions` file if they exist or they have a valid structure. If the server is already started,  then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds, for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port or to start a stopped simpleS instance.
+Start listening for requests on the provided port. If the server is already started then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port.
 
 ```javascript
 server.start(80, function () {
@@ -176,7 +176,7 @@ server.start(80, function () {
 
 callback: function()
 
-Stop the server. The existing sessions are saved to the `.sessions` file for further access. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds, for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. The purpose of this method is to provide a way for closing the server and save the existing session for future use.
+Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served.
 
 ```javascript
 server.stop(function () {
@@ -186,29 +186,19 @@ server.stop(function () {
 
 ### <a name="server-host"/> Virtual Hosting
 
-`.host(name)`
+`.host(name[, config])`
 
 name: string
 
-simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. Routing methods explained below are applicable on simpleS instance, for the main host, and on this method to define different hosts.
+config: object
+
+simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration.
 
 ```javascript
 var host = server.host('example.com');
 ```
 
-#### <a name="server-host-management"/> Host Management
-
-`.open()`
-
-Make the host active, this method is called automatically when a new host is created, it is not needed to call it explicitly on host creation.
-
-`.close()`
-
-Closes all the child WebSocket hosts and make the host inactive.
-
-`.destroy()`
-
-Close the host and removes it from the server. Can not destroy the main host, for the main host all routes will be cleaned as it would be a new created host.
+#### <a name="server-host-config"/> Host Configuration
 
 `.config(config)`
 
@@ -216,23 +206,27 @@ config: object
 
 Change the configuration of the host. Possible attributes:
 
-`compression: boolean // true` - switch the compression of the response content, default is true
+`useCompression: boolean // true` - Switch the compression of the response content, default is true
 
-`limit: number // 1048576` - set the limit of the request body in bytes, default is 1MB.
+`requestLimit: number // 1048576` - Set the limit of the request body in bytes, default is 1MB.
 
-`origins: array of strings // []` - set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
+`acceptedOrigins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
 ```javascript
 ['null', 'localhost', 'example.com'] // Will accept requests only from these 3 hosts
 
 ['*', 'example.com'] // Will accept requests from all hosts except 'example.com'
 ```
 
-`referers: array of strings // []` - set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
+`acceptedReferers: array of strings // []` - Set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
 ```javascript
 ['*', 'example.com'] // will respond to all referers except 'example.com'
 
 ['example.com', 'test.com'] // Will respond only to these 2 referers
 ```
+
+`sessionTimeout: number // 3600` - Set the time to live of a session in seconds, default is 1 hour.
+
+`sessionPassword: string // ""` - Set the password for encrypting the session data on the client. Should be set as a long random string to improve security. The password should be kept the same after server restart to be sure that all the client session data is available. Default is an empty string.
 
 ### <a name="server-templating"/> Templating
 
@@ -291,17 +285,6 @@ All the methods described below are applicable on each host independently (see [
 */
 ```
 
-### <a name="host-route"/> General routing
-`.route(type, route, result)`
-
-type: 'all', 'del', 'get', 'put' or 'post'
-
-route: array[strings] or string
-
-result: function(connection) or string
-
-Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts.
-
 ### <a name="host-all"/> All Requests
 
 `.all(route, result)`
@@ -351,6 +334,17 @@ route: array[strings] or string
 result: function(connection) or string
 
 Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+
+### <a name="host-route"/> General routing
+`.route(type, route, result)`
+
+type: 'all', 'del', 'get', 'put' or 'post'
+
+route: array[strings] or string
+
+result: function(connection) or string
+
+Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts.
 
 ### <a name="host-error"/> Error Routes
 
@@ -425,11 +419,13 @@ serve.leave('all', [
 
 ### <a name="host-log"/> Logging
 
-`.log(callback)`
+`.log([stream, ]callback)`
+
+stream: object(writable stream instance) or string
 
 callback: function(connection)
 
-Allows to log data about the established connections, will write data to the `process.stdout` using `console.log` interface. The callback should return data which will be shown in the console. The callback function is triggered on HTTP and WS requests.
+Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests.
 
 ```javascript
 server.log(function (connection) {
@@ -443,7 +439,7 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 ```javascript
 {
-    body: '',
+    body: [],
     cookies: {
         user: 'me',
         pass: 'password'
@@ -491,7 +487,7 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 #### <a name="http-connection-body"/>  .body
 
-The content of the body of the request, for `GET` requests it is empty, for `POST` request it will contain plain data, parsed data is contained in `connection.query` or `connection.files`.
+The content of the body of the request, for `GET` requests it is empty, for `POST` request it will contain plain data, parsed data is contained in `connection.query` or `connection.files`, this data is represented by a buffer.
 
 #### <a name="http-connection-cookies"/> .cookies
 
@@ -630,7 +626,7 @@ data: any value
 
 replacer: array[numbers or strings] or function(key, value)
 
-space: number of string
+space: number or string
 
 Writes preformatted data to the response stream and ends the response, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
@@ -672,15 +668,15 @@ The WebSocket host is linked to the current or the main HTTP host (see Virtual H
 
 ### <a name="ws-host"/> WebSocket Host
 
-`.ws(location, [config, ]callback)`
+`.ws(location[, config], listener)`
 
 location: string
 
 config: object
 
-callback: function(connection)
+listener: function(connection)
 
-Create WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `origins` parameter from the configuration object of the host must bedefined. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too by the value of `limit` parameter, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
+Create a WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `origins` parameter from the configuration object of the host must be defined. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too by the value of `limit` parameter, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
 
 ```javascript
 var echo = server.ws('/', {
@@ -692,13 +688,13 @@ var echo = server.ws('/', {
 });
 ```
 
-#### <a name="ws-host-open"/> .open([config, callback])
+#### <a name="ws-host-config"/> .config([config, callback])
 
 config: object
 
 callback: function(connection)
 
-Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. This method is called automatically when a new WebSocket host is created, it is not needed to call it explicitly on WebSocket host creation.
+Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed.
 
 ```javascript
 echo.open({
@@ -708,14 +704,9 @@ echo.open({
     // Application logic
 });
 ```
-
-#### <a name="ws-host-close"/> .close()
-
-Stops the WebSocket host. Will close all existing connections and will not receive new connections.
-
 #### <a name="ws-host-destroy"/> .destroy()
 
-Will stop the current WebSocket host and will remove it from the WebSocket hosts list.
+Close all existing connections and remove the host from the WebSocket hosts list.
 
 #### <a name="ws-host-broadcast"/> .broadcast([event, ]data[, filter])
 

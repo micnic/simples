@@ -15,10 +15,10 @@ exports.accepts = function (host, request) {
 
 	// Check if the origin is accepted
 	if (origin !== request.headers.host.split(':')[0]) {
-		if (host.conf.origins.indexOf(origin) < 0) {
-			accepted = host.conf.origins[0] === '*';
+		if (host.conf.acceptedOrigins.indexOf(origin) < 0) {
+			accepted = host.conf.acceptedOrigins[0] === '*';
 		} else {
-			accepted = host.conf.origins[0] !== '*';
+			accepted = host.conf.acceptedOrigins[0] !== '*';
 		}
 	}
 
@@ -49,51 +49,35 @@ exports.generateSessionName = function () {
 	return name;
 };
 
-// Get sessions from file and activate them in the hosts
-exports.getSessions = function (instance, callback) {
-
-	// Read and parse the sessions file
-	fs.readFile('.sessions', 'utf8', function (error, data) {
-
-		// Catch error at reading
-		if (error) {
-			callback();
-			return;
-		}
-
-		// Supervise session file parsing
-		try {
-			data = JSON.parse(data);
-		} catch (error) {
-			console.error('\nsimpleS: can not parse sessions file');
-			console.error(error.message + '\n');
-		}
-
-		// If data was not parsed
-		if (typeof data === 'string') {
-			callback();
-			return;
-		}
-
-		// Activate the sessions from the file
-		Object.keys(instance.hosts).forEach(function (host) {
-			instance.hosts[host].sessions = data[host];
-
-			Object.keys(data[host]).forEach(function (timer) {
-				instance.hosts[host].timers[timer] = setTimeout(function () {
-					delete instance.hosts[host].sessions[timer];
-					delete instance.hosts[host].timers[timer];
-				}, 3600000);
-			});
-		});
-
-		// Continue to port listening
-		callback();
-	});
-};
-
 // Export http utils
 exports.http = require('./http');
+
+// Log data on new connections
+exports.log = function (host, connection) {
+
+	var log = {};
+
+	// Prepare log object
+	Object.keys(connection).filter(function (attribute) {
+		return typeof connection[attribute] !== 'function';
+	}).forEach(function (attribute) {
+		log[attribute] = connection[attribute];
+	});
+
+	// Apply the log object
+	log = host.logger.callback(log);
+
+	// Check if the logger has defined a result and write to stream
+	if (log !== undefined) {
+
+		// Stringify log data
+		if (typeof log !== 'string') {
+			log = JSON.stringify(log);
+		}
+
+		host.logger.stream.write(log + '\n');
+	}
+};
 
 // Get the cookies and the session
 exports.parseCookies = function (content) {
@@ -136,13 +120,7 @@ exports.parseCookies = function (content) {
 			currentChar = content.charAt(index);
 		}
 		value = decodeURIComponent(value);
-		if (name === '_session') {
-			Object.defineProperty(cookies, '_session', {
-				value: value
-			});
-		} else {
-			cookies[name] = value;
-		}
+		cookies[name] = value;
 		index++;
 		currentChar = content.charAt(index);
 	}
@@ -217,42 +195,6 @@ exports.parseLangs = function (content) {
 		return second.quality - first.quality;
 	}).map(function (element) {
 		return element.lang;
-	});
-};
-
-// Get the sessions from the hosts and save them to file
-exports.saveSessions = function (instance, callback) {
-
-	// Sessions container
-	var sessions = {};
-
-	// Select and deactivate sessions
-	Object.keys(instance.hosts).forEach(function (host) {
-		Object.keys(instance.hosts[host].timers).forEach(function (timer) {
-			clearTimeout(instance.hosts[host].timers[timer]);
-		});
-		instance.hosts[host].timers = {};
-		sessions[host] = instance.hosts[host].sessions;
-	});
-
-	// Prepare sessions for writing on file
-	sessions = JSON.stringify(sessions);
-
-	// Write the sessions in the file
-	fs.writeFile('.sessions', sessions, 'utf8', function (error) {
-
-		// Release the server in all cases
-		instance.server.emit('release', callback);
-
-		// Log the error
-		if (error) {
-			console.error('\nsimpleS: Can not write sessions to file\n');
-			console.error(error.message + '\n');
-			return;
-		}
-
-		// Lot the sessions file creation
-		console.log('\nsimpleS: File with sessions created\n');
 	});
 };
 
