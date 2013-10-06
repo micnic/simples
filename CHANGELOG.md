@@ -1,3 +1,9 @@
+## 0.4.8
+- Implemented static server behavior for serving index.html if present for subdirectories
+- Fixed 500 error for request to subdirectories when no callback is defined in `.serve()` method
+- Fixed new behavior for sending WebSocket protocol header for Google Chrome 30
+- Fixed behavior of client-side WS API on Firefox when the message size is too big
+
 ## 0.4.7
 - API clean up, removed `.open()`, `.close()` methods for HTTP and WS hosts
 - Added `.config()` method for WS host

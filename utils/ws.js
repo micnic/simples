@@ -181,18 +181,17 @@ function wsParse(connection, frame, data) {
 	// Wait for masking key
 	if (frame.state === 3 && frame.data.length - frame.index >= 4) {
 
-		// Check if message is not too big
-		if (frame.length + frame.message.length > connection.config.messageLimit) {
+		// Check if message is not too big and get the masking key
+		if (frame.length + frame.message.length > frame.limit) {
 			console.error('\nsimpleS: Too big WebSocket message\n');
 			connection.socket.end(new Buffer([136, 0]), socketDestroy);
 			frame.state = -1;
+		} else {
+			frame.mask = frame.data.slice(frame.index, frame.index + 4);
+			frame.data = frame.data.slice(frame.index + 4);
+			frame.index = 0;
+			frame.state = 4;
 		}
-
-		// Get the masking key
-		frame.mask = frame.data.slice(frame.index, frame.index + 4);
-		frame.data = frame.data.slice(frame.index + 4);
-		frame.index = 0;
-		frame.state = 4;
 	}
 
 	// Wait for payload data
@@ -207,6 +206,7 @@ function wsHandshake(host, connection, key) {
 	var frame = {
 			data: new Buffer(0),
 			index: 0,
+			limit: connection.config.messageLimit,
 			message: new Buffer(0),
 			state: 0
 		},
@@ -229,6 +229,7 @@ function wsHandshake(host, connection, key) {
 	socket.write('Connection: Upgrade\r\n');
 	socket.write('Upgrade: WebSocket\r\n');
 	socket.write('Sec-WebSocket-Accept: ' + key + '\r\n');
+	socket.write('Sec-Websocket-Protocol: ' + connection.protocols + '\r\n');
 
 	// Write origin only if requested
 	if (connection.headers.origin) {

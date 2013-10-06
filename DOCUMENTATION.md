@@ -226,8 +226,6 @@ Change the configuration of the host. Possible attributes:
 
 `sessionTimeout: number // 3600` - Set the time to live of a session in seconds, default is 1 hour.
 
-`sessionPassword: string // ""` - Set the password for encrypting the session data on the client. Should be set as a long random string to improve security. The password should be kept the same after server restart to be sure that all the client session data is available. Default is an empty string.
-
 ### <a name="server-templating"/> Templating
 
 `.engine(engine)`

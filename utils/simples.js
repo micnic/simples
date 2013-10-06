@@ -131,6 +131,25 @@ simples.ee = function () {
 	}
 };
 
+// Append listener for an event
+simples.ee.prototype.addListener = function (event, listener) {
+	'use strict';
+
+	// Shortcut for listeners
+	var listeners = this.listeners[event];
+
+	// Add the listener
+	if (!listeners) {
+		this.listeners[event] = listener;
+	} else if (typeof listeners === 'function') {
+		this.listeners = [listeners, listener];
+	} else {
+		this.listeners.push(listener);
+	}
+
+	return this;
+};
+
 // Trigger the event with the data
 simples.ee.prototype.emit = function (event) {
 	'use strict';
@@ -177,25 +196,6 @@ simples.ee.prototype.emit = function (event) {
 		while (index < length) {
 			listeners[index++].apply(this, args);
 		}
-	}
-
-	return this;
-};
-
-// Append listener for an event
-simples.ee.prototype.addListener = function (event, listener) {
-	'use strict';
-
-	// Shortcut for listeners
-	var listeners = this.listeners[event];
-
-	// Add the listener
-	if (!listeners) {
-		this.listeners[event] = listener;
-	} else if (typeof listeners === 'function') {
-		this.listeners = [listeners, listener];
-	} else {
-		this.listeners.push(listener);
 	}
 
 	return this;
@@ -266,7 +266,7 @@ simples.ee.prototype.removeListener = function (event, listener) {
 	return this;
 };
 
-// WebSocket microframework
+// WS microframework
 simples.ws = function (host, protocols, raw) {
 	'use strict';
 
@@ -328,6 +328,19 @@ simples.ws.prototype = Object.create(simples.ee.prototype, {
 	}
 });
 
+// Close the WebSocket
+simples.ws.prototype.close = function () {
+	'use strict';
+
+	// Close the WebSocket only if it is started
+	if (this.started) {
+		this.socket.close();
+		this.started = false;
+	}
+
+	return this;
+};
+
 // Open or reopen the WebSocket socket
 simples.ws.prototype.open = function (host, protocols) {
 	'use strict';
@@ -367,7 +380,7 @@ simples.ws.prototype.open = function (host, protocols) {
 	// Catch connection errors
 	this.socket.onerror = function () {
 		that.started = false;
-		that.emit('error', 'simpleS: Can not connect to the WebSocket server');
+		that.emit('error', 'simpleS: Can not connect to the WS server');
 	};
 
 	// Transform Node.JS buffer to browser blob
@@ -427,19 +440,6 @@ simples.ws.prototype.open = function (host, protocols) {
 	};
 };
 
-// Close the WebSocket
-simples.ws.prototype.close = function () {
-	'use strict';
-
-	// Close the WebSocket only if it is started
-	if (this.started) {
-		this.socket.close();
-		this.started = false;
-	}
-
-	return this;
-};
-
 // Send data via the WebSocket in raw or advanced mode
 simples.ws.prototype.send = function (event, data) {
 	'use strict';
@@ -454,16 +454,21 @@ simples.ws.prototype.send = function (event, data) {
 		});
 	}
 
-	// Check for open socket
+	// Check for open socket and send data
 	if (this.started) {
-		this.socket.send(data);
+		try {
+			this.socket.send(data);
+		} catch (error) {
+			this.queue.push(data);
+			this.open();
+		}
 	} else {
 
 		// Push the message to the end of the queue
-		this.queue[this.queue.length] = data;
+		this.queue.push(data);
 
 		// If connection is down open a new one
-		if (!this.started && !this.opening) {
+		if (!this.opening) {
 			this.open();
 		}
 	}
