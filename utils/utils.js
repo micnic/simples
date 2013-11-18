@@ -80,13 +80,22 @@ exports.log = function (host, connection) {
 };
 
 // Get the cookies and the session
-exports.parseCookies = function (content) {
+exports.parseCookies = function (request) {
 
-	var cookies = {},
-		currentChar = content.charAt(0),
+	var content = '',
+		cookies = {},
+		currentChar,
 		index = 0,
 		name,
 		value;
+
+	// Check if the request has a cookie header
+	if (request.headers.cookie) {
+		content = request.headers.cookie;
+	}
+
+	// Get the first character
+	currentChar = content.charAt(0);
 
 	// Populate cookies and session
 	while (currentChar) {
@@ -129,13 +138,22 @@ exports.parseCookies = function (content) {
 };
 
 // Get the languages accepted by the client
-exports.parseLangs = function (content) {
+exports.parseLangs = function (request) {
 
-	var currentChar = content.charAt(0),
+	var content = '',
+		currentChar,
 		index = 0,
 		lang,
 		langs = [],
 		quality;
+
+	// Check if the request has an accept-language header
+	if (request.headers['accept-language']) {
+		content = request.headers['accept-language'];
+	}
+
+	// Get the first character
+	currentChar = content.charAt(0);
 
 	// Start parsing
 	while (currentChar) {

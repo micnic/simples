@@ -1,14 +1,16 @@
 {
 	"name": "simples",
-	"version": "0.4.8",
+	"version": "0.4.9",
 	"description": "Simple HTTP(S) Server",
 	"keywords": [
 		"cors",
+		"framework",
 		"http",
 		"https",
 		"rest",
 		"simple",
 		"server",
+		"static",
 		"vhost",
 		"web",
 		"websocket"
@@ -25,13 +27,16 @@
 		"url": "https://github.com/micnic"
 	},
 	"main": "index",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/micnic/simpleS"
+	},
 	"scripts": {
 		"start": "node test/test.js",
 		"test": "node test/test.js test"
 	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/micnic/simpleS"
+	"devDependencies": {
+		"simpleu": "0.0.2"
 	},
 	"engines": {
 		"node": ">=0.10"

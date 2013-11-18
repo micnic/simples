@@ -107,11 +107,11 @@ cache.prototype.checkElement = function (object, location) {
 		if (modified) {
 			object.files[name].location = location;
 			object.files[name].stats = stats;
-			that.watchLocation(object, location);
 		}
 
 		// Check if element is not in cache or is modified
 		if (modified && stats.isDirectory()) {
+			that.watchLocation(object.files[name], location);
 			that.addDirectory(object.files[name], location);
 		} else if (modified && !stats.isDirectory()) {
 			that.addFile(object.files[name], location);

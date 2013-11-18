@@ -5,25 +5,30 @@ var simples = {};
 simples.ajax = function (url, data, method) {
 	'use strict';
 
+	var hash = url.indexOf('#'),
+		listeners = {
+			error: function () {},
+			success: function () {}
+		},
+		json = false,
+		xhr = new XMLHttpRequest();
+
+	// Transform object to encoded URI keys and values
+	function encode(data) {
+		var key,
+			value;
+
+		return Object.keys(data).map(function (element) {
+			key = encodeURIComponent(element);
+			value = encodeURIComponent(data[element]);
+			return key + '=' + value;
+		}).join('&');
+	}
+
 	// Ignore new keyword
 	if (!(this instanceof simples.ajax)) {
 		return new simples.ajax(url, data, method);
 	}
-
-	// Accept only DELETE, GET, HEAD, POST and PUT methods, defaults to get
-	if (['delete', 'get', 'head', 'post', 'put'].indexOf(method) < 0) {
-		method = 'get';
-	}
-
-	// Create the listeners and the XMLHttpRequest
-	var hashIndex = url.indexOf('#'),
-		listeners = {
-			error: function () {},
-			progress: function () {},
-			success: function () {}
-		},
-		sufix = '',
-		xhr = new XMLHttpRequest();
 
 	// Define special properties for simples.ajax
 	Object.defineProperties(this, {
@@ -35,48 +40,53 @@ simples.ajax = function (url, data, method) {
 		}
 	});
 
-	// Form data from object
-	function objectData(data) {
-		var formData = new FormData();
-		Object.keys(data).forEach(function (element) {
-			formData.append(element, data[element]);
-		});
-		return formData;
+	// Accept only DELETE, GET, HEAD, POST and PUT methods, defaults to get
+	if (['delete', 'get', 'head', 'post', 'put'].indexOf(method) < 0) {
+		method = 'get';
 	}
 
-	// Cut off the suffix for some modifications in url
-	if (hashIndex >= 0) {
-		sufix = url.substr(hashIndex);
-		url = url.substr(0, hashIndex);
+	// Cut off the fragment identifier
+	if (hash >= 0) {
+		url = url.substr(0, hash);
 	}
 
 	// Process data
 	if (method === 'get' || method === 'head') {
-		if (url.indexOf('?') >= 0) {
-			url += '&';
-		} else {
+
+		// Check if the URL contains query string
+		if (url.indexOf('?') < 0) {
 			url += '?';
-		}
-		url += Object.keys(data).map(function (element) {
-			return element + '=' + encodeURIComponent(data[element]);
-		}).join('&');
-		data = null;
-	} else if (method === 'post') {
-		if (data instanceof HTMLFormElement) {
-			data = new FormData(data);
 		} else {
-			data = objectData(data);
+			url += '&';
 		}
-	} else {
-		if (data instanceof HTMLFormElement) {
-			data = new FormData(data);
-		} else if (typeof data !== 'string') {
+
+		// Add the data to the URL string
+		url += encode(data);
+		data = null;
+	}
+
+	// Open the XMLHttpRequest
+	xhr.open(method.toUpperCase(), url);
+
+	if (data instanceof HTMLFormElement) {
+		data = new FormData(data);
+	} else if (typeof data === 'object') {
+
+		// Check if data contains objects inside
+		json = Array.isArray(data) || Object.keys(data).some(function (key) {
+			return typeof data[key] === 'object';
+		});
+
+		// Stringify data
+		if (json) {
 			data = JSON.stringify(data);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+		} else {
+			data = encode(data);
 		}
 	}
 
-	// Open the XMLHttpRequest and send data
-	xhr.open(method.toUpperCase(), url + sufix);
+	// Send the data throught the XMLHttpRequest
 	xhr.send(data);
 
 	// Listen for changes in the state of the XMLHttpRequest
@@ -87,8 +97,6 @@ simples.ajax = function (url, data, method) {
 			listeners.error(xhr.status, xhr.statusText);
 		}
 	};
-
-	listeners.progress();
 };
 
 // Set the error listener
@@ -96,14 +104,7 @@ simples.ajax.prototype.error = function (listener) {
 	'use strict';
 
 	this.listeners.error = listener;
-	return this;
-};
 
-// Set the progress listener
-simples.ajax.prototype.progress = function (listener) {
-	'use strict';
-
-	this.listeners.progress = listener;
 	return this;
 };
 
@@ -119,6 +120,7 @@ simples.ajax.prototype.success = function (listener) {
 	'use strict';
 
 	this.listeners.success = listener;
+
 	return this;
 };
 
@@ -126,26 +128,29 @@ simples.ajax.prototype.success = function (listener) {
 simples.ee = function () {
 	'use strict';
 
+	// Ignore new keyword
 	if (!this instanceof simples.ee) {
 		return new simples.ee();
 	}
+
+	// Define listeners object
+	Object.defineProperty(this, 'listeners', {
+		value: {},
+		writable: true
+	});
 };
 
 // Append listener for an event
 simples.ee.prototype.addListener = function (event, listener) {
 	'use strict';
 
-	// Shortcut for listeners
-	var listeners = this.listeners[event];
-
-	// Add the listener
-	if (!listeners) {
-		this.listeners[event] = listener;
-	} else if (typeof listeners === 'function') {
-		this.listeners = [listeners, listener];
-	} else {
-		this.listeners.push(listener);
+	// Check if more listeners exist for this event
+	if (!this.listeners[event]) {
+		this.listeners[event] = [];
 	}
+
+	// Push the listener to the event listeners array
+	this.listeners[event].push(listener);
 
 	return this;
 };
@@ -154,11 +159,8 @@ simples.ee.prototype.addListener = function (event, listener) {
 simples.ee.prototype.emit = function (event) {
 	'use strict';
 
-	// Shortcut for listeners
-	var args,
-		index,
-		length,
-		listeners = this.listeners[event];
+	var args = Array.prototype.slice.call(arguments, 1),
+		that = this;
 
 	// Throw the error if there are no listeners for error event
 	if (event === 'error' && !this.listeners.error) {
@@ -167,55 +169,17 @@ simples.ee.prototype.emit = function (event) {
 		} else if (typeof arguments[1] === 'string') {
 			throw new Error(arguments[1]);
 		} else {
-			throw new Error("Uncaught, unspecified 'error' event.");
+			throw new Error('Uncaught, unspecified "error" event.');
 		}
 	}
 
-	// Check for listeners
-	if (listeners) {
-		args = [];
-		index = 0;
-		length = arguments.length - 1;
-
-		// Prepare the arguments for the listeners
-		while (index < length) {
-			args[index++] = arguments[index];
-		}
-
-		// Only one listener
-		if (typeof listeners === 'function') {
-			listeners.apply(this, args);
-			return this;
-		}
-
-		// Recycle variables
-		index = 0;
-		length = listeners.length;
-
-		// Call all listeners
-		while (index < length) {
-			listeners[index++].apply(this, args);
-		}
+	// Check if the event has listeners
+	if (this.listeners[event]) {
+		this.listeners[event].forEach(function (listener) {
+			listener.apply(that, args);
+		});
 	}
 
-	return this;
-};
-
-// Shortcut to addListener
-simples.ee.prototype.on = simples.ee.prototype.addListener;
-
-// Append one time listener
-simples.ee.prototype.once = function (event, listener) {
-	'use strict';
-
-	// Prepare the one time listener
-	var oneTimeListener = function () {
-		listener.apply(this, arguments);
-		this.removeListener(event, oneTimeListener);
-	};
-
-	// Append the listener
-	this.on(event, oneTimeListener);
 	return this;
 };
 
@@ -238,30 +202,46 @@ simples.ee.prototype.removeListener = function (event, listener) {
 	'use strict';
 
 	// Shortcut for listeners
-	var index,
-		listeners = this.listeners[event];
+	var index;
 
-	// Remove the only one listener
-	if (typeof listeners === 'function') {
-		delete this.listeners[event];
-		return this;
+	// Check if the event has listeners and remove the needed one
+	if (this.listeners[event]) {
+		index = this.listeners[event].indexOf(listener);
+		this.listeners[event].splice(index, 1);
 	}
 
-	// Prepare the index of the listener
-	index = listeners.length;
+	return this;
+};
 
-	// Search for listener and remove it
-	while (index--) {
-		if (listeners[index] === listener) {
-			listeners.splice(index, 1);
-			break;
-		}
+// Shortcut for removeListener and removeAllListeners
+simples.ee.prototype.off = function (event, listener) {
+	'use strict';
+
+	// Switch behavior if listener is provided
+	if (listener) {
+		this.removeListener(event, listener);
+	} else {
+		this.removeAllListeners(event);
 	}
 
-	// If only one listener remains make it function
-	if (listeners.length === 1) {
-		this.listeners = listeners[0];
-	}
+	return this;
+};
+
+// Shortcut for addListener
+simples.ee.prototype.on = simples.ee.prototype.addListener;
+
+// Append one time listener
+simples.ee.prototype.once = function (event, listener) {
+	'use strict';
+
+	// Prepare the one time listener
+	var oneTimeListener = function () {
+		listener.apply(this, arguments);
+		this.removeListener(event, oneTimeListener);
+	};
+
+	// Append the listener
+	this.on(event, oneTimeListener);
 
 	return this;
 };
@@ -289,9 +269,6 @@ simples.ws = function (host, protocols, raw) {
 		host: {
 			value: host,
 			writable: true
-		},
-		listeners: {
-			value: {}
 		},
 		queue: {
 			value: []

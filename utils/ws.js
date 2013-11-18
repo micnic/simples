@@ -24,7 +24,7 @@ function wsUnmasking(connection, frame) {
 	// Check if any data is available
 	if (size) {
 
-		// Loop through the data un apply xor operation
+		// Loop through the data and apply xor operation
 		while (index--) {
 			frame.data[index] ^= frame.mask[index % 4];
 		}
@@ -91,6 +91,7 @@ function wsParse(connection, frame, data) {
 		connection.socket.destroy();
 	}
 
+	// Prepare data for concatenation
 	data = data || new Buffer(0);
 	length = frame.data.length + data.length;
 
@@ -172,7 +173,7 @@ function wsParse(connection, frame, data) {
 			frame.state = -1;
 		}
 
-		// Limit payload length to 32bit (4GB)
+		// Get 32bit payload length (<= 4GB)
 		frame.length = frame.data.readUInt32BE(6);
 		frame.index += 8;
 		frame.state = 3;
@@ -210,7 +211,10 @@ function wsHandshake(host, connection, key) {
 			message: new Buffer(0),
 			state: 0
 		},
+		location = connection.host,
+		session,
 		socket = connection.socket,
+		timeout = host.parent.conf.sessionTimeout * 1000,
 		timer;
 
 	// Send a ping frame each 25 seconds of inactivity
@@ -236,8 +240,30 @@ function wsHandshake(host, connection, key) {
 		socket.write('Origin: ' + connection.headers.origin + '\r\n');
 	}
 
-	// End the WebSocket handshake
-	socket.write('\r\n');
+	// Prepare session data
+	if (connection.session) {
+		session = connection.cookies._session;
+	} else {
+		session = utils.generateSessionName();
+		connection.session = host.parent.sessions[session] = {};
+	}
+
+	// Prepare session cookie domain location
+	if (location.indexOf('.') < 0) {
+		location = '';
+	}
+
+	// Clear the previous session timer and create a new one
+	clearTimeout(host.parent.timers[session]);
+	host.parent.timers[session] = setTimeout(function () {
+		delete host.parent.sessions[session];
+		delete host.parent.timers[session];
+	}, timeout);
+
+	// Write session cookie to the socket and end the WS handshake
+	socket.write('Set-Cookie: _session=' + session);
+	socket.write(';expires=' + new Date(Date.now() + timeout).toUTCString());
+	socket.write(';path=/;domain=' + location + ';httponly\r\n\r\n');
 
 	// Parse received data
 	socket.on('readable', function () {
@@ -271,10 +297,12 @@ function wsHandshake(host, connection, key) {
 exports.wsRequestListener = function (request, socket) {
 
 	var connection,
+		data,
 		error,
 		handshake = new Buffer(0),
 		host,
-		key = request.headers['sec-websocket-key'];
+		key = request.headers['sec-websocket-key'],
+		length;
 
 	// Check if host is provided by the host header
 	if (request.headers.host) {
@@ -331,11 +359,8 @@ exports.wsRequestListener = function (request, socket) {
 
 		// Hash the key and continue to WS handshake
 		crypto.Hash('sha1').on('readable', function () {
-
-			var data = this.read() || new Buffer(0),
-				length = handshake.length + data.length;
-
-			// Concatenate hanshake data
+			data = this.read() || new Buffer(0);
+			length = handshake.length + data.length;
 			handshake = utils.buffer(handshake, data, length);
 		}).on('end', function () {
 			wsHandshake(host, connection, handshake.toString('base64'));

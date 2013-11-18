@@ -437,7 +437,7 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 ```javascript
 {
-    body: [],
+    body: {},
     cookies: {
         user: 'me',
         pass: 'password'
@@ -485,7 +485,7 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 #### <a name="http-connection-body"/>  .body
 
-The content of the body of the request, for `GET` requests it is empty, for `POST` request it will contain plain data, parsed data is contained in `connection.query` or `connection.files`, this data is represented by a buffer.
+The content of the body of the request, for `GET` requests it is an empty object, for other types of requests it will contain parsed data if the request comes with a specific content type, otherwise it will contain plain data as a buffer, parsed files from requests with `multipart/form-data` are contained in `connection.files`
 
 #### <a name="http-connection-cookies"/> .cookies
 
@@ -493,7 +493,7 @@ An object that contains the cookies provided by the client.
 
 #### <a name="http-connection-files"/> .files
 
-An object that contains files sent using POST method with `multipart/form-data` content type.
+An object that contains files sent with `multipart/form-data` content type.
 
 #### <a name="http-connection-headers"/> .headers
 
@@ -512,7 +512,7 @@ An array of strings that represents languages accepted by the client in the orde
 
 #### <a name="http-connection-method"/> .method
 
-The HTTP method of the request, it can be `GET`, `HEAD` or `POST` for usual requests, but can have a different value on error `405`.
+The HTTP method of the request, it can be `DELETE`, `GET`, `HEAD`, `POST` and `PUT` for usual requests, but can have a different value on error `405`.
 
 #### <a name="http-connection-params"/> .params
 
@@ -524,15 +524,15 @@ The pathname of the url of the request.
 
 #### <a name="http-connection-protocol"/> .protocol
 
-The name of the protocol of the request.
+The name of the protocol of the request, can be `http` or `https`.
 
 #### <a name="http-connection-query"/> .query
 
-The object that contains queries from both GET and POST methods, it is recommended to use different names for queries from both methods, if there are two queries with the same name then the GET query will be overwritten.
+The object that contains parsed query string from the url.
 
 #### <a name="http-connection-session"/> .session
 
-A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 16 `0-9a-zA-Z` characters which will ensure security for `4.76 * 10 ^ 28` values. This is a getter and the session is initialized only when it is called, this is made for more performance.
+A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 16 `0-9a-zA-Z` characters which will ensure security for `4.76 * 10 ^ 28` values.
 
 #### <a name="http-connection-url"/> .url
 
@@ -553,8 +553,8 @@ connection.cookie('user', 'me', {
     expires: 3600,          // or maxAge: 3600, Set the expiration time of the cookie in seconds
     path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
     domain: 'localhost',    // Domain of the cookie, should be defined only if it is different from the current host
-    secure: false,          // Set if the cookie is secured, used by HTTPS
-    httpOnly: false,        // Set if the cookie can not be changed from client-side
+    secure: false,          // Set if the cookie is secured and should be used only by HTTPS
+    httpOnly: false,        // Set if the cookie should not be changed from client-side
 });
 ```
 

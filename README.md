@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.4.8
+# 0.4.9
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
@@ -22,6 +22,7 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 #### More simple modules:
 - [simpleR](http://micnic.github.com/simpleR/)
 - [simpleT](http://micnic.github.com/simpleT/)
+- [simpleU](http://micnic.github.com/simpleU/)
 
 ### [Changelog](https://github.com/micnic/simpleS/wiki/Changelog)
 ### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation)

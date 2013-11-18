@@ -1,3 +1,9 @@
+## 0.4.9
+- Improved request parsing, added parsing for json data
+- Parsed data is now stored in `connection.body`
+- Fixed bugs related to dynamic caching and cache accesing
+- Improved client-side API
+
 ## 0.4.8
 - Implemented static server behavior for serving index.html if present for subdirectories
 - Fixed 500 error for request to subdirectories when no callback is defined in `.serve()` method

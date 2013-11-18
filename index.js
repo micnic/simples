@@ -136,12 +136,38 @@ simples.prototype.stop = function (callback) {
 
 	var that = this;
 
+	// Close all the open connections to the WS host
+	function clearWsHost(wsHost) {
+		wsHost.connections.forEach(function (connection) {
+			connection.close();
+		});
+	}
+
+	// Stop the timers of the sessions and the child WS hosts of the host
+	function clearHttpHost(host) {
+
+		// Clear the timers
+		Object.keys(host.timers).forEach(function (timer) {
+			clearTimeout(host.timers[timer]);
+		});
+
+		// Clear the WS hosts
+		Object.keys(host.wsHosts).forEach(function (wsHost) {
+			clearWsHost(host.wsHosts[wsHost]);
+		});
+	}
+
 	// Stop the server
 	function stop() {
 
 		// Set status flags
 		that.busy = true;
 		that.started = false;
+
+		// Clear all existing hosts
+		Object.keys(that.hosts).forEach(function (host) {
+			clearHttpHost(that.hosts[host]);
+		});
 
 		// Close the server
 		that.server.close(function () {

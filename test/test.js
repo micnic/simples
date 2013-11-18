@@ -68,7 +68,7 @@ server
 		console.log(connection.session.name);
 
 		var response = {
-			body: connection.body.toString(),
+			body: connection.body,
 			cookies: connection.cookies,
 			headers: connection.headers,
 			host: connection.host,
@@ -108,7 +108,7 @@ server
 	})
 	.post('post', function (connection) {
 		var response = {
-			body: connection.body.toString(),
+			body: connection.body,
 			cookies: connection.cookies,
 			files: connection.files,
 			headers: connection.headers,

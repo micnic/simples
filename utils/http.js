@@ -6,7 +6,7 @@ var cache = require('./cache'),
 	http = require('http'),
 	https = require('https'),
 	httpConnection = require('../lib/http/connection'),
-	qs = require('querystring'),
+	parsers = require('./parsers'),
 	stream = require('stream'),
 	url = require('url'),
 	utils = require('./utils');
@@ -116,115 +116,6 @@ function findAdvancedRoute(routes, location) {
 	};
 }
 
-// Parse data sent via POST method
-function parsePOST(connection) {
-
-	var boundary,
-		boundaryLength,
-		buffer = '',
-		content = connection.request.headers['content-type'],
-		contentType,
-		currentChar = content.charAt(0),
-		filecontent,
-		filename,
-		index = 0,
-		name,
-		POSTquery,
-		tempIndex,
-		type;
-
-	while (currentChar === ' ') {
-		index++;
-		currentChar = content.charAt(index);
-	}
-	if (!currentChar) {
-		return;
-	}
-	contentType = '';
-	while (currentChar && currentChar !== ' ' && currentChar !== ';') {
-		contentType += currentChar;
-		index++;
-		currentChar = content.charAt(index);
-	}
-	if (contentType === 'multipart/form-data') {
-		while (currentChar === ' ' || currentChar === ';') {
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar) {
-			return;
-		}
-		while (currentChar && currentChar !== ' ' && currentChar !== '=') {
-			buffer += currentChar;
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (buffer !== 'boundary' || !currentChar) {
-			return;
-		}
-		while (currentChar === ' ' || currentChar === '=') {
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar) {
-			return;
-		}
-		boundary = '';
-		while (currentChar) {
-			boundary += currentChar;
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!boundary) {
-			return;
-		}
-		content = connection.body.toString();
-		index = 0;
-		currentChar = content.charAt(index);
-		boundaryLength = boundary.length;
-		while (content.substr(index, 4 + boundaryLength) === '--' + boundary + '\r\n') {
-			index += 4 + boundaryLength;
-			index = content.indexOf('name="', index) + 6;
-			if (index < 6) {
-				break;
-			}
-			name = content.substring(index, content.indexOf('"', index));
-			index += name.length + 1;
-			tempIndex = content.indexOf('filename="', index) + 10;
-			filename = undefined;
-			if (tempIndex >= 10) {
-				filename = content.substring(tempIndex, content.indexOf('"', tempIndex));
-				index += 11 + filename.length;
-				index = content.indexOf('Content-Type: ', index) + 14;
-				type = content.substring(index, content.indexOf('\r', index));
-				index += type.length;
-			}
-			index += 4;
-			filecontent = '';
-			while (content.substr(index, 4 + boundaryLength) !== '\r\n--' + boundary) {
-				filecontent += currentChar;
-				index++;
-				currentChar = content.charAt(index);
-			}
-			if (filename) {
-				connection.files[name] = {
-					content: filecontent,
-					filename: filename,
-					type: type
-				};
-			} else {
-				connection.query[name] = filecontent;
-			}
-			index += 2;
-		}
-	} else {
-		POSTquery = qs.parse(connection.body.toString());
-		Object.keys(POSTquery).forEach(function (element) {
-			connection.query[element] = POSTquery[element];
-		});
-	}
-}
-
 // Routes all the requests
 function routing(host, connection) {
 
@@ -249,9 +140,7 @@ function routing(host, connection) {
 	// Callback for a static file route
 	function staticRoute(connection) {
 
-		var index,
-			mtime = file.stats.mtime.valueOf(),
-			rstream;
+		var mtime = file.stats.mtime.valueOf();
 
 		// Set the last modified time and the content type of the response
 		connection.header('Last-Modified', mtime);
@@ -262,18 +151,7 @@ function routing(host, connection) {
 			connection.response.statusCode = 304;
 			connection.end();
 		} else {
-			index = 0;
-			rstream = new stream.Readable();
-			rstream._read = function () {
-				if (file.content.length > index + 16384) {
-					this.push(file.content.slice(index, 16384));
-					index += 16384;
-				} else {
-					this.push(file.content.slice(index));
-					this.push(null);
-				}
-			};
-			rstream.pipe(connection);
+			connection.end(file.content);
 		}
 	}
 
@@ -397,30 +275,17 @@ function httpRequestListener(request, response) {
 
 	// Listener for request end event
 	function onEnd() {
-
-		// Populate the files and the query of POST requests
-		if (request.headers['content-type']) {
-			parsePOST(connection);
-		}
-
-		// Route the requests
 		routing(host, connection);
 	}
 
 	// Listener for request readable event
 	function onReadable() {
 
-		var data = request.read() || new Buffer(0),
-			length = connection.body.length + data.length;
-
-		// Concatenate body chunks
-		connection.body = utils.buffer(connection.body, data, length);
-
 		// Check for request body limit
-		if (connection.body.length > host.conf.requestLimit) {
+		/*if (connection.body.length > host.conf.requestLimit) {
 			console.error('\nsimpleS: Request Entity Too Large\n');
 			request.destroy();
-		}
+		}*/
 	}
 
 	// Check if host is provided by the host header
@@ -452,6 +317,7 @@ function httpRequestListener(request, response) {
 			console.error('\nsimpleS: Request Entity Too Large\n');
 			request.destroy();
 		} else {
+			parsers.parse(connection);
 			request.on('readable', onReadable).on('end', onEnd);
 		}
 	}
@@ -565,11 +431,11 @@ exports.createServer = function (options, callback) {
 	// Check the options and read the files for the HTTPS server
 	if (options && (options.cert && options.key || options.pfx)) {
 		readFiles(options, httpsServer);
-	} else if (options) {
-		throw new Error('simpleS: Invalid data for the HTTPS server');
-	} else {
+	} else if (!options) {
 		server = http.Server(httpRequestListener);
 		httpAddListeners(server);
 		callback(server, false);
+	} else {
+		throw new Error('simpleS: Invalid data for the HTTPS server');
 	}
 };

@@ -29,9 +29,11 @@
 		<input checked name="type" type="radio">text
 		<input name="type" type="radio">generated string
 		<br>
-		<input id="textinput" placeholder="textinput" type="text" value="textinput"/>
+		<form id="form">
+			<input id="textinput" name="textinput" placeholder="textinput" type="text" value="textinput"/>
+			<input id="fileinput" name="fileinput" multiple type="file">
+		</form>
 		<button id="filebutton">File Upload</button>
-		<input id="fileinput" type="file">
 		<div id="result"></div>
 	</body>
 </html>
