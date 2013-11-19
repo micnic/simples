@@ -70,7 +70,7 @@ simples.ajax = function (url, data, method) {
 
 	if (data instanceof HTMLFormElement) {
 		data = new FormData(data);
-	} else if (typeof data === 'object') {
+	} else if (data && typeof data === 'object') {
 
 		// Check if data contains objects inside
 		json = Array.isArray(data) || Object.keys(data).some(function (key) {
