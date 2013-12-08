@@ -2,11 +2,9 @@
 
 var cache = require('./cache'),
 	domain = require('domain'),
-	fs = require('fs'),
 	http = require('http'),
 	https = require('https'),
 	httpConnection = require('../lib/http/connection'),
-	parsers = require('./parsers'),
 	stream = require('stream'),
 	url = require('url'),
 	utils = require('./utils');
@@ -26,111 +24,168 @@ function e500(connection) {
 	connection.end('"' + connection.url.path + '" Internal Server Error');
 }
 
-// Add listeners to the server
-function httpAddListeners(server) {
-	server.on('error', function (error) {
-		this.parent.busy = false;
-		this.parent.started = false;
-		throw new Error('simpleS: Server error > ' + error.message);
-	}).on('release', function (callback) {
-		this.parent.busy = false;
-
-		// Call the callback when the server is free
-		if (callback) {
-			callback.call(this.parent);
-		}
-	}).on('upgrade', utils.ws.wsRequestListener);
-}
-
 // Check if the referer header is accepted by the host
 function refers(host, connection) {
 
 	var accepted = true,
+		index = 0,
 		referer,
 		request = connection.request;
 
+	// Check for referer header and accepted referers list
 	if (request.headers.referer && host.conf.acceptedReferers.length) {
-		referer = url.parse(request.headers.referer).hostname;
 
-		if (host.conf.acceptedReferers.indexOf(referer) < 0) {
+		// Get the hostname of the referer and find it in the list
+		referer = url.parse(request.headers.referer).hostname;
+		index = host.conf.acceptedReferers.indexOf(referer);
+
+		// Check if referer is found in the accepted referers list
+		if (index < 0) {
 			accepted = host.conf.acceptedReferers[0] === '*';
-		} else {
+		} else if (index >= 0) {
 			accepted = host.conf.acceptedReferers[0] !== '*';
 		}
+
+		// Accept if the referer is the same as the connection host
+		accepted = accepted || referer === connection.host;
 	}
 
-	return accepted || referer === connection.host;
+	return accepted;
 }
 
 // Returns the advanced route if found
-function findAdvancedRoute(routes, location) {
+function getDynamicRoute(connection, routes, verb) {
 
-	var param,
+	var index = 0,
+		lcurrent = '',
+		lindex = 0,
+		location = connection.path.substr(1),
+		param = '',
 		params = {},
-		route,
-		value;
+		rcurrent = '',
+		result = null,
+		rindex = 0,
+		route = '',
+		keys = null,
+		value = '';
 
-	['all', 'del', 'get', 'post', 'put'].some(function (verb) {
-		return Object.keys(routes[verb].advanced).some(function (element) {
-			var locationIndex = 0,
-				routeIndex = 0;
+	// Get the key of the parameter till next slash
+	function getParameterName() {
+		while (rcurrent && rcurrent !== '/') {
+			param += rcurrent;
+			rindex++;
+			rcurrent = route[rindex];
+		}
+	}
 
-			while (element.charAt(routeIndex)) {
-				if (element.charAt(routeIndex) === location.charAt(locationIndex)) {
-					routeIndex++;
-					locationIndex++;
-				} else if (element.charAt(routeIndex) === ':') {
-					param = '';
-					value = '';
-					routeIndex++;
+	// Get the value of the parameter till next slash
+	function getParameterValue() {
+		while (lcurrent && lcurrent !== '/') {
+			value += lcurrent;
+			lindex++;
+			lcurrent = location[lindex];
+		}
+	}
 
-					while (element.charAt(routeIndex) && element.charAt(routeIndex) !== '/') {
-						param += element.charAt(routeIndex);
-						routeIndex++;
-					}
+	// Get the parameter and its value from the URL
+	function getParameter() {
+		if (rcurrent === ':') {
+			rindex++;
+			rcurrent = route[rindex];
+			getParameterName();
+			getParameterValue();
+			params[param] = decodeURIComponent(value);
+			param = '';
+			value = '';
+		}
+	}
 
-					while (location.charAt(locationIndex) && location.charAt(locationIndex) !== '/') {
-						value += location.charAt(locationIndex);
-						locationIndex++;
-					}
+	// Skip equal characters
+	function skipEqual() {
+		while (rcurrent && rcurrent === lcurrent) {
+			lindex++;
+			lcurrent = location[lindex];
+			rindex++;
+			rcurrent = route[rindex];
+		}
+	}
 
-					params[param] = value;
+	// Compare advanced route with location
+	function compareRoute(container) {
 
-					if (routeIndex === element.length) {
-						route = routes[verb].advanced[element];
-					}
-				} else {
-					params = {};
-					route = null;
-					break;
-				}
-			}
+		// Get the current route
+		route = keys[index];
 
-			return route;
-		});
-	});
+		// Reset indexes and values
+		lcurrent = location[0];
+		lindex = 0;
+		param = '';
+		params = {};
+		rcurrent = route[0];
+		rindex = 0;
+		value = '';
 
-	return {
-		params: params,
-		route: route
-	};
+		// Compare pattern with location
+		while (rcurrent && rcurrent === lcurrent) {
+			skipEqual();
+			getParameter();
+		}
+
+		// Check if result is ready
+		if (!rcurrent) {
+			connection.params = params;
+			result = container[route];
+		}
+
+		// Get next route index
+		index--;
+	}
+
+	// Start searching for the advanced route
+	function findRoute(container) {
+
+		// Prepare the routes
+		keys = Object.keys(container);
+
+		// Set the initial route index
+		index = keys.length - 1;
+
+		// While no result and there are routes, compare them with the location
+		while (!result && keys[index]) {
+			compareRoute(container);
+		}
+	}
+
+	// Find the route in all routes
+	findRoute(routes[verb]);
+
+	// Find the route in the route specific verb
+	if (!result) {
+		findRoute(routes.all);
+	}
+
+	return result;
 }
 
 // Routes all the requests
 function routing(host, connection) {
 
-	var del,
+	var directory = [],
 		file,
-		found,
-		get,
-		post,
-		put,
+		location = connection.path.substr(1),
+		methods = {
+			'DELETE': 'del',
+			'GET': 'get',
+			'HEAD': 'get',
+			'POST': 'post',
+			'PUT': 'put'
+		},
 		origin,
 		request = connection.request,
-		requestURL = connection.path.substr(1),
 		response = connection.response,
 		route,
-		routes = host.routes;
+		routes = host.routes,
+		verb = methods[request.method];
 
 	// Route HTTP Server Error
 	function routeServerError() {
@@ -144,7 +199,7 @@ function routing(host, connection) {
 
 		// Set the last modified time and the content type of the response
 		connection.header('Last-Modified', mtime);
-		connection.type(requestURL.substr(requestURL.lastIndexOf('.') + 1));
+		connection.type(location.substr(location.lastIndexOf('.') + 1));
 
 		// Check if modification time coincides on the client and on the server
 		if (Number(connection.request.headers['if-modified-since']) === mtime) {
@@ -155,11 +210,33 @@ function routing(host, connection) {
 		}
 	}
 
-	// Cache the methods
-	del = request.method === 'DELETE';
-	get = request.method === 'GET' || request.method === 'HEAD';
-	post = request.method === 'POST';
-	put = request.method === 'PUT';
+	// Apply the selected route
+	function applyRoute() {
+		if (file && file.stats.isDirectory()) {
+			route.call(host, connection, directory);
+		} else {
+			route.call(host, connection);
+		}
+	}
+
+	// Return file object for an array of files
+	function getFilesArray(element) {
+
+		return {
+			name: element,
+			stats: file.files[element].stats
+		};
+	}
+
+	// Set the route for static files and directories
+	function setStaticFilesRoute() {
+		if (file && file.stats.isDirectory()) {
+			directory = Object.keys(file.files).map(getFilesArray);
+			route = host.routes.serve;
+		} else if (file) {
+			route = staticRoute;
+		}
+	}
 
 	// Check for CORS requests
 	if (request.headers.origin) {
@@ -172,10 +249,12 @@ function routing(host, connection) {
 		}
 
 		// Set CORS response headers
-		response.setHeader('Access-Control-Allow-Credentials', 'True');
-		response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-		response.setHeader('Access-Control-Allow-Methods', 'DELETE,GET,HEAD,POST,PUT');
-		response.setHeader('Access-Control-Allow-Origin', origin);
+		response.writeHead(200, {
+			'Access-Control-Allow-Credentials': 'True',
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'Access-Control-Allow-Methods': 'DELETE,GET,HEAD,POST,PUT',
+			'Access-Control-Allow-Origin': origin
+		});
 
 		// End the response
 		if (request.method === 'OPTIONS') {
@@ -185,43 +264,24 @@ function routing(host, connection) {
 	}
 
 	// Find the route
-	if ((del || get || post || put) && routes.all.simple[requestURL]) {
-		route = routes.all.simple[requestURL];
-	} else if (del && routes.del.simple[requestURL]) {
-		route = routes.del.simple[requestURL];
-	} else if (get && routes.get.simple[requestURL]) {
-		route = routes.get.simple[requestURL];
-	} else if (post && routes.post.simple[requestURL]) {
-		route = routes.post.simple[requestURL];
-	} else if (put && routes.put.simple[requestURL]) {
-		route = routes.out.simple[requestURL];
-	} else if (del || get || post || put) {
+	if (verb) {
+
+		// Find the fixed route
+		route = routes.fixed[verb][location] || routes.fixed.all[location];
 
 		// Find the advanced route
-		found = findAdvancedRoute(routes, requestURL);
-
-		// Populate the connection parameters and use the selected route
-		if (found.route) {
-			connection.params = found.params;
-			route = found.route;
+		if (!route) {
+			route = getDynamicRoute(connection, routes.dynamic, verb);
 		}
 
-		// Check for static files routes
-		if (!route && get && refers(host, connection)) {
+		// Check for routes to static files and directories
+		if (!route && verb === 'get' && refers(host, connection)) {
+			file = host.cache.read(location);
+			setStaticFilesRoute();
+		}
 
-			// Get cached files
-			file = host.cache.read(requestURL);
-
-			// Return the route
-			if (file && file.stats.isDirectory()) {
-				route = host.routes.serve;
-			} else if (file) {
-				route = staticRoute;
-			} else {
-				response.statusCode = 404;
-				route = routes.error[404];
-			}
-		} else if (!route) {
+		// Set error 404 if no route found
+		if (!route) {
 			response.statusCode = 404;
 			route = routes.error[404];
 		}
@@ -253,49 +313,74 @@ function routing(host, connection) {
 		if (typeof route === 'string') {
 			connection.render(route);
 		} else {
-			if (file && file.stats.isDirectory()) {
-				route.call(host, connection, Object.keys(file.files).map(function (element) {
-					return {
-						name: element,
-						stats: file.files[element].stats
-					};
-				}));
-			} else {
-				route.call(host, connection);
-			}
+			applyRoute();
 		}
 	});
 }
 
-// HTTP request listener
-function httpRequestListener(request, response) {
+// Generate empty routes
+exports.httpDefaultRoutes = function () {
+
+	return {
+		dynamic: {
+			all: {},
+			del: {},
+			get: {},
+			post: {},
+			put: {}
+		},
+		error: {
+			404: e404,
+			405: e405,
+			500: e500
+		},
+		fixed: {
+			all: {},
+			del: {},
+			get: {},
+			post: {},
+			put: {}
+		},
+		serve: null
+	};
+};
+
+exports.requestListener = function (host, request, response) {
 
 	var connection,
-		host;
+		length = 0,
+		parser,
+		parts = [];
 
 	// Listener for request end event
 	function onEnd() {
+
+		// If parser is defined end parsing
+		if (parser) {
+			parser.parse(null);
+			connection.body = parser.result;
+		}
+
 		routing(host, connection);
 	}
 
 	// Listener for request readable event
 	function onReadable() {
 
-		// Check for request body limit
-		/*if (connection.body.length > host.conf.requestLimit) {
+		var data = connection.request.read() || new Buffer(0);
+
+		// Get the read length
+		length += data.length;
+
+		// Check for request body limit and parse data
+		if (length > host.conf.requestLimit) {
 			console.error('\nsimpleS: Request Entity Too Large\n');
 			request.destroy();
-		}*/
-	}
-
-	// Check if host is provided by the host header
-	if (request.headers.host) {
-		host = this.parent.hosts[request.headers.host.split(':')[0]];
-	}
-
-	// Get the main host if the other one does not exist
-	if (!host) {
-		host = this.parent.hosts.main;
+		} else if (parser) {
+			parser.parse(data.toString());
+		} else {
+			connection.body = utils.buffer(connection.body, data, length);
+		}
 	}
 
 	// Create the HTTP connection
@@ -310,132 +395,31 @@ function httpRequestListener(request, response) {
 	// Route the request and parse it if needed
 	if (request.method === 'GET' || request.method === 'HEAD') {
 		routing(host, connection);
+	} else if (request.headers['content-length'] > host.conf.requestLimit) {
+		console.error('\nsimpleS: Request Entity Too Large\n');
+		request.destroy();
 	} else {
 
-		// Listen for incoming data
-		if ((request.headers['content-length'] | 0) > host.conf.requestLimit) {
-			console.error('\nsimpleS: Request Entity Too Large\n');
-			request.destroy();
-		} else {
-			parsers.parse(connection);
-			request.on('readable', onReadable).on('end', onEnd);
+		// Split content type in two parts to get boundary if exists
+		if (request.headers['content-type']) {
+			parts = request.headers['content-type'].split(';');
 		}
-	}
-}
 
-// Read the provide files an return the files object in the callback
-function readFiles(files, callback) {
-
-	var count = 0;
-
-	// Check if files are read
-	function onEnd() {
-		count--;
-
-		// If all files are read provide the files to the callback
-		if (count === 0) {
-			callback(files);
+		// Choose the content parser
+		if (parts[0] === 'application/x-www-form-urlencoded') {
+			parser = new utils.parsers.qs();
+		} else if (parts[0] === 'multipart/form-data' && parts.length > 1) {
+			parser = new utils.parsers.multipart(parts[1].substr(10));
+		} else if (parts[0] === 'application/json') {
+			parser = new utils.parsers.json();
 		}
-	}
 
-	// Loop through the files object
-	Object.keys(files).filter(function (element) {
-		return ['cert', 'key', 'pfx'].indexOf(element) >= 0;
-	}).forEach(function (element) {
+		// If no parser was defined then make connection body a buffer
+		if (!parser) {
+			connection.body = new Buffer(0);
+		}
 
-		var data,
-			length,
-			location = files[element];
-
-		// Increase the count of the files
-		count++;
-
-		// Prepare the buffer
-		files[element] = new Buffer(0);
-
-		// Create the readable stream
-		fs.ReadStream(location).on('error', function () {
-			throw new Error('simpleS: Can not read "' + location + '"');
-		}).on('readable', function () {
-			data = this.read() || new Buffer(0);
-			length = files[element].length + data.length;
-			files[element] = utils.buffer(files[element], data, length);
-		}).on('end', onEnd);
-	});
-}
-
-// Generate empty routes
-exports.httpDefaultRoutes = function () {
-
-	return {
-		all: {
-			advanced: [],
-			simple: {}
-		},
-		del: {
-			advanced: [],
-			simple: {}
-		},
-		error: {
-			404: e404,
-			405: e405,
-			500: e500
-		},
-		get: {
-			advanced: [],
-			simple: {}
-		},
-		post: {
-			advanced: [],
-			simple: {}
-		},
-		put: {
-			advanced: [],
-			simple: {}
-		},
-		serve: null
-	};
-};
-
-// Create the HTTP or the HTTPS server
-exports.createServer = function (options, callback) {
-
-	var server;
-
-	// Create the HTTPS server
-	function httpsServer(options) {
-
-		// Prepare the HTTP and the HTTPS servers
-		var aux = http.Server(httpRequestListener);
-		server = https.Server(options, httpRequestListener);
-
-		// Catch the errors in the auxiliary HTTP server
-		aux.on('error', function (error) {
-			server.emit('error', error);
-		}).on('upgrade', utils.ws.wsRequestListener);
-
-		// Manage the HTTP server depending on HTTPS events
-		server.on('open', function () {
-			aux.listen(80);
-		}).on('close', function () {
-			aux.close();
-		});
-
-		// Add the listeners for the server
-		httpAddListeners(server);
-
-		// Send the server object through the callback
-		callback(server, true);
-	}
-
-	// Check the options and read the files for the HTTPS server
-	if (options && (options.cert && options.key || options.pfx)) {
-		readFiles(options, httpsServer);
-	} else if (!options) {
-		server = http.Server(httpRequestListener);
-		httpAddListeners(server);
-		callback(server, false);
-	} else {
-		throw new Error('simpleS: Invalid data for the HTTPS server');
+		// Process received data
+		request.on('readable', onReadable).on('end', onEnd);
 	}
 };

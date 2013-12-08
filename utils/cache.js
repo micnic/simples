@@ -1,6 +1,6 @@
 'use strict';
 
-var client,
+var client = {},
 	fs = require('fs');
 
 // Remove recursively all file watchers from the cache
@@ -213,28 +213,15 @@ cache.prototype.watchLocation = function (object, location) {
 
 // Prepare client-side simples.js content
 fs.stat(__dirname + '/simples.js', function (error, stats) {
-
-	var content = new Buffer(0);
-
-	// Log error
-	if (error) {
-		console.error('\nsimpleS: Can not find "simples.js"');
-		console.error(error.stack + '\n');
-		return;
-	}
-
-	// Read the file
-	fs.ReadStream(__dirname + '/simples.js').on('error', function (error) {
-		console.error('\nsimpleS: Can not read "simples.js" content');
-		console.error(error.stack + '\n');
-	}).on('readable', function () {
-		content = Buffer.concat([content, this.read() || new Buffer(0)]);
-	}).on('end', function () {
-		client = {
-			stats: stats,
-			content: content
-		};
-		client.content = content;
+	stats && fs.readFile(__dirname + '/simples.js', function (error, content) {
+		if (error) {
+			console.error('\nsimpleS: Can not read "simples.js"');
+			console.error(error.stack + '\n');
+			console.error('Try to reinstall simpleS, something went wrong\n');
+		} else {
+			client.stats = stats,
+			client.content = content;
+		}
 	});
 });
 

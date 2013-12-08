@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.4.9
+# 0.5.0
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
@@ -31,15 +31,9 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
     npm install simples
 
-## Testing
+## Examples
 
-    npm test simples
-
-## Start Demo Server
-
-    npm start simples
-
-Then try [http://localhost:12345](http://localhost:12345) in your browser
+See the folder `examples/` in the module directory, it contains examples that cover most simpleS features.
 
 ## Usage
 
@@ -88,9 +82,9 @@ host2.get('/', function (connection) {
 
 ```javascript
 server.ws('/', {
-    limit: 1024, // The maximum size of a message
-    protocols: ['echo'], // The accepted protocols
-    raw: true // Connections in raw mode, see docs for more info
+    messageLimit: 1024, // The maximum size of a message
+    usedProtocols: ['echo'], // The accepted protocols
+    rawMode: true // Connections in raw mode, see docs for more info
 }, function (connection) {
     console.log('New connection');
 

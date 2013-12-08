@@ -84,7 +84,7 @@ function wsMessageParse(connection, frame) {
 // Parse received WS data
 function wsParse(connection, frame, data) {
 
-	var length;
+	var length = 0;
 
 	// Destroy the TCP socket
 	function socketDestroy() {
@@ -212,7 +212,7 @@ function wsHandshake(host, connection, key) {
 			state: 0
 		},
 		location = connection.host,
-		session,
+		session = '',
 		socket = connection.socket,
 		timeout = host.parent.conf.sessionTimeout * 1000,
 		timer;
@@ -223,21 +223,6 @@ function wsHandshake(host, connection, key) {
 		timer = setTimeout(function () {
 			socket.write(new Buffer([137, 0]));
 		}, 25000);
-	}
-
-	// Set socket keep alive time to 30 seconds
-	socket.setTimeout(30000);
-
-	// Write the handshake to the socket
-	socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n');
-	socket.write('Connection: Upgrade\r\n');
-	socket.write('Upgrade: WebSocket\r\n');
-	socket.write('Sec-WebSocket-Accept: ' + key + '\r\n');
-	socket.write('Sec-Websocket-Protocol: ' + connection.protocols + '\r\n');
-
-	// Write origin only if requested
-	if (connection.headers.origin) {
-		socket.write('Origin: ' + connection.headers.origin + '\r\n');
 	}
 
 	// Prepare session data
@@ -259,6 +244,21 @@ function wsHandshake(host, connection, key) {
 		delete host.parent.sessions[session];
 		delete host.parent.timers[session];
 	}, timeout);
+
+	// Set socket keep alive time to 30 seconds
+	socket.setTimeout(30000);
+
+	// Write the handshake to the socket
+	socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n');
+	socket.write('Connection: Upgrade\r\n');
+	socket.write('Upgrade: WebSocket\r\n');
+	socket.write('Sec-WebSocket-Accept: ' + key + '\r\n');
+	socket.write('Sec-Websocket-Protocol: ' + connection.protocols + '\r\n');
+
+	// Write origin only if requested
+	if (connection.headers.origin) {
+		socket.write('Origin: ' + connection.headers.origin + '\r\n');
+	}
 
 	// Write session cookie to the socket and end the WS handshake
 	socket.write('Set-Cookie: _session=' + session);
@@ -288,63 +288,56 @@ function wsHandshake(host, connection, key) {
 		}
 
 		// Call the connection listener and keep the connection alive
-		host.conf.connectionListener(connection);
+		host.conf.connectionListener.call(host, connection);
 		keepAlive();
 	});
 }
 
 // WS request listener
-exports.wsRequestListener = function (request, socket) {
+exports.requestListener = function (host, request, socket) {
 
 	var connection,
-		data,
-		error,
+		error = '',
 		handshake = new Buffer(0),
-		host,
-		key = request.headers['sec-websocket-key'],
-		length;
+		key = request.headers['sec-websocket-key'];
 
-	// Check if host is provided by the host header
-	if (request.headers.host) {
-		host = this.parent.hosts[request.headers.host.split(':')[0]];
-	}
+	// Handshake hash readable event listener
+	function onReadable() {
 
-	// Get the main HTTP host if the other one does not exist
-	if (!host) {
-		host = this.parent.hosts.main;
+		var data = this.read() || new Buffer(0),
+			length = handshake.length + data.length;
+
+		// Append data to the handshake
+		handshake = utils.buffer(handshake, data, length);
 	}
 
 	// Select the WS host
 	host = host.wsHosts[url.parse(request.url).pathname];
 
-	// Check for WS host
-	if (!host) {
+	// Check for errors
+	if (host) {
+
+		// Check for valid upgrade header
+		if (request.headers.upgrade !== 'websocket') {
+			error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
+		}
+
+		// Check for WS handshake key
+		if (!key) {
+			error = '\nsimpleS: No WebSocket handshake key\n';
+		}
+
+		// Check for valid WS protocol version
+		if (request.headers['sec-websocket-version'] !== '13') {
+			error = '\nsimpleS: Unsupported WebSocket version\n';
+		}
+
+		// Check for accepted origin
+		if (request.headers.origin && !utils.accepts(host.parent, request)) {
+			error = '\nsimpleS: WebSocket origin not accepted\n';
+		}
+	} else {
 		error = '\nsimpleS: Request to an inexistent WebSocket host\n';
-	}
-
-	// Check for valid upgrade header
-	if (request.headers.upgrade !== 'websocket') {
-		error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
-	}
-
-	// Check for WS handshake key
-	if (!key) {
-		error = '\nsimpleS: No WebSocket handshake key\n';
-	}
-
-	// Check for WS subprotocols
-	if (!request.headers['sec-websocket-protocol']) {
-		error = '\nsimpleS: No WebSocket subprotocols\n';
-	}
-
-	// Check for valid WS protocol version
-	if (request.headers['sec-websocket-version'] !== '13') {
-		error = '\nsimpleS: Unsupported WebSocket version\n';
-	}
-
-	// Check for accepted origin
-	if (request.headers.origin && !utils.accepts(host.parent, request)) {
-		error = '\nsimpleS: WebSocket origin not accepted\n';
 	}
 
 	// Check for error and make the WS handshake
@@ -358,11 +351,7 @@ exports.wsRequestListener = function (request, socket) {
 		host.connections.push(connection);
 
 		// Hash the key and continue to WS handshake
-		crypto.Hash('sha1').on('readable', function () {
-			data = this.read() || new Buffer(0);
-			length = handshake.length + data.length;
-			handshake = utils.buffer(handshake, data, length);
-		}).on('end', function () {
+		crypto.Hash('sha1').on('readable', onReadable).on('end', function () {
 			wsHandshake(host, connection, handshake.toString('base64'));
 		}).end(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
 	}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+	<head>
+		<script src="/simples.js"></script>
+		<script>
+			var echoSocket = simples.ws('/echo', true).on('message', function (message) {
+				document.getElementById('result').innerHTML = message;
+			});
+			
+			document.addEventListener('DOMContentLoaded', function () {
+				document.getElementById('sender').addEventListener('keypress', function (event) {
+					if (event.which === 13) {
+						echoSocket.send(this.value);
+						this.value = '';
+					}
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<input id="sender" type="text">
+		<div id="result"></div>
+	</body>
+</html>

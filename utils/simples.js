@@ -259,7 +259,7 @@ simples.ws = function (host, protocols, raw) {
 	simples.ee.call(this);
 
 	// Get raw parameter if it is defined
-	if (arguments.length === 2 && typeof protocols === 'boolean') {
+	if (typeof protocols === 'boolean') {
 		raw = protocols;
 		protocols = [];
 	}
@@ -346,7 +346,11 @@ simples.ws.prototype.open = function (host, protocols) {
 	this.close();
 
 	// Initialize the WebSocket
-	this.socket = new WebSocket(protocol + '://' + host, protocols);
+	if (protocols.length) {
+		this.socket = new WebSocket(protocol + '://' + host, protocols);
+	} else {
+		this.socket = new WebSocket(protocol + '://' + host);
+	}
 
 	// Catch connection close
 	this.socket.onclose = function () {

@@ -1,12 +1,44 @@
 'use strict';
 
 var host = require('./lib/http/host'),
-	utils = require('./utils/utils');
+	server = require('./lib/http/server');
 
 // SimpleS prototype constructor
-var simples = function (port, options) {
+var simples = function (port, options, callback) {
 
 	var that = this;
+
+	// Optional cases for port, options and callback
+	if (typeof port === 'number') {
+		if (typeof options === 'object' && typeof callback === 'function') {
+			port = 443;
+		} else if (typeof options === 'object') {
+			port = 443;
+			callback = null;
+		} else if (typeof options === 'function') {
+			callback = options;
+			options = null;
+		} else {
+			options = null;
+			callback = null;
+		}
+	} else if (typeof port === 'object') {
+		if (typeof options === 'function') {
+			callback = options;
+		} else {
+			callback = null;
+		}
+		options = port;
+		port = 443;
+	} else if (typeof port === 'function') {
+		callback = port;
+		port = 80;
+		options = null;
+	} else {
+		port = 80;
+		options = null;
+		callback = null;
+	}
 
 	// Define special properties for simpleS
 	Object.defineProperties(this, {
@@ -18,15 +50,11 @@ var simples = function (port, options) {
 			value: {}
 		},
 		port: {
-			value: 80,
-			writable: true
-		},
-		secured: {
-			value: false,
+			value: port,
 			writable: true
 		},
 		server: {
-			value: null,
+			value: new server(this, options),
 			writable: true
 		},
 		started: {
@@ -39,13 +67,14 @@ var simples = function (port, options) {
 	host.call(this, this, 'main');
 	this.hosts.main = this;
 
-	// Create and configure the server
-	utils.http.createServer(options, function (server, secured) {
-		server.parent = that;
-		that.secured = secured;
-		that.server = server;
-		that.start(port);
-	});
+	// Start the server when it is ready
+	if (this.server.instance) {
+		this.start(port, callback);
+	} else {
+		this.server.on('ready', function () {
+			that.start(port, callback);
+		});
+	}
 };
 
 // Inherit from host
@@ -83,22 +112,11 @@ simples.prototype.start = function (port, callback) {
 		that.server.listen(port, function () {
 			that.port = port;
 			that.server.emit('release', callback);
-			that.server.emit('open');
 		});
 	}
 
 	// Start or restart the server
 	function start() {
-
-		// Set the port to be optional
-		if (typeof port !== 'number') {
-			port = that.port;
-		}
-
-		// Always use port 443 for HTTPS
-		if (that.secured) {
-			port = 443;
-		}
 
 		// Set the busy flag
 		that.busy = true;
@@ -111,14 +129,24 @@ simples.prototype.start = function (port, callback) {
 		}
 	}
 
-	// Check if callback is defined and is a function
-	if (callback && typeof callback !== 'function') {
-		callback = null;
-	}
-
-	// Get callback as the only parameter
-	if (typeof port === 'function') {
+	// Optional cases for port and callback
+	if (typeof port === 'number') {
+		if (this.server.secured) {
+			port = 443;
+		}
+		if (typeof callback !== 'function') {
+			callback = null;
+		}
+	} else if (typeof port === 'function') {
 		callback = port;
+		if (this.server.secured) {
+			port = 443;
+		} else {
+			port = 80;
+		}
+	} else {
+		port = this.port;
+		callback = null;
 	}
 
 	// If the server is busy wait for release
@@ -175,8 +203,8 @@ simples.prototype.stop = function (callback) {
 		});
 	}
 
-	// Check if callback is defined and is a function
-	if (callback && typeof callback !== 'function') {
+	// Check if callback is a function
+	if (typeof callback !== 'function') {
 		callback = null;
 	}
 
@@ -193,6 +221,6 @@ simples.prototype.stop = function (callback) {
 };
 
 // Export a new simpleS instance
-module.exports = function (port, options) {
-	return new simples(port, options);
+module.exports = function (port, options, callback) {
+	return new simples(port, options, callback);
 };

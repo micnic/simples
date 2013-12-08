@@ -108,11 +108,13 @@ var simples = require('simples');
 
 # <a name="server"/> New simpleS Instance
 
-`simples([port, options])`
+`simples([port, options, callback])`
 
 port: number
 
 options: object
+
+callback: function
 
 simpleS needs only the port number and it sets up a HTTP server on this port.
 
@@ -121,7 +123,7 @@ var server = simples(80);
 
 // or simpler
 
-var server = simples(); // will be set on the port 80
+var server = simples(); // the server will be set on the port 80
 ```
 
 To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
@@ -134,7 +136,7 @@ var server = simples(443, {
 
 // or just
 
-var server = simples({ // will be set on port 443
+var server = simples({ // the server will be set on port 443
     key: 'path/to/key.pem',
     cert: 'path/to/cert.pem'
 });
@@ -151,6 +153,8 @@ server.get('/secured', function (connection) {
     }
 });
 ```
+
+The third parameter `callback` is used to know when the server has started running.
 
 ## <a name="server-management"/> Server Management
 
@@ -267,7 +271,7 @@ All the methods described below are applicable on each host independently (see [
 ```javascript
 'user/john/action/thinking'; // Fixed route
 
-'user/:user/action/:action'; // Advanced route with named parameters
+'user/:user/action/:action'; // Advanced routing with named parameters
 
 /*
     This route will match this request url:
@@ -291,7 +295,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method is prioritized against all other methods for routing.
+Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method has less priority then the other methods described below to allow specific behavior for routes.
 
 ### <a name="host-del"/> DELETE Requests
 
@@ -387,7 +391,7 @@ callback: function(connection, files)
 `directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
 
 ```javascript
-server.serve('root', function (connection) {
+server.serve('root', function (connection, files) {
     // Application logic
 });
 ```
@@ -674,13 +678,13 @@ config: object
 
 listener: function(connection)
 
-Create a WebSocket host and listen for WebSocket connections. For security reasons only requests from the current host or local file system origins are accepted, to accept requests from another locations the `origins` parameter from the configuration object of the host must be defined. Also, for additional security or logic separation, protocols should be provided in the `config` parameter, they should match on the server and on the client, the length of the message can be limited too by the value of `limit` parameter, default is 1MiB, the value is defined in bytes. The connection can be used in raw and advanced mode. The advanced mode allows an event based communication over the WebSocket connection, while the raw mode represents a low level communication, default is advanced mode. The callback function comes with the connection as parameter.
+Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `messageLimit` attribute in the `config` parameter in bytes, default is 1048576 (10 MiB). For some security reasons WS protocols can be defined in the `usedProtocols` attribute. The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources.
 
 ```javascript
 var echo = server.ws('/', {
-    limit: 1024,
-    protocols: ['', 'echo'],
-    raw: true
+    messageLimit: 1024,
+    usedProtocols: ['', 'echo'],
+    rawMode: true
 }, function (connection) {
     // Application logic
 });
@@ -696,8 +700,8 @@ Restarts the WebSocket host with new configuration and callback. The missing con
 
 ```javascript
 echo.open({
-    limit: 512,
-    protocols: ['echo']
+    messageLimit: 512,
+    usedProtocols: ['echo']
 }, function (connection) {
     // Application logic
 });
@@ -870,7 +874,7 @@ var request = simples.ajax('/', {
 request.stop();
 ```
 
-### <a name="client-side-ee"> Event Emitter
+### <a name="client-side-ee"/> Event Emitter
 
 `simples.ee()`
 

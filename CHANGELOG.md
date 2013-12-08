@@ -1,3 +1,10 @@
+## 0.5.0
+- Added callback to simples instance
+- Improved internal structure
+- Improved request routing
+- Fixed advanced routing bugs
+- Fixed some WS API issues
+
 ## 0.4.9
 - Improved request parsing, added parsing for json data
 - Parsed data is now stored in `connection.body`

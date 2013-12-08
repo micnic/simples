@@ -55,7 +55,8 @@ exports.http = require('./http');
 // Log data on new connections
 exports.log = function (host, connection) {
 
-	var log = {};
+	var log = {},
+		logger = host.logger;
 
 	// Prepare log object
 	Object.keys(connection).filter(function (attribute) {
@@ -65,7 +66,7 @@ exports.log = function (host, connection) {
 	});
 
 	// Apply the log object
-	log = host.logger.callback(log);
+	log = logger.callback(log);
 
 	// Check if the logger has defined a result and write to stream
 	if (log !== undefined) {
@@ -75,63 +76,64 @@ exports.log = function (host, connection) {
 			log = JSON.stringify(log);
 		}
 
-		host.logger.stream.write(log + '\n');
+		// Write the log on a new line in the host logger
+		logger.stream.write(log + '\n');
 	}
 };
 
-// Get the cookies and the session
+// Get the cookies of the request
 exports.parseCookies = function (request) {
 
-	var content = '',
-		cookies = {},
-		currentChar,
+	var cookies = {},
+		current = '',
+		header = '',
 		index = 0,
-		name,
-		value;
+		name = '',
+		value = '';
 
 	// Check if the request has a cookie header
 	if (request.headers.cookie) {
-		content = request.headers.cookie;
+		header = request.headers.cookie;
 	}
 
 	// Get the first character
-	currentChar = content.charAt(0);
+	current = header[0];
 
-	// Populate cookies and session
-	while (currentChar) {
-		while (currentChar === ' ') {
+	// Populate cookies
+	while (current) {
+
+		// Skip whitespace
+		while (current === ' ') {
 			index++;
-			currentChar = content.charAt(index);
+			current = header[index];
 		}
-		if (!currentChar) {
-			break;
+
+		// Get the name of the cookie
+		while (current && current !== '=') {
+			name += current;
+			index++;
+			current = header[index];
 		}
+
+		// Skip "="
+		if (current === '=') {
+			index++;
+			current = header[index];
+		}
+
+		// Get the value of the cookie
+		while (current && current !== ';') {
+			value += current;
+			index++;
+			current = header[index];
+		}
+
+		// Set the current cookie and wait for the next one
+		cookies[name] = decodeURIComponent(value);
 		name = '';
-		while (currentChar && currentChar !== ' ' && currentChar !== '=') {
-			name += currentChar;
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar) {
-			break;
-		}
-		while (currentChar === ' ' || currentChar === '=') {
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar) {
-			break;
-		}
 		value = '';
-		while (currentChar && currentChar !== ' ' && currentChar !== ';') {
-			value += currentChar;
-			index++;
-			currentChar = content.charAt(index);
-		}
-		value = decodeURIComponent(value);
-		cookies[name] = value;
 		index++;
-		currentChar = content.charAt(index);
+		current = header[index];
 	}
 
 	return cookies;
@@ -140,80 +142,87 @@ exports.parseCookies = function (request) {
 // Get the languages accepted by the client
 exports.parseLangs = function (request) {
 
-	var content = '',
-		currentChar,
+	var current = '',
+		header = '',
 		index = 0,
-		lang,
 		langs = [],
-		quality;
+		name = '',
+		quality = '',
+		ready = false;
 
 	// Check if the request has an accept-language header
 	if (request.headers['accept-language']) {
-		content = request.headers['accept-language'];
+		header = request.headers['accept-language'];
 	}
 
 	// Get the first character
-	currentChar = content.charAt(0);
+	current = header[0];
 
-	// Start parsing
-	while (currentChar) {
-		lang = '';
+	// Populate langs
+	while (current) {
+
+		// Skip whitespace
+		while (current === ' ') {
+			index++;
+			current = header[index];
+		}
+
+		// Get the name of the language
+		while (current && current !== ',' && current !== ';') {
+			name += current;
+			index++;
+			current = header[index];
+		}
+
+		// Set the quality factor to 1 if none found or continue to get it
+		if (!current || current === ',') {
+			quality = '1';
+			ready = true;
+		} else if (current === ';') {
+			index++;
+			current = header[index];
+		}
+
+		// Check for quality factor
+		if (!ready && header.substr(index, 2) === 'q=') {
+			index += 2;
+			current = header[index];
+		}
+
+		// Get the quality factor of the languages
+		while (!ready && current && current !== ',') {
+			quality += current;
+			index++;
+			current = header[index];
+		}
+
+		// Add the language to the set
+		langs.push({
+			name: name,
+			quality: Number(quality)
+		});
+
+		// Reset flags and wait for the next language
+		name = '';
 		quality = '';
-		while (currentChar === ' ') {
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar) {
-			break;
-		}
-		while (currentChar && currentChar !== ' ' && currentChar !== ',' && currentChar !== ';') {
-			lang += currentChar;
-			index++;
-			currentChar = content.charAt(index);
-		}
-		if (!currentChar || currentChar === ',') {
-			langs.push({
-				lang: lang,
-				quality: 1
-			});
-		} else {
-			index++;
-			currentChar = content.charAt(index);
-			while (currentChar === ' ') {
-				index++;
-				currentChar = content.charAt(index);
-			}
-			if (currentChar !== 'q') {
-				break;
-			}
-			index++;
-			while (currentChar === ' ' || currentChar === '=') {
-				index++;
-				currentChar = content.charAt(index);
-			}
-			if (!currentChar) {
-				break;
-			}
-			while (currentChar && currentChar !== ' ' && currentChar !== ',') {
-				quality += currentChar;
-				index++;
-				currentChar = content.charAt(index);
-			}
-			langs.push({
-				lang: lang,
-				quality: Number(quality)
-			});
-		}
+		ready = false;
 		index++;
-		currentChar = content.charAt(index);
+		current = header[index];
 	}
 
 	// Sort the languages in the order of their importance and return them
 	return langs.sort(function (first, second) {
 		return second.quality - first.quality;
 	}).map(function (element) {
-		return element.lang;
+		return element.name;
 	});
+};
+
+// Export the parsers
+exports.parsers = {
+	json: require('./parsers/json'),
+	multipart: require('./parsers/multipart'),
+	qs: require('./parsers/qs')
 };
 
 // Export ws utils
