@@ -31,7 +31,7 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a name="049" class="anchor" href="#049"><span class="octicon octicon-link"></span></a>0.4.9</h1>
+<a name="050" class="anchor" href="#050"><span class="octicon octicon-link"></span></a>0.5.0</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
@@ -76,18 +76,9 @@
 </code></pre>
 
 <h2>
-<a name="testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h2>
+<a name="examples" class="anchor" href="#examples"><span class="octicon octicon-link"></span></a>Examples</h2>
 
-<pre><code>npm test simples
-</code></pre>
-
-<h2>
-<a name="start-demo-server" class="anchor" href="#start-demo-server"><span class="octicon octicon-link"></span></a>Start Demo Server</h2>
-
-<pre><code>npm start simples
-</code></pre>
-
-<p>Then try <a href="http://localhost:12345">http://localhost:12345</a> in your browser</p>
+<p>See the folder <code>examples/</code> in the module directory, it contains examples that cover most simpleS features.</p>
 
 <h2>
 <a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
@@ -136,9 +127,9 @@
 <a name="websocket" class="anchor" href="#websocket"><span class="octicon octicon-link"></span></a>WebSocket</h2>
 
 <div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
-    <span class="nx">limit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
-    <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
-    <span class="nx">raw</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
+    <span class="nx">messageLimit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
+    <span class="nx">usedProtocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
+    <span class="nx">rawMode</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
 <span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'New connection'</span><span class="p">);</span>
 
