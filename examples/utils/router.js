@@ -1,5 +1,5 @@
 module.exports = function (server) {
-	server.serve('static').get('/', function (connection) {
+	server.serve(__dirname + '/../static').get('/', function (connection) {
 		connection.header('Test-Header', 'Test-Value');
 		connection.lang('en');
 		connection.write('<!doctype html>');

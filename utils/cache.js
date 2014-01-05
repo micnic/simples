@@ -3,22 +3,6 @@
 var client = {},
 	fs = require('fs');
 
-// Remove recursively all file watchers from the cache
-function recursiveUnwatch(object) {
-
-	// Unwatch the current object location
-	fs.unwatchFile(object.location);
-
-	// Loop througth the object files
-	Object.keys(object.files).forEach(function (element) {
-		if (element.files) {
-			recursiveUnwatch(element);
-		} else {
-			fs.unwatchFile(element.location);
-		}
-	});
-}
-
 // File cache prototype constructor
 var cache = function (location) {
 
@@ -40,88 +24,69 @@ cache.prototype.addDirectory = function (object, location) {
 
 	var that = this;
 
+	// Add an element to the cache object
+	function addElement(element) {
+		that.addElement(object, location + '/' + element);
+	}
+
 	// Directory files container
 	object.files = {};
 
 	// Read the directory content
 	fs.readdir(location, function (error, files) {
-
-		// Emit error and stop
 		if (error) {
 			console.error('\nsimpleS: Can not read "' + location + '"');
 			console.error(error.stack + '\n');
-			return;
+		} else {
+			files.forEach(addElement);
 		}
+	});
+};
 
-		// Check all files
-		files.forEach(function (element) {
-			that.checkElement(object, location + '/' + element);
-		});
+// Check the stats of the provided location
+cache.prototype.addElement = function (object, location) {
+
+	var name = location.substr(location.lastIndexOf('/') + 1),
+		that = this;
+
+	// Create a new object for the element
+	object.files[name] = {};
+
+	// Check element stats and add it to the cache
+	fs.stat(location, function (error, stats) {
+
+		// Prepare the object of the element
+		object.files[name].location = location;
+		object.files[name].stats = stats;
+
+		// Check for errors and add the element to the cache
+		if (error) {
+			console.error('\nsimpleS: Can not read "' + location + '"');
+			console.error(error.stack + '\n');
+		} else if (stats.isDirectory()) {
+			that.addDirectory(object.files[name], location);
+			that.watchLocation(object.files[name], location);
+		} else {
+			that.addFile(object.files[name], location);
+		}
 	});
 };
 
 // Cache the provided file
 cache.prototype.addFile = function (object, location) {
-
-	var content = new Buffer(0);
-
-	// Add data to the content using a readable stream
-	fs.ReadStream(location).on('error', function (error) {
-		console.error('\nsimpleS: Can not read "' + location + '"');
-		console.error(error.stack + '\n');
-	}).on('readable', function () {
-		content = Buffer.concat([content, this.read() || new Buffer(0)]);
-	}).on('end', function () {
-		object.content = content;
-	});
-};
-
-// Check the stats of the provided location
-cache.prototype.checkElement = function (object, location) {
-
-	var element,
-		modified = true,
-		name = location.substr(location.lastIndexOf('/') + 1),
-		that = this;
-
-	element = object.files[name];
-
-	// Check file and folder stats
-	fs.stat(location, function (error, stats) {
-
-		// Emit error and stop
+	fs.readFile(location, function (error, content) {
 		if (error) {
 			console.error('\nsimpleS: Can not read "' + location + '"');
 			console.error(error.stack + '\n');
-			return;
-		}
-
-		// Check if element exists in cache and is modified
-		if (element) {
-			modified = stats.mtime.valueOf() !== element.stats.mtime.valueOf();
 		} else {
-			object.files[name] = {};
-		}
-
-		// Create a new object with stats for element if modified
-		if (modified) {
-			object.files[name].location = location;
-			object.files[name].stats = stats;
-		}
-
-		// Check if element is not in cache or is modified
-		if (modified && stats.isDirectory()) {
-			that.watchLocation(object.files[name], location);
-			that.addDirectory(object.files[name], location);
-		} else if (modified && !stats.isDirectory()) {
-			that.addFile(object.files[name], location);
+			object.content = content;
 		}
 	});
 };
 
 // Removes all the data contained by the instance and file watchers
 cache.prototype.destroy = function () {
-	recursiveUnwatch(this.container);
+	this.unwatchLocation(this.container);
 	this.container = null;
 };
 
@@ -131,59 +96,63 @@ cache.prototype.init = function () {
 	var location = this.container.location,
 		that = this;
 
-	// Check root directory stats
+	// Check root directory stats and prepare the cache container
 	fs.stat(location, function (error, stats) {
-
-		// Emit error and stop
 		if (error) {
 			console.error('\nsimpleS: Can not read "' + location + '"');
 			console.error(error.stack + '\n');
-			return;
-		}
-
-		// Check if directory is provided
-		if (!stats.isDirectory()) {
+		} else if (!stats.isDirectory()) {
 			console.error('\nsimpleS: "' + location + '" is not a directory\n');
-			return;
+		} else {
+			that.container.stats = stats;
+			that.addDirectory(that.container, location);
+			that.watchLocation(that.container, location);
 		}
-
-		// Prepare the global cache container object
-		that.container.stats = stats;
-
-		// Populate the container
-		that.addDirectory(that.container, location);
-
-		// Watch for changes
-		that.watchLocation(that.container, location);
 	});
 };
 
 // Read the provided location from cache
 cache.prototype.read = function (location) {
 
-	var object = this.container;
+	var object = null;
 
 	// Get the file object
-	function getFileObject(element) {
+	function getFileObject(previous, current) {
 
-		// Check if the object represents a directory
-		if (object.files && object.files[element]) {
-			object = object.files[element];
-		} else {
-			object = null;
+		var result = null;
+
+		// Check for a valid object
+		if (previous && previous.files && previous.files[current]) {
+			result = previous.files[current];
 		}
 
-		return object;
+		return result;
 	}
 
 	// Check for client API file location
 	if (location === 'simples.js') {
 		object = client;
 	} else {
-		location.split('/').every(getFileObject);
+		object = location.split('/').reduce(getFileObject, this.container);
 	}
 
 	return object;
+};
+
+// Remove the file watchers from the location
+cache.prototype.unwatchLocation = function (object) {
+
+	var that = this;
+
+	// Unwatch the current object location
+	fs.unwatchFile(object.location);
+
+	// Loop througth the object files and unwatch directories
+	Object.keys(object.files).forEach(function (element) {
+		if (element.files) {
+			that.unwatchLocation(element);
+		}
+	});
 };
 
 // Watch the location for changes and make changes in the cache
@@ -201,12 +170,9 @@ cache.prototype.watchLocation = function (object, location) {
 		} else if (!current.nlink && object !== that.container) {
 			delete object.files[location.substr(location.lastIndexOf('/') + 1)];
 			fs.unwatchFile(location);
-		} else if (current.isDirectory()) {
-			object.stats = current;
-			that.addDirectory(object, location);
 		} else {
 			object.stats = current;
-			that.addFile(object, location);
+			that.addDirectory(object, location);
 		}
 	});
 };
@@ -219,8 +185,8 @@ fs.stat(__dirname + '/simples.js', function (error, stats) {
 			console.error(error.stack + '\n');
 			console.error('Try to reinstall simpleS, something went wrong\n');
 		} else {
-			client.stats = stats,
 			client.content = content;
+			client.stats = stats;
 		}
 	});
 });

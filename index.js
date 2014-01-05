@@ -1,7 +1,7 @@
 'use strict';
 
-var host = require('./lib/http/host'),
-	server = require('./lib/http/server');
+var host = require('simples/lib/http/host'),
+	server = require('simples/lib/http/server');
 
 // SimpleS prototype constructor
 var simples = function (port, options, callback) {
@@ -9,7 +9,7 @@ var simples = function (port, options, callback) {
 	var that = this;
 
 	// Optional cases for port, options and callback
-	if (typeof port === 'number') {
+	if (port && typeof port === 'number') {
 		if (typeof options === 'object' && typeof callback === 'function') {
 			port = 443;
 		} else if (typeof options === 'object') {
@@ -42,24 +42,11 @@ var simples = function (port, options, callback) {
 
 	// Define special properties for simpleS
 	Object.defineProperties(this, {
-		busy: {
-			value: false,
-			writable: true
-		},
 		hosts: {
 			value: {}
 		},
-		port: {
-			value: port,
-			writable: true
-		},
 		server: {
-			value: new server(this, options),
-			writable: true
-		},
-		started: {
-			value: false,
-			writable: true
+			value: new server(this, port, options)
 		}
 	});
 
@@ -69,10 +56,10 @@ var simples = function (port, options, callback) {
 
 	// Start the server when it is ready
 	if (this.server.instance) {
-		this.start(port, callback);
+		this.start(callback);
 	} else {
 		this.server.on('ready', function () {
-			that.start(port, callback);
+			that.start(callback);
 		});
 	}
 };
@@ -87,14 +74,18 @@ simples.prototype = Object.create(host.prototype, {
 // Create a new host or return an existing one
 simples.prototype.host = function (name, config) {
 
-	// Check if the host name is a string and create a new host
-	if (typeof name === 'string' && name !== 'main' && !this.hosts[name]) {
-		this.hosts[name] = new host(this, name, config);
-	} else if (this.hosts[name]) {
-		this.hosts[name].config(config);
+	// Check for an existing host or create a new host
+	if (typeof name === 'string') {
+		if (this.hosts[name]) {
+			this.hosts[name].config(config);
+		} else {
+			this.hosts[name] = new host(this, config);
+		}
+	} else {
+		name = 'main';
 	}
 
-	return this.hosts[name] || this.hosts.main;
+	return this.hosts[name];
 };
 
 // Start simples server
@@ -104,25 +95,14 @@ simples.prototype.start = function (port, callback) {
 
 	// Set the server to listen the port
 	function listen() {
-
-		// Set the started flag
-		that.started = true;
-
-		// Listen on the port
 		that.server.listen(port, function () {
-			that.port = port;
 			that.server.emit('release', callback);
 		});
 	}
 
 	// Start or restart the server
 	function start() {
-
-		// Set the busy flag
-		that.busy = true;
-
-		// Check if server is started
-		if (that.started) {
+		if (that.server.started) {
 			that.server.close(listen);
 		} else {
 			listen();
@@ -130,7 +110,7 @@ simples.prototype.start = function (port, callback) {
 	}
 
 	// Optional cases for port and callback
-	if (typeof port === 'number') {
+	if (port && typeof port === 'number') {
 		if (this.server.secured) {
 			port = 443;
 		}
@@ -142,15 +122,15 @@ simples.prototype.start = function (port, callback) {
 		if (this.server.secured) {
 			port = 443;
 		} else {
-			port = 80;
+			port = this.server.port;
 		}
 	} else {
-		port = this.port;
+		port = this.server.port;
 		callback = null;
 	}
 
 	// If the server is busy wait for release
-	if (this.busy) {
+	if (this.server.busy) {
 		this.server.once('release', start);
 	} else {
 		start();
@@ -164,37 +144,12 @@ simples.prototype.stop = function (callback) {
 
 	var that = this;
 
-	// Close all the open connections to the WS host
-	function clearWsHost(wsHost) {
-		wsHost.connections.forEach(function (connection) {
-			connection.close();
-		});
-	}
-
-	// Stop the timers of the sessions and the child WS hosts of the host
-	function clearHttpHost(host) {
-
-		// Clear the timers
-		Object.keys(host.timers).forEach(function (timer) {
-			clearTimeout(host.timers[timer]);
-		});
-
-		// Clear the WS hosts
-		Object.keys(host.wsHosts).forEach(function (wsHost) {
-			clearWsHost(host.wsHosts[wsHost]);
-		});
-	}
-
 	// Stop the server
 	function stop() {
 
-		// Set status flags
-		that.busy = true;
-		that.started = false;
-
 		// Clear all existing hosts
 		Object.keys(that.hosts).forEach(function (host) {
-			clearHttpHost(that.hosts[host]);
+			that.hosts[host].close();
 		});
 
 		// Close the server
@@ -209,8 +164,8 @@ simples.prototype.stop = function (callback) {
 	}
 
 	// Stop the server only if it is running
-	if (this.started) {
-		if (this.busy) {
+	if (this.server.started) {
+		if (this.server.busy) {
 			this.server.once('release', stop);
 		} else {
 			stop();

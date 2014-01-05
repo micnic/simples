@@ -1,10 +1,7 @@
 'use strict';
 
-var crypto = require('crypto'),
-	domain = require('domain'),
-	url = require('url'),
-	utils = require('./utils'),
-	wsConnection = require('../lib/ws/connection');
+var domain = require('domain'),
+	utils = require('simples/utils/utils');
 
 // Unmask the WS data
 function wsUnmasking(connection, frame) {
@@ -56,7 +53,7 @@ function wsMessageParse(connection, frame) {
 	}
 
 	// Prepare messages depending on their type
-	if (frame.opcode === 2 || connection.config.rawMode) {
+	if (frame.opcode === 2 || connection.config.raw) {
 		connection.emit('message', {
 			data: frame.message,
 			type: frame.opcode === 1 && 'text' || 'binary'
@@ -202,74 +199,42 @@ function wsParse(connection, frame, data) {
 }
 
 // Make the WS handshake
-function wsHandshake(host, connection, key) {
+exports.requestListener = function (host, connection) {
 
-	var frame = {
-			data: new Buffer(0),
-			index: 0,
-			limit: connection.config.messageLimit,
-			message: new Buffer(0),
-			state: 0
-		},
-		location = connection.host,
-		session = '',
+	var frame = {},
+		parent = host.parent,
 		socket = connection.socket,
-		timeout = host.parent.conf.sessionTimeout * 1000,
-		timer;
+		timer = null;
 
-	// Send a ping frame each 25 seconds of inactivity
-	function keepAlive() {
-		clearTimeout(timer);
-		timer = setTimeout(function () {
-			socket.write(new Buffer([137, 0]));
-		}, 25000);
-	}
-
-	// Prepare session data
-	if (connection.session) {
-		session = connection.cookies._session;
-	} else {
-		session = utils.generateSessionName();
-		connection.session = host.parent.sessions[session] = {};
-	}
-
-	// Prepare session cookie domain location
-	if (location.indexOf('.') < 0) {
-		location = '';
-	}
-
-	// Clear the previous session timer and create a new one
-	clearTimeout(host.parent.timers[session]);
-	host.parent.timers[session] = setTimeout(function () {
-		delete host.parent.sessions[session];
-		delete host.parent.timers[session];
-	}, timeout);
+	// Prepare the frame object
+	frame.data = new Buffer(0);
+	frame.index = 0;
+	frame.limit = host.conf.limit;
+	frame.message = new Buffer(0);
+	frame.state = 0;
 
 	// Set socket keep alive time to 30 seconds
 	socket.setTimeout(30000);
 
-	// Write the handshake to the socket
-	socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n');
-	socket.write('Connection: Upgrade\r\n');
-	socket.write('Upgrade: WebSocket\r\n');
-	socket.write('Sec-WebSocket-Accept: ' + key + '\r\n');
-	socket.write('Sec-Websocket-Protocol: ' + connection.protocols + '\r\n');
-
-	// Write origin only if requested
-	if (connection.headers.origin) {
-		socket.write('Origin: ' + connection.headers.origin + '\r\n');
-	}
-
-	// Write session cookie to the socket and end the WS handshake
-	socket.write('Set-Cookie: _session=' + session);
-	socket.write(';expires=' + new Date(Date.now() + timeout).toUTCString());
-	socket.write(';path=/;domain=' + location + ';httponly\r\n\r\n');
-
 	// Parse received data
 	socket.on('readable', function () {
-		keepAlive();
+
+		// Clear the previous timer and parse the received data
+		clearTimeout(timer);
 		wsParse(connection, frame, this.read());
+
+		// Create a new timeout to write a ping frame in 25 seconds
+		timer = setTimeout(function () {
+			socket.write(new Buffer([137, 0]));
+		}, 25000);
 	}).on('close', function () {
+
+		// Unbind the connection from its channels
+		connection.channels.forEach(function (channel) {
+			channel.unbind(connection);
+		});
+
+		// Remove the connection and its timer
 		host.connections.splice(host.connections.indexOf(connection), 1);
 		clearTimeout(timer);
 		connection.emit('close');
@@ -283,76 +248,12 @@ function wsHandshake(host, connection, key) {
 	}).run(function () {
 
 		// Log the new connection
-		if (host.parent.logger.callbak) {
-			utils.log(host.parent, connection);
+		if (parent.logger.callbak) {
+			utils.log(parent, connection);
 		}
 
-		// Call the connection listener and keep the connection alive
-		host.conf.connectionListener.call(host, connection);
-		keepAlive();
+		// Call the connection listener and write the first ping frame
+		host.listener(connection);
+		socket.write(new Buffer([137, 0]));
 	});
-}
-
-// WS request listener
-exports.requestListener = function (host, request, socket) {
-
-	var connection,
-		error = '',
-		handshake = new Buffer(0),
-		key = request.headers['sec-websocket-key'];
-
-	// Handshake hash readable event listener
-	function onReadable() {
-
-		var data = this.read() || new Buffer(0),
-			length = handshake.length + data.length;
-
-		// Append data to the handshake
-		handshake = utils.buffer(handshake, data, length);
-	}
-
-	// Select the WS host
-	host = host.wsHosts[url.parse(request.url).pathname];
-
-	// Check for errors
-	if (host) {
-
-		// Check for valid upgrade header
-		if (request.headers.upgrade !== 'websocket') {
-			error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
-		}
-
-		// Check for WS handshake key
-		if (!key) {
-			error = '\nsimpleS: No WebSocket handshake key\n';
-		}
-
-		// Check for valid WS protocol version
-		if (request.headers['sec-websocket-version'] !== '13') {
-			error = '\nsimpleS: Unsupported WebSocket version\n';
-		}
-
-		// Check for accepted origin
-		if (request.headers.origin && !utils.accepts(host.parent, request)) {
-			error = '\nsimpleS: WebSocket origin not accepted\n';
-		}
-	} else {
-		error = '\nsimpleS: Request to an inexistent WebSocket host\n';
-	}
-
-	// Check for error and make the WS handshake
-	if (error) {
-		console.error(error);
-		socket.destroy();
-	} else {
-
-		// Create a new WebSocket connection
-		connection = new wsConnection(host.parent, host.conf, request);
-		host.connections.push(connection);
-
-		// Hash the key and continue to WS handshake
-		crypto.Hash('sha1').on('readable', onReadable).on('end', function () {
-			wsHandshake(host, connection, handshake.toString('base64'));
-		}).end(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
-	}
 };

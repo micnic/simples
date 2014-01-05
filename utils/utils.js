@@ -14,7 +14,7 @@ exports.accepts = function (host, request) {
 	origin = url.parse(origin).hostname || origin;
 
 	// Check if the origin is accepted
-	if (origin !== request.headers.host.split(':')[0]) {
+	if (origin && origin !== request.headers.host.split(':')[0]) {
 		if (host.conf.acceptedOrigins.indexOf(origin) < 0) {
 			accepted = host.conf.acceptedOrigins[0] === '*';
 		} else {
@@ -34,6 +34,27 @@ exports.buffer = function () {
 	return Buffer.concat(buffers, args[args.length - 1]);
 };
 
+// Copy configuration from one object to another
+exports.copyConfig = function (destination, source, stop) {
+
+	// Iterate through the source keys to copy them
+	Object.keys(source).forEach(function (property) {
+
+		var dprop = destination[property],
+			dtype = typeof dprop,
+			sprop = source[property],
+			stype = typeof sprop,
+			valid = destination.hasOwnProperty(property) && dtype === stype;
+
+		// Copy the property if it has the same type
+		if (valid && dtype === 'object' && !stop && !Array.isArray(dprop)) {
+			exports.copyConfig(dprop, sprop, true);
+		} else if (valid) {
+			destination[property] = source[property];
+		}
+	});
+};
+
 // Return a random session name of 16 characters
 exports.generateSessionName = function () {
 
@@ -43,14 +64,14 @@ exports.generateSessionName = function () {
 
 	// Append a random character to the name
 	while (count--) {
-		name += chrs.charAt(Math.random() * 62 | 0);
+		name += chrs[Math.random() * 62 | 0];
 	}
 
 	return name;
 };
 
 // Export http utils
-exports.http = require('./http');
+exports.http = require('simples/utils/http');
 
 // Log data on new connections
 exports.log = function (host, connection) {
@@ -220,10 +241,10 @@ exports.parseLangs = function (request) {
 
 // Export the parsers
 exports.parsers = {
-	json: require('./parsers/json'),
-	multipart: require('./parsers/multipart'),
-	qs: require('./parsers/qs')
+	json: require('simples/utils/parsers/json'),
+	multipart: require('simples/utils/parsers/multipart'),
+	qs: require('simples/utils/parsers/qs')
 };
 
 // Export ws utils
-exports.ws = require('./ws');
+exports.ws = require('simples/utils/ws');

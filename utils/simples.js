@@ -335,7 +335,7 @@ simples.ws.prototype.open = function (host, protocols) {
 	}
 
 	// Get the host
-	if (host.charAt(0) === '/' && host.indexOf(location.host) !== 0) {
+	if (host[0] === '/' && host.indexOf(location.host) !== 0) {
 		this.host = host = location.host + host;
 	}
 

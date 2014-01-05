@@ -1,13 +1,12 @@
 'use strict';
 
-var cache = require('./cache'),
+var cache = require('simples/utils/cache'),
 	domain = require('domain'),
 	http = require('http'),
 	https = require('https'),
-	httpConnection = require('../lib/http/connection'),
 	stream = require('stream'),
 	url = require('url'),
-	utils = require('./utils');
+	utils = require('simples/utils/utils');
 
 // Default callback for "Not Found"
 function e404(connection) {
@@ -29,21 +28,21 @@ function refers(host, connection) {
 
 	var accepted = true,
 		index = 0,
-		referer,
+		referer = '',
 		request = connection.request;
 
 	// Check for referer header and accepted referers list
-	if (request.headers.referer && host.conf.acceptedReferers.length) {
+	if (request.headers.referer && host.conf.referers.length) {
 
 		// Get the hostname of the referer and find it in the list
 		referer = url.parse(request.headers.referer).hostname;
-		index = host.conf.acceptedReferers.indexOf(referer);
+		index = host.conf.referers.indexOf(referer);
 
 		// Check if referer is found in the accepted referers list
 		if (index < 0) {
-			accepted = host.conf.acceptedReferers[0] === '*';
+			accepted = host.conf.referers[0] === '*';
 		} else if (index >= 0) {
-			accepted = host.conf.acceptedReferers[0] !== '*';
+			accepted = host.conf.referers[0] !== '*';
 		}
 
 		// Accept if the referer is the same as the connection host
@@ -180,6 +179,7 @@ function routing(host, connection) {
 			'POST': 'post',
 			'PUT': 'put'
 		},
+		middlewares = host.middlewares.slice(0),
 		origin,
 		request = connection.request,
 		response = connection.response,
@@ -235,6 +235,26 @@ function routing(host, connection) {
 			route = host.routes.serve;
 		} else if (file) {
 			route = staticRoute;
+		}
+	}
+
+	// Get middlewares one by one and execute them
+	function shiftMiddlewares(stop) {
+		if (middlewares.length && !stop) {
+			middlewares.shift()(connection, shiftMiddlewares);
+		} else if (!stop) {
+
+			// Check if any logger is defined and log data
+			if (host.logger.callback) {
+				utils.log(host, connection);
+			}
+
+			// Use the routes
+			if (typeof route === 'string') {
+				connection.render(route);
+			} else {
+				applyRoute();
+			}
 		}
 	}
 
@@ -297,29 +317,17 @@ function routing(host, connection) {
 			console.error('\nsimpleS: Can not apply route for error 500');
 			console.error(error.stack + '\n');
 		} else {
-			console.error('\nsimpleS: Internal Server Error > ' + connection.url.href);
+			console.error('\nsimpleS: Internal Server Error');
+			console.error(connection.url.href);
 			console.error(error.stack + '\n');
 			response.statusCode = 500;
 			this.run(routeServerError);
 		}
-	}).run(function () {
-
-		// Check if any logger is defined and log data
-		if (host.logger.callback) {
-			utils.log(host, connection);
-		}
-
-		// Use the routes
-		if (typeof route === 'string') {
-			connection.render(route);
-		} else {
-			applyRoute();
-		}
-	});
+	}).run(shiftMiddlewares);
 }
 
 // Generate empty routes
-exports.httpDefaultRoutes = function () {
+exports.defaultRoutes = function () {
 
 	return {
 		dynamic: {
@@ -345,12 +353,12 @@ exports.httpDefaultRoutes = function () {
 	};
 };
 
-exports.requestListener = function (host, request, response) {
+exports.requestListener = function (host, connection) {
 
-	var connection,
-		length = 0,
+	var length = 0,
 		parser,
-		parts = [];
+		parts = [],
+		request = connection.request;
 
 	// Listener for request end event
 	function onEnd() {
@@ -367,7 +375,7 @@ exports.requestListener = function (host, request, response) {
 	// Listener for request readable event
 	function onReadable() {
 
-		var data = connection.request.read() || new Buffer(0);
+		var data = request.read() || new Buffer(0);
 
 		// Get the read length
 		length += data.length;
@@ -383,14 +391,11 @@ exports.requestListener = function (host, request, response) {
 		}
 	}
 
-	// Create the HTTP connection
-	connection = new httpConnection(host, request, response);
-
 	// Set the keep alive timeout of the request socket to 5 seconds
 	request.connection.setTimeout(5000);
 
 	// Set the default content type to HTML and charset UTF-8
-	response.setHeader('Content-Type', 'text/html;charset=utf-8');
+	connection.response.setHeader('Content-Type', 'text/html;charset=utf-8');
 
 	// Route the request and parse it if needed
 	if (request.method === 'GET' || request.method === 'HEAD') {

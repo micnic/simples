@@ -78,6 +78,8 @@
 
 >##### [.type(type[, override])](#http-connection-type)
 
+>##### [.keep([timeout])](#http-connection-keep)
+
 >##### [.write(chunk[, encoding, callback])](#http-connection-write)
 
 >##### [.end(chunk[, encoding, callback])](#http-connection-end)
@@ -126,7 +128,7 @@ var server = simples(80);
 var server = simples(); // the server will be set on the port 80
 ```
 
-To set up a HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server a HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
+To set up an HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `.pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server an HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
 ```javascript
 var server = simples(443, {
@@ -230,13 +232,34 @@ Change the configuration of the host. Possible attributes:
 
 `sessionTimeout: number // 3600` - Set the time to live of a session in seconds, default is 1 hour.
 
+### <a name="server-host-middleware"/> Middlewares
+
+`.middleware(callback[, remove])`
+
+callback: function(connection, next)
+
+remove: boolean
+
+Each host accepts middlewares to be implemented, which allow to add some additional implementations which are not available out of the box. The middlewares can manipulate the connection object and to call the next middleware or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value.
+
+```javascript
+host.middleware(function (connection, next) {
+    if (connection.path = '/restricted') {
+        connection.end('You do not have right to be here');
+        next(true); // Will stop the middleware chain and connection routing
+    } else {
+        next(); // Will continue to the next middleware if it exists or will continue to connection routing
+    }
+});
+```
+
 ### <a name="server-templating"/> Templating
 
 `.engine(engine)`
 
 engine: object
 
-To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 2 parameters, `source` and `imports`, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates. The templates are rendered using the `.render()` method of Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
+To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
 
 ```javascript
 
@@ -247,7 +270,7 @@ var noopEngine = {
     }
 };
 
-server.engine(noopEngine);
+host.engine(noopEngine);
 
 // Wrapped unsupported template engine example
 var unsupportedEngine = {
@@ -257,7 +280,7 @@ var unsupportedEngine = {
     }
 };
 
-server.engine({
+host.engine({
     render: function (source, imports) {
         unsupportedEngine.renderFile(imports, source);
     }
@@ -338,9 +361,9 @@ result: function(connection) or string
 Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
 
 ### <a name="host-route"/> General routing
-`.route(type, route, result)`
+`.route(verb, route, result)`
 
-type: 'all', 'del', 'get', 'put' or 'post'
+verb: 'all', 'del', 'get', 'put' or 'post'
 
 route: array[strings] or string
 
@@ -361,20 +384,20 @@ Listen for errors that can have place and uses a callback function with connecti
 #### <a name="example-routes"/> Examples for routing methods:
 
 ```javascript
-server.all('/', function (connection) {
+host.all('/', function (connection) {
     // Application logic
 });
 
-server.get([
+host.get([
     '/',
     '/index'
 ], function (connection) {
     // Application logic
 });
 
-server.error(404, 'not_found.ejs');
+host.error(404, 'not_found.ejs');
 
-server.post([
+host.post([
     '/',
     '/index'
 ], 'index.ejs');
@@ -391,7 +414,7 @@ callback: function(connection, files)
 `directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
 
 ```javascript
-server.serve('root', function (connection, files) {
+host.serve('root', function (connection, files) {
     // Application logic
 });
 ```
@@ -407,13 +430,13 @@ route: 404, 405, 500, array[strings] or string
 Removes a specific route, a set od routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
 
 ```javascript
-server.leave('post');
+host.leave('post');
 
-server.leave('get', '/nothing');
+host.leave('get', '/nothing');
 
-server.leave('serve');
+host.leave('serve');
 
-serve.leave('all', [
+host.leave('all', [
     '/home',
     '/index'
 ]);
@@ -430,7 +453,7 @@ callback: function(connection)
 Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests.
 
 ```javascript
-server.log(function (connection) {
+host.log(function (connection) {
     return connection.url.href;
 });
 ```
@@ -614,6 +637,18 @@ Sets the type of the content of the response. Default is 'html'. By default uses
 connection.type('html');
 ```
 
+#### <a name="http-connection-keep"/> .keep([timeout])
+
+timeout: number
+
+Each connection has a 5 seconds timeout for inactivity on the socket to prevent too many connections in the same time. To change the value of this timeout the `.keep()` method is called with the a new value in miliseconds, `0` for removing the timeout.
+
+```javascript
+connection.keep(); // or connection.keep(0); removes the timeout
+
+connection.keep(10000); // sets the timeout for 10 seconds
+```
+
 #### <a name="http-connection-write"/> .write(chunk[, encoding, callback])
 
 Writes to the response stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
@@ -706,9 +741,6 @@ echo.open({
     // Application logic
 });
 ```
-#### <a name="ws-host-destroy"/> .destroy()
-
-Close all existing connections and remove the host from the WebSocket hosts list.
 
 #### <a name="ws-host-broadcast"/> .broadcast([event, ]data[, filter])
 
@@ -733,6 +765,14 @@ name: string
 filter: function(element, index, array)
 
 Opens a new channel with the provided name. If `filter` is defined, then all the connections of the WebSocket host that respect the filter callback will be bound to the channel. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
+
+#### <a name="ws-host-close"/> .close()
+
+Close all existing connections to the host, but the host still can receive new connections after this.
+
+#### <a name="ws-host-destroy"/> .destroy()
+
+Close all existing connections and remove the host from the WebSocket hosts list.
 
 ### <a name="ws-connection"/> WebSocket Connection
 

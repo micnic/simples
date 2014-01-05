@@ -1,3 +1,9 @@
+## 0.5.1
+- Improved configuration for http host and ws host
+- Added session cookies protection
+- Added `connection.keep()`
+- Some internal fixes and improvements
+
 ## 0.5.0
 - Added callback to simples instance
 - Improved internal structure
