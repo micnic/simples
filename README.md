@@ -82,9 +82,9 @@ host2.get('/', function (connection) {
 
 ```javascript
 server.ws('/', {
-    messageLimit: 1024, // The maximum size of a message
-    usedProtocols: ['echo'], // The accepted protocols
-    rawMode: true // Connections in raw mode, see docs for more info
+    limit: 1024, // The maximum size of a message
+    protocols: ['echo'], // The accepted protocols
+    raw: true // Connections in raw mode, see docs for more info
 }, function (connection) {
     console.log('New connection');
 
