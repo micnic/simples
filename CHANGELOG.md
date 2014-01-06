@@ -1,3 +1,7 @@
+## 0.5.2
+- Fixed CORS content providing
+- Small internal structure impromevents
+
 ## 0.5.1
 - Improved configuration for http host and ws host
 - Added session cookies protection

@@ -269,12 +269,10 @@ function routing(host, connection) {
 		}
 
 		// Set CORS response headers
-		response.writeHead(200, {
-			'Access-Control-Allow-Credentials': 'True',
-			'Access-Control-Allow-Headers': 'Content-Type',
-			'Access-Control-Allow-Methods': 'DELETE,GET,HEAD,POST,PUT',
-			'Access-Control-Allow-Origin': origin
-		});
+		response.setHeader('Access-Control-Allow-Credentials', 'True');
+		response.setHeader('Access-Control-Allow-Headers', 'True');
+		response.setHeader('Access-Control-Allow-Methods', 'True');
+		response.setHeader('Access-Control-Allow-Origin', origin);
 
 		// End the response
 		if (request.method === 'OPTIONS') {
