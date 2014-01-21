@@ -17,7 +17,7 @@ var simples = function (port, options, callback) {
 	});
 
 	// Call host in this context and set it as the main host
-	host.call(this, this, 'main');
+	host.call(this, this);
 	this.hosts.main = this;
 
 	// Start the server when it is ready

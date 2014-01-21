@@ -1,6 +1,7 @@
 'use strict';
 
-var fs = require('fs'),
+var crypto = require('crypto'),
+	fs = require('fs'),
 	stream = require('stream'),
 	url = require('url');
 
@@ -55,19 +56,21 @@ exports.copyConfig = function (destination, source, stop) {
 	});
 };
 
-// Return a random session name of 16 characters
-exports.generateSessionName = function () {
+// Generate hash from data and send it to the callback
+exports.generateHash = function (data, callback) {
 
-	var chrs = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-		count = 16,
-		name = '';
+	var hash = new Buffer(0);
 
-	// Append a random character to the name
-	while (count--) {
-		name += chrs[Math.random() * 62 | 0];
-	}
+	// Hash received data
+	crypto.Hash('sha1').on('readable', function () {
 
-	return name;
+		var chunk = this.read() || new Buffer(0);
+
+		// Append data to the hash
+		hash = exports.buffer(hash, chunk, hash.length + chunk.length);
+	}).on('end', function () {
+		callback(hash);
+	}).end(data);
 };
 
 // Export http utils

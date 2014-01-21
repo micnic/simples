@@ -26,30 +26,26 @@ function e500(connection) {
 // Check if the referer header is accepted by the host
 function refers(host, connection) {
 
-	var accepted = true,
-		index = 0,
-		referer = '',
-		request = connection.request;
+	var headers = connection.request.headers,
+		hostname = url.parse(headers.referer || '').hostname || '',
+		referers = host.conf.referers,
+		valid = true;
 
-	// Check for referer header and accepted referers list
-	if (request.headers.referer && host.conf.referers.length) {
-
-		// Get the hostname of the referer and find it in the list
-		referer = url.parse(request.headers.referer).hostname;
-		index = host.conf.referers.indexOf(referer);
-
-		// Check if referer is found in the accepted referers list
-		if (index < 0) {
-			accepted = host.conf.referers[0] === '*';
-		} else if (index >= 0) {
-			accepted = host.conf.referers[0] !== '*';
-		}
-
-		// Accept if the referer is the same as the connection host
-		accepted = accepted || referer === connection.host;
+	// Check for referer
+	if (headers.referer && hostname !== connection.host) {
+		valid = false;
 	}
 
-	return accepted;
+	// Check if referer is found in the accepted referers list
+	if (!valid && hostname && referers.length) {
+		if (referers.indexOf(hostname) < 0) {
+			valid = referers[0] === '*';
+		} else {
+			valid = referers[0] !== '*';
+		}
+	}
+
+	return valid;
 }
 
 // Returns the advanced route if found

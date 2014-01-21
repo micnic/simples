@@ -1,3 +1,9 @@
+## 0.5.3
+- Fixed session data applying
+- Improved cache behavior
+- Improved internal session process
+- Improved cookies applying
+
 ## 0.5.2
 - Fixed CORS content providing
 - Small internal structure impromevents
@@ -143,7 +149,7 @@
 - Some good improvements
 
 ## 0.2.7
-- Fixed template engine connection bug 
+- Fixed template engine connection bug
 - Fixed POST data parser
 
 ## 0.2.6
