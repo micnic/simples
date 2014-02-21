@@ -31,7 +31,7 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a name="053" class="anchor" href="#053"><span class="octicon octicon-link"></span></a>0.5.3</h1>
+<a name="054" class="anchor" href="#054"><span class="octicon octicon-link"></span></a>0.5.4</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
@@ -40,11 +40,11 @@
 <li>No dependencies and high performance</li>
 <li>Advanced routing for http requests, static files and errors</li>
 <li>Restful verbs</li>
-<li>Unique interface for requests and responses</li>
-<li>Response compression (deflate and gzip)</li>
+<li>Unique interface for requests and responses (named as connection)</li>
+<li>Response compression (deflate and gzip, enabled by default)</li>
 <li>Virtual Hosting</li>
 <li>CORS support and Referer blocking</li>
-<li>Sessions</li>
+<li>Sessions (disabled by default)</li>
 <li>Template engine connection</li>
 <li>WebSocket implementation (version 13, RFC 6455)</li>
 <li>Client-side simple API for AJAX and WebSocket</li>
@@ -128,8 +128,8 @@
 
 <div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
     <span class="nx">limit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
-    <span class="nx">protocols</span><span class="o">:</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">],</span> <span class="c1">// The accepted protocols</span>
-    <span class="nx">raw</span><span class="o">:</span> <span class="kc">true</span> <span class="c1">// Connections in raw mode, see docs for more info</span>
+    <span class="nx">mode</span><span class="o">:</span> <span class="s1">'raw'</span><span class="p">,</span> <span class="c1">// Set connection mode, see docs for more info</span>
+    <span class="nx">type</span><span class="o">:</span> <span class="s1">'text'</span> <span class="c1">// Set the type of the content of the data</span>
 <span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'New connection'</span><span class="p">);</span>
 
