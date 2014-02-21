@@ -90,6 +90,8 @@
 
 >##### [.render(source[, imports])](#http-connection-render)
 
+>##### [.close([callback])](#http-connection-close)
+
 ### [WebSocket](#websocket)
 >##### [WebSocket Host](#ws-host)
 
@@ -147,7 +149,7 @@ var server = simples({ // the server will be set on port 443
 To redirect the client to HTTPS, use a structure like this:
 
 ```javascript
-server.get('/secured', function (connection) {
+server.get('/', function (connection) {
     if (connection.protocol === 'http') {
         connection.redirect('https://' + connection.url.host + connection.url.path, true);
     } else {
@@ -212,25 +214,38 @@ config: object
 
 Change the configuration of the host. Possible attributes:
 
-`useCompression: boolean // true` - Switch the compression of the response content, default is true
+Compression configuration:
+```javascript
+compression: {
+    enabled: true, // Activate the compression
+    options: null // Set compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+}
+```
 
-`requestLimit: number // 1048576` - Set the limit of the request body in bytes, default is 1MB.
+`limit: number // 1048576` - Set the limit of the request body in bytes, default is 1MB.
 
-`acceptedOrigins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
+`origins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
 ```javascript
 ['null', 'localhost', 'example.com'] // Will accept requests only from these 3 hosts
 
 ['*', 'example.com'] // Will accept requests from all hosts except 'example.com'
 ```
 
-`acceptedReferers: array of strings // []` - Set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
+`referers: array of strings // []` - Set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
 ```javascript
 ['*', 'example.com'] // will respond to all referers except 'example.com'
 
 ['example.com', 'test.com'] // Will respond only to these 2 referers
 ```
 
-`sessionTimeout: number // 3600` - Set the time to live of a session in seconds, default is 1 hour.
+Session configuration:
+```javascript
+session: {
+    enabled: false, // Activate the session
+    secret: '', // Set the secret string for preventing session cookies tampering, should not be empty(!)
+    timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour
+}
+```
 
 ### <a name="server-host-middleware"/> Middlewares
 
@@ -559,7 +574,7 @@ The object that contains parsed query string from the url.
 
 #### <a name="http-connection-session"/> .session
 
-A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 16 `0-9a-zA-Z` characters which will ensure security for `4.76 * 10 ^ 28` values.
+A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 40 hexadecimal characters which will ensure security for `1.46 * 10 ^ 48` values.
 
 #### <a name="http-connection-url"/> .url
 
@@ -699,6 +714,18 @@ connection.render('Hello <%= world %>', {
 });
 ```
 
+#### <a name="http-connection-close"/> .close([callback])
+
+callback: function()
+
+Closes the connection and append an optional callback function to the `finish` event. It is similar to the `.end()` method but has only the callback parameter, can be used as a semantic synonym of the `.end()` method.
+
+```javascript
+connection.close(function () {
+    console.log('Connection closed');
+});
+```
+
 ## <a name="websocket"/> WebSocket
 
 The WebSocket host is linked to the current or the main HTTP host (see Virtual Hosting).
@@ -713,13 +740,13 @@ config: object
 
 listener: function(connection)
 
-Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `messageLimit` attribute in the `config` parameter in bytes, default is 1048576 (10 MiB). For some security reasons WS protocols can be defined in the `usedProtocols` attribute. The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources.
+Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `config` parameter in bytes, default is 1048576 (10 MiB). The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources. To specify the type of the content which will be sent via the WebSocket connection the `type` parameter should be defined as `binary` or `text`, by default is `text`.
 
 ```javascript
 var echo = server.ws('/', {
-    messageLimit: 1024,
-    usedProtocols: ['', 'echo'],
-    rawMode: true
+    limit: 1024,
+    mode: 'raw',
+    type: 'binary'
 }, function (connection) {
     // Application logic
 });
@@ -735,8 +762,7 @@ Restarts the WebSocket host with new configuration and callback. The missing con
 
 ```javascript
 echo.open({
-    messageLimit: 512,
-    usedProtocols: ['echo']
+    limit: 512,
 }, function (connection) {
     // Application logic
 });
@@ -776,7 +802,7 @@ Close all existing connections and remove the host from the WebSocket hosts list
 
 ### <a name="ws-connection"/> WebSocket Connection
 
-The object that represents the current WebSocket connection. The WebSocket connection is an event emitter, see [`events`](http://nodejs.org/api/events.html) core module for more details, and has some attributes from connection interface to handle needed data from the handshake request.
+The object that represents the current WebSocket connection. The WebSocket connection is an writable stream, see [`stream`](file:///usr/share/doc/nodejs/api/stream.html#stream_class_stream_writable) core module for more details, and has some attributes from connection interface to handle needed data from the handshake request.
 
 #### <a name="ws-connection-members"/> WebSocket Connection Members
 
@@ -816,9 +842,18 @@ See Connection Interface `.session`.
 
 See Connection Interface `.url`.
 
-`.close()`
+`.write(chunk[, encoding, callback])`
 
-Sends the last frame of the WebSocket connection and then closes the socket.
+Writes to the connection socket, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
+
+`.end([chunk, encoding, callback])`
+
+Ends the connection socket, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
+
+`.close([callback])`
+callback: function()
+
+Sends the last frame of the WebSocket connection and then closes the socket. Can have an optional callback function, which is fired when the connection is closed
 
 `.send([event, ]data)`
 event: string
@@ -838,13 +873,11 @@ Using the template engine, send data through the WebSocket connection.
 
 #### <a name="ws-connection-events"/> WebSocket Connection Events
 
+As the WebSocket connection is a writable stream it emits all the events which are emitted by writable streams
+
 `message`
 
-Emitted when the server receives a message from the client. The callback function has an object as a parameter with 2 attributes `data`, the content of the message,  and `type`, the type of the message which can be `binary` or `text`.
-
-`close`
-
-Emitted when the connection is closed. The callback function does not have any parameter.
+Emitted when the WebSocket host receives a message from the client, this event is emitted only if the WebSocket host is configured in `raw` mode. The callback function has an object as a parameter with 2 attributes `data`, the content of the message, and `type`, the type of the message which can be `binary` or `text`.
 
 ### <a name="ws-channel"/> WebSocket Channel
 
@@ -928,18 +961,20 @@ request.stop();
 
 ### <a name="client-side-ws"/> WS (WebSocket)
 
-`simples.ws(host[, protocols, raw])`
+`simples.ws(host[, config])`
 
 host: string
 
-protocols: array[strings]
+config: object
 
-raw: boolean
-
-`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. If raw parameter is set to true then this connection will use a low level communication with the server, else the connection will use a event based communication with the server, which is more intuitive, by default is advanced mode. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
+`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be the communication mode, the protocols and the type of the data which is sent, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
 ```javascript
-var socket = simples.ws('/', ['echo'], true).on('message', function (message) {
+var socket = simples.ws('/', {
+    mode: 'raw',
+    protocols: ['echo'],
+    type: 'text'
+}).on('message', function (message) {
     this.send('Hello World');
 });
 ```

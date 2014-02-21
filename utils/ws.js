@@ -47,16 +47,23 @@ function wsUnmasking(connection, frame) {
 // Parse received WS messages
 function wsMessageParse(connection, frame) {
 
+	var type = 'text';
+
+	// Check for binary opcode
+	if (frame.opcode === 2) {
+		type = 'binary';
+	}
+
 	// Stringify text messages
-	if (frame.opcode === 1) {
+	if (type === 'text') {
 		frame.message = frame.message.toString();
 	}
 
 	// Prepare messages depending on their type
-	if (frame.opcode === 2 || connection.config.raw) {
+	if (connection.mode === 'raw') {
 		connection.emit('message', {
 			data: frame.message,
-			type: frame.opcode === 1 && 'text' || 'binary'
+			type: type
 		});
 	} else {
 		domain.create().on('error', function (error) {
@@ -68,7 +75,7 @@ function wsMessageParse(connection, frame) {
 		});
 	}
 
-	// Reset frame state
+	// Reset frame object
 	frame.message = new Buffer(0);
 	frame.state = 0;
 
@@ -198,10 +205,24 @@ function wsParse(connection, frame, data) {
 	}
 }
 
+// Generate default config for hosts
+exports.defaultConfig = function () {
+
+	return {
+		limit: 1048576,
+		mode: 'advanced',
+		type: 'text'
+	};
+};
+
+// The WebSocket GUID
+exports.guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+
 // Make the WS handshake
-exports.requestListener = function (host, connection) {
+exports.requestListener = function (connection) {
 
 	var frame = {},
+		host = connection.parent,
 		parent = host.parent,
 		socket = connection.socket,
 		timer = null;
@@ -212,6 +233,9 @@ exports.requestListener = function (host, connection) {
 	frame.limit = host.conf.limit;
 	frame.message = new Buffer(0);
 	frame.state = 0;
+
+	// Write the connection head to the socket
+	socket.write(connection.head + '\r\n');
 
 	// Set socket keep alive time to 30 seconds
 	socket.setTimeout(30000);

@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.5.3",
+	"version": "0.5.4",
 	"description": "Simple HTTP(S) Server",
 	"keywords": [
 		"cors",

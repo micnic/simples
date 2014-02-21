@@ -1,7 +1,7 @@
 'use strict';
 
 var host = require('simples/lib/http/host'),
-	server = require('simples/lib/http/server');
+	server = require('simples/lib/server');
 
 // SimpleS prototype constructor
 var simples = function (port, options, callback) {

@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.5.3
+# 0.5.4
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
@@ -7,11 +7,11 @@ simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 - No dependencies and high performance
 - Advanced routing for http requests, static files and errors
 - Restful verbs
-- Unique interface for requests and responses
-- Response compression (deflate and gzip)
+- Unique interface for requests and responses (named as connection)
+- Response compression (deflate and gzip, enabled by default)
 - Virtual Hosting
 - CORS support and Referer blocking
-- Sessions
+- Sessions (disabled by default)
 - Template engine connection
 - WebSocket implementation (version 13, RFC 6455)
 - Client-side simple API for AJAX and WebSocket
@@ -83,8 +83,8 @@ host2.get('/', function (connection) {
 ```javascript
 server.ws('/', {
     limit: 1024, // The maximum size of a message
-    protocols: ['echo'], // The accepted protocols
-    raw: true // Connections in raw mode, see docs for more info
+    mode: 'raw', // Set connection mode, see docs for more info
+    type: 'text' // Set the type of the content of the data
 }, function (connection) {
     console.log('New connection');
 

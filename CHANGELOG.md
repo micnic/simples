@@ -1,3 +1,8 @@
+## 0.5.4
+- Fixed `DELETE` requests routing
+- Changed configuration for the HTTP and the WS hosts
+- Improved internal structure and global processes, in special sessions
+
 ## 0.5.3
 - Fixed session data applying
 - Improved cache behavior

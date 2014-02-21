@@ -1,10 +1,8 @@
 'use strict';
 
-var cache = require('simples/utils/cache'),
-	domain = require('domain'),
+var domain = require('domain'),
 	http = require('http'),
 	https = require('https'),
-	stream = require('stream'),
 	url = require('url'),
 	utils = require('simples/utils/utils');
 
@@ -320,6 +318,25 @@ function routing(host, connection) {
 	}).run(shiftMiddlewares);
 }
 
+// Generate default config for hosts
+exports.defaultConfig = function () {
+
+	return {
+		compression: {
+			enabled: true,
+			options: null
+		},
+		limit: 1048576,
+		origins: [],
+		referers: [],
+		session: {
+			enabled: false,
+			secret: '',
+			timeout: 3600000
+		}
+	};
+};
+
 // Generate empty routes
 exports.defaultRoutes = function () {
 
@@ -347,9 +364,10 @@ exports.defaultRoutes = function () {
 	};
 };
 
-exports.requestListener = function (host, connection) {
+exports.requestListener = function (connection) {
 
-	var length = 0,
+	var host = connection.parent,
+		length = 0,
 		parser,
 		parts = [],
 		request = connection.request;
@@ -375,7 +393,7 @@ exports.requestListener = function (host, connection) {
 		length += data.length;
 
 		// Check for request body limit and parse data
-		if (length > host.conf.requestLimit) {
+		if (length > host.conf.limit) {
 			console.error('\nsimpleS: Request Entity Too Large\n');
 			request.destroy();
 		} else if (parser) {
@@ -394,7 +412,7 @@ exports.requestListener = function (host, connection) {
 	// Route the request and parse it if needed
 	if (request.method === 'GET' || request.method === 'HEAD') {
 		routing(host, connection);
-	} else if (request.headers['content-length'] > host.conf.requestLimit) {
+	} else if (request.headers['content-length'] > host.conf.limit) {
 		console.error('\nsimpleS: Request Entity Too Large\n');
 		request.destroy();
 	} else {

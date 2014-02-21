@@ -41,23 +41,21 @@ exports.copyConfig = function (destination, source, stop) {
 	// Iterate through the source keys to copy them
 	Object.keys(source).forEach(function (property) {
 
-		var dprop = destination[property],
-			dtype = typeof dprop,
-			sprop = source[property],
-			stype = typeof sprop,
-			valid = destination.hasOwnProperty(property) && dtype === stype;
+		var dtype = typeof destination[property],
+			stype = typeof source[property],
+			valid = dtype === stype;
 
 		// Copy the property if it has the same type
-		if (valid && dtype === 'object' && !stop && !Array.isArray(dprop)) {
-			exports.copyConfig(dprop, sprop, true);
-		} else if (valid) {
+		if (destination[property] === null || dtype !== 'object' && valid) {
 			destination[property] = source[property];
+		} else if (dtype === 'object' && valid && !stop) {
+			exports.copyConfig(destination[property], source[property], true);
 		}
 	});
 };
 
 // Generate hash from data and send it to the callback
-exports.generateHash = function (data, callback) {
+exports.generateHash = function (data, encoding, callback) {
 
 	var hash = new Buffer(0);
 
@@ -69,7 +67,7 @@ exports.generateHash = function (data, callback) {
 		// Append data to the hash
 		hash = exports.buffer(hash, chunk, hash.length + chunk.length);
 	}).on('end', function () {
-		callback(hash);
+		callback(hash.toString(encoding));
 	}).end(data);
 };
 
@@ -247,6 +245,11 @@ exports.parsers = {
 	json: require('simples/utils/parsers/json'),
 	multipart: require('simples/utils/parsers/multipart'),
 	qs: require('simples/utils/parsers/qs')
+};
+
+// Generate UTC string for a numeric time value
+exports.utc = function (time) {
+	return new Date(Date.now() + time).toUTCString();
 };
 
 // Export ws utils

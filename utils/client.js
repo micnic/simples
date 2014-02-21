@@ -247,21 +247,35 @@ simples.ee.prototype.once = function (event, listener) {
 };
 
 // WS microframework
-simples.ws = function (host, protocols, raw) {
+simples.ws = function (host, config) {
 	'use strict';
 
 	// Ignore new keyword
 	if (!(this instanceof simples.ws)) {
-		return new simples.ws(host, protocols, raw);
+		return new simples.ws(host, config);
 	}
 
 	// Call event emitter in this context
 	simples.ee.call(this);
 
-	// Get raw parameter if it is defined
-	if (typeof protocols === 'boolean') {
-		raw = protocols;
-		protocols = [];
+	// Set default config
+	if (!config) {
+		config = {};
+	}
+
+	// Set default mode
+	if (typeof config.mode !== 'string' || (config.mode !== 'advanced' && config.mode !== 'raw')) {
+		config.mode = 'advanced';
+	}
+
+	// Check for WS subprotocols
+	if (!Array.isArray(config.protocols)) {
+		config.protocols = [];
+	}
+
+	// Set default mode
+	if (typeof config.type !== 'string' || config.type !== 'binary' || config.type !== 'text') {
+		config.type = 'text';
 	}
 
 	// Define special properties for simples.ws
@@ -273,16 +287,19 @@ simples.ws = function (host, protocols, raw) {
 		queue: {
 			value: []
 		},
+		mode: {
+			value: config.mode
+		},
 		opening: {
 			value: false,
 			writable: true
 		},
 		protocols: {
-			value: protocols,
+			value: config.protocols,
 			writable: true
 		},
-		raw: {
-			value: Boolean(raw)
+		type: {
+			value: config.type
 		},
 		socket: {
 			value: null,
@@ -379,7 +396,7 @@ simples.ws.prototype.open = function (host, protocols) {
 		var message = JSON.parse(data);
 
 		// Check for binary data
-		if (message.binary) {
+		if (message.type === 'binary') {
 			message.data = bufferToBlob(message.data);
 		}
 
@@ -392,7 +409,7 @@ simples.ws.prototype.open = function (host, protocols) {
 		var message;
 
 		// Emit raw data
-		if (that.raw) {
+		if (that.mode === 'raw') {
 			that.emit('message', event.data);
 			return;
 		}
@@ -426,7 +443,7 @@ simples.ws.prototype.send = function (event, data) {
 	'use strict';
 
 	// Prepare the data
-	if (this.raw) {
+	if (this.mode === 'raw') {
 		data = event;
 	} else {
 		data = JSON.stringify({
