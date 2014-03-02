@@ -2,24 +2,29 @@
 
 var crypto = require('crypto'),
 	fs = require('fs'),
+	session = require('simples/lib/session'),
 	stream = require('stream'),
 	url = require('url');
 
+// Utils namespace
+var utils = exports;
+
 // Check if the origin header is accepted by the host (CORS)
-exports.accepts = function (host, request) {
+utils.accepts = function (host, request) {
 
 	var accepted = true,
-		origin = request.headers.origin;
+		origin = request.headers.origin,
+		origins = host.conf.origins;
 
 	// Get the hostname from the origin
 	origin = url.parse(origin).hostname || origin;
 
 	// Check if the origin is accepted
 	if (origin && origin !== request.headers.host.split(':')[0]) {
-		if (host.conf.acceptedOrigins.indexOf(origin) < 0) {
-			accepted = host.conf.acceptedOrigins[0] === '*';
+		if (origins.indexOf(origin) < 0) {
+			accepted = origins[0] === '*';
 		} else {
-			accepted = host.conf.acceptedOrigins[0] !== '*';
+			accepted = origins[0] !== '*';
 		}
 	}
 
@@ -27,16 +32,15 @@ exports.accepts = function (host, request) {
 };
 
 // Create a new Buffer instance from a list of buffers
-exports.buffer = function () {
+utils.buffer = function () {
 
-	var args = arguments,
-		buffers = Array.prototype.slice.call(args, 0, args.length - 1);
+	var args = Array.apply(null, arguments);
 
-	return Buffer.concat(buffers, args[args.length - 1]);
+	return Buffer.concat(args.slice(0, -1), args[args.length - 1]);
 };
 
 // Copy configuration from one object to another
-exports.copyConfig = function (destination, source, stop) {
+utils.copyConfig = function (destination, source, stop) {
 
 	// Iterate through the source keys to copy them
 	Object.keys(source).forEach(function (property) {
@@ -49,13 +53,13 @@ exports.copyConfig = function (destination, source, stop) {
 		if (destination[property] === null || dtype !== 'object' && valid) {
 			destination[property] = source[property];
 		} else if (dtype === 'object' && valid && !stop) {
-			exports.copyConfig(destination[property], source[property], true);
+			utils.copyConfig(destination[property], source[property], true);
 		}
 	});
 };
 
 // Generate hash from data and send it to the callback
-exports.generateHash = function (data, encoding, callback) {
+utils.generateHash = function (data, encoding, callback) {
 
 	var hash = new Buffer(0);
 
@@ -65,17 +69,65 @@ exports.generateHash = function (data, encoding, callback) {
 		var chunk = this.read() || new Buffer(0);
 
 		// Append data to the hash
-		hash = exports.buffer(hash, chunk, hash.length + chunk.length);
+		hash = utils.buffer(hash, chunk, hash.length + chunk.length);
 	}).on('end', function () {
 		callback(hash.toString(encoding));
 	}).end(data);
 };
 
+// Generate session id and hash
+utils.generateSession = function (host, connection, callback) {
+
+	var config = host.conf.session,
+		instance = new session(config.timeout);
+
+	// Generate a random session id of 20 bytes
+	crypto.randomBytes(20, function (error, buffer) {
+
+		// Check for error, which, eventually, should never happen(!)
+		if (error) {
+			console.error('\nsimpleS: can not generate random bytes');
+			throw error;
+		}
+
+		// Set session id and append the session container to the connection
+		instance.id = buffer.toString('hex');
+		host.sessions[instance.id] = instance;
+		connection.session = instance.container;
+
+		// Generate the session hash
+		utils.generateHash(instance.id + config.secret, 'hex', function (hash) {
+			instance.hash = hash;
+			callback(connection, instance.id, instance.hash);
+		});
+	});
+};
+
+// Generate the session container
+utils.getSession = function (host, connection, callback) {
+
+	var cookies = connection.cookies;
+
+	// Generate new session if it does not exist
+	if (!cookies._session || !host.sessions[cookies._session]) {
+		utils.generateSession(host, connection, callback);
+	} else {
+		if (host.sessions[cookies._session].hash !== cookies._hash) {
+			delete host.sessions[cookies._session];
+			utils.generateSession(host, connection, callback);
+		} else {
+			connection.session = host.sessions[cookies._session].container;
+			host.sessions[cookies._session].update();
+			callback(connection, cookies._session, cookies._hash);
+		}
+	}
+};
+
 // Export http utils
-exports.http = require('simples/utils/http');
+utils.http = require('simples/utils/http');
 
 // Log data on new connections
-exports.log = function (host, connection) {
+utils.log = function (host, connection) {
 
 	var log = {},
 		logger = host.logger;
@@ -104,7 +156,7 @@ exports.log = function (host, connection) {
 };
 
 // Get the cookies of the request
-exports.parseCookies = function (request) {
+utils.parseCookies = function (request) {
 
 	var cookies = {},
 		current = '',
@@ -162,7 +214,7 @@ exports.parseCookies = function (request) {
 };
 
 // Get the languages accepted by the client
-exports.parseLangs = function (request) {
+utils.parseLangs = function (request) {
 
 	var current = '',
 		header = '',
@@ -241,16 +293,16 @@ exports.parseLangs = function (request) {
 };
 
 // Export the parsers
-exports.parsers = {
+utils.parsers = {
 	json: require('simples/utils/parsers/json'),
 	multipart: require('simples/utils/parsers/multipart'),
 	qs: require('simples/utils/parsers/qs')
 };
 
 // Generate UTC string for a numeric time value
-exports.utc = function (time) {
+utils.utc = function (time) {
 	return new Date(Date.now() + time).toUTCString();
 };
 
 // Export ws utils
-exports.ws = require('simples/utils/ws');
+utils.ws = require('simples/utils/ws');

@@ -1,3 +1,9 @@
+## 0.5.5
+- Improved dynamic routes searching
+- Improved general routing performance
+- Added '*' wildcard character to dynamic routes to match any string
+- Small bugfixes
+
 ## 0.5.4
 - Fixed `DELETE` requests routing
 - Changed configuration for the HTTP and the WS hosts

@@ -17,7 +17,7 @@ var simples = function (port, options, callback) {
 	});
 
 	// Call host in this context and set it as the main host
-	host.call(this, this);
+	host.call(this, this, 'main');
 	this.hosts.main = this;
 
 	// Start the server when it is ready
@@ -45,7 +45,7 @@ simples.prototype.host = function (name, config) {
 		if (this.hosts[name]) {
 			this.hosts[name].config(config);
 		} else {
-			this.hosts[name] = new host(this, config);
+			this.hosts[name] = new host(this, name, config);
 		}
 	} else {
 		name = 'main';

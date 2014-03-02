@@ -323,6 +323,16 @@ All the methods described below are applicable on each host independently (see [
         action: 'cooking'
     }
 */
+
+'user/:user/*'; // Advanced routing that can match anything
+
+/*
+    This route will match these request urls:
+
+    /user/mary/home
+    /user/mary/friends/john
+*/
+
 ```
 
 ### <a name="host-all"/> All Requests
