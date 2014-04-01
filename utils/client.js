@@ -1,29 +1,57 @@
 // simpleS global namespace
 var simples = {};
 
+// simpleS utils namespace
+simples.utils = {};
+
+// Transform object to encoded URI keys and values
+simples.utils.encode = function (data) {
+	'use strict';
+
+	var result = [];
+
+	// Loop through the data elements and encode the keys and the values
+	result = Object.keys(data).map(function (element) {
+
+		var key = encodeURIComponent(element),
+			value = encodeURIComponent(data[element]);
+
+		return key + '=' + value;
+	});
+
+	return result.join('&');
+};
+
+// Parse the JSON message and transform binary data if needed
+simples.utils.parseMessage = function (data) {
+	'use strict';
+
+	var message = JSON.parse(data),
+		string = '';
+
+	// Check for binary data
+	if (message.type === 'binary') {
+
+		// Append buffer elements to the string
+		message.data.forEach(function (element) {
+			string += String.fromCharCode(element);
+		});
+
+		// Create a new blob and replace the message data
+		message.data = new Blob([string]);
+	}
+
+	return message;
+};
+
 // AJAX microframework
-simples.ajax = function (url, data, method) {
+var ajax = simples.ajax = function (url, data, method) {
 	'use strict';
 
 	var hash = url.indexOf('#'),
-		listeners = {
-			error: function () {},
-			success: function () {}
-		},
+		listeners = {},
 		json = false,
 		xhr = new XMLHttpRequest();
-
-	// Transform object to encoded URI keys and values
-	function encode(data) {
-		var key,
-			value;
-
-		return Object.keys(data).map(function (element) {
-			key = encodeURIComponent(element);
-			value = encodeURIComponent(data[element]);
-			return key + '=' + value;
-		}).join('&');
-	}
 
 	// Ignore new keyword
 	if (!(this instanceof simples.ajax)) {
@@ -40,8 +68,23 @@ simples.ajax = function (url, data, method) {
 		}
 	});
 
+	// Default error listener
+	listeners.error = function () {
+		throw new Error('simpleS: Error listener not implemented');
+	};
+
+	// Default success listener
+	listeners.success = function () {
+		throw new Error('simpleS: Success listener not implemented');
+	};
+
+	// Set method to lower case for comparison
+	if (typeof method === 'string') {
+		method = method.toLowerCase();
+	}
+
 	// Accept only DELETE, GET, HEAD, POST and PUT methods, defaults to get
-	if (['delete', 'get', 'head', 'post', 'put'].indexOf(method) < 0) {
+	if (['delete', 'head', 'post', 'put'].indexOf(method) < 0) {
 		method = 'get';
 	}
 
@@ -61,7 +104,7 @@ simples.ajax = function (url, data, method) {
 		}
 
 		// Add the data to the URL string
-		url += encode(data);
+		url += simples.utils.encode(data);
 		data = null;
 	}
 
@@ -82,7 +125,7 @@ simples.ajax = function (url, data, method) {
 			data = JSON.stringify(data);
 			xhr.setRequestHeader('Content-Type', 'application/json');
 		} else {
-			data = encode(data);
+			data = simples.utils.encode(data);
 		}
 	}
 
@@ -91,7 +134,7 @@ simples.ajax = function (url, data, method) {
 
 	// Listen for changes in the state of the XMLHttpRequest
 	xhr.onreadystatechange = function () {
-		if (xhr.readyState === 4 && (xhr.status / 100 | 0) === 2) {
+		if (xhr.readyState === 4 && Math.trunc(xhr.status / 100) === 2) {
 			listeners.success(xhr.responseText);
 		} else if (xhr.readyState === 4) {
 			listeners.error(xhr.status, xhr.statusText);
@@ -100,32 +143,38 @@ simples.ajax = function (url, data, method) {
 };
 
 // Set the error listener
-simples.ajax.prototype.error = function (listener) {
+ajax.prototype.error = function (listener) {
 	'use strict';
 
-	this.listeners.error = listener;
+	// Check if the listener is a function
+	if (typeof listener === 'function') {
+		this.listeners.error = listener;
+	}
 
 	return this;
 };
 
 // Abords the ajax transmission
-simples.ajax.prototype.stop = function () {
+ajax.prototype.stop = function () {
 	'use strict';
 
 	this.xhr.abort();
 };
 
 // Set the succes listener
-simples.ajax.prototype.success = function (listener) {
+ajax.prototype.success = function (listener) {
 	'use strict';
 
-	this.listeners.success = listener;
+	// Check if the listener is a function
+	if (typeof listener === 'function') {
+		this.listeners.success = listener;
+	}
 
 	return this;
 };
 
 // Client-side Node.JS event emitter implementation
-simples.ee = function () {
+var ee = simples.ee = function () {
 	'use strict';
 
 	// Ignore new keyword
@@ -141,7 +190,7 @@ simples.ee = function () {
 };
 
 // Append listener for an event
-simples.ee.prototype.addListener = function (event, listener) {
+ee.prototype.addListener = function (event, listener) {
 	'use strict';
 
 	// Check if more listeners exist for this event
@@ -156,18 +205,18 @@ simples.ee.prototype.addListener = function (event, listener) {
 };
 
 // Trigger the event with the data
-simples.ee.prototype.emit = function (event) {
+ee.prototype.emit = function (event) {
 	'use strict';
 
-	var args = Array.prototype.slice.call(arguments, 1),
+	var args = Array.apply(null, arguments).slice(1),
 		that = this;
 
 	// Throw the error if there are no listeners for error event
 	if (event === 'error' && !this.listeners.error) {
-		if (arguments[1] instanceof Error) {
-			throw arguments[1];
-		} else if (typeof arguments[1] === 'string') {
-			throw new Error(arguments[1]);
+		if (args[0] instanceof Error) {
+			throw args[0];
+		} else if (typeof args[0] === 'string') {
+			throw new Error(args[0]);
 		} else {
 			throw new Error('Uncaught, unspecified "error" event.');
 		}
@@ -183,8 +232,41 @@ simples.ee.prototype.emit = function (event) {
 	return this;
 };
 
+// Shortcut for removeListener and removeAllListeners
+ee.prototype.off = function (event, listener) {
+	'use strict';
+
+	// Switch behavior if listener is provided
+	if (typeof listener === 'function') {
+		this.removeListener(event, listener);
+	} else {
+		this.removeAllListeners(event);
+	}
+
+	return this;
+};
+
+// Shortcut for addListener
+ee.prototype.on = simples.ee.prototype.addListener;
+
+// Append one time listener
+ee.prototype.once = function (event, listener) {
+	'use strict';
+
+	// Prepare the one time listener
+	var onceListener = function () {
+		listener.apply(this, arguments);
+		this.removeListener(event, onceListener);
+	};
+
+	// Append the listener
+	this.on(event, onceListener);
+
+	return this;
+};
+
 // Delete all listeners of an event or all listeners of all events
-simples.ee.prototype.removeAllListeners = function (event) {
+ee.prototype.removeAllListeners = function (event) {
 	'use strict';
 
 	// If event is provided remove all its listeners
@@ -198,7 +280,7 @@ simples.ee.prototype.removeAllListeners = function (event) {
 };
 
 // Delete specific listener
-simples.ee.prototype.removeListener = function (event, listener) {
+ee.prototype.removeListener = function (event, listener) {
 	'use strict';
 
 	// Shortcut for listeners
@@ -213,50 +295,22 @@ simples.ee.prototype.removeListener = function (event, listener) {
 	return this;
 };
 
-// Shortcut for removeListener and removeAllListeners
-simples.ee.prototype.off = function (event, listener) {
-	'use strict';
-
-	// Switch behavior if listener is provided
-	if (listener) {
-		this.removeListener(event, listener);
-	} else {
-		this.removeAllListeners(event);
-	}
-
-	return this;
-};
-
-// Shortcut for addListener
-simples.ee.prototype.on = simples.ee.prototype.addListener;
-
-// Append one time listener
-simples.ee.prototype.once = function (event, listener) {
-	'use strict';
-
-	// Prepare the one time listener
-	var oneTimeListener = function () {
-		listener.apply(this, arguments);
-		this.removeListener(event, oneTimeListener);
-	};
-
-	// Append the listener
-	this.on(event, oneTimeListener);
-
-	return this;
-};
-
 // WS microframework
-simples.ws = function (host, config) {
+var ws = simples.ws = function (url, config) {
 	'use strict';
 
 	// Ignore new keyword
 	if (!(this instanceof simples.ws)) {
-		return new simples.ws(host, config);
+		return new simples.ws(url, config);
 	}
 
 	// Call event emitter in this context
 	simples.ee.call(this);
+
+	// Set default connection to the root
+	if (typeof url !== 'string') {
+		url = '/';
+	}
 
 	// Set default config
 	if (!config) {
@@ -264,7 +318,7 @@ simples.ws = function (host, config) {
 	}
 
 	// Set default mode
-	if (typeof config.mode !== 'string' || (config.mode !== 'advanced' && config.mode !== 'raw')) {
+	if (typeof config.mode !== 'string' || config.mode !== 'raw') {
 		config.mode = 'advanced';
 	}
 
@@ -274,18 +328,15 @@ simples.ws = function (host, config) {
 	}
 
 	// Set default mode
-	if (typeof config.type !== 'string' || config.type !== 'binary' || config.type !== 'text') {
+	if (typeof config.type !== 'string' || config.type !== 'binary') {
 		config.type = 'text';
 	}
 
 	// Define special properties for simples.ws
 	Object.defineProperties(this, {
-		host: {
-			value: host,
+		url: {
+			value: url,
 			writable: true
-		},
-		queue: {
-			value: []
 		},
 		mode: {
 			value: config.mode
@@ -298,8 +349,8 @@ simples.ws = function (host, config) {
 			value: config.protocols,
 			writable: true
 		},
-		type: {
-			value: config.type
+		queue: {
+			value: []
 		},
 		socket: {
 			value: null,
@@ -308,6 +359,9 @@ simples.ws = function (host, config) {
 		started: {
 			value: false,
 			writable: true
+		},
+		type: {
+			value: config.type
 		}
 	});
 
@@ -316,14 +370,14 @@ simples.ws = function (host, config) {
 };
 
 // Inherit from host
-simples.ws.prototype = Object.create(simples.ee.prototype, {
+ws.prototype = Object.create(simples.ee.prototype, {
 	constructor: {
 		value: simples.ws
 	}
 });
 
 // Close the WebSocket
-simples.ws.prototype.close = function () {
+ws.prototype.close = function () {
 	'use strict';
 
 	// Close the WebSocket only if it is started
@@ -336,25 +390,48 @@ simples.ws.prototype.close = function () {
 };
 
 // Open or reopen the WebSocket socket
-simples.ws.prototype.open = function (host, protocols) {
+ws.prototype.open = function (url, protocols) {
 	'use strict';
 
 	var protocol = 'ws',
+		slashes = 0,
 		that = this;
 
-	// Make the host and the protocols optional
-	host = host || this.host;
-	protocols = protocols || this.protocols;
+	// Make the url optional
+	if (Array.isArray(url)) {
+		protocols = url;
+		url = this.url;
+	} else if (typeof url !== 'string') {
+		url = this.url;
+	}
+
+	// Make the protocols optional
+	if (!Array.isArray(url)) {
+		protocols = this.protocols;
+	}
 
 	// Get the protocol name
-	if (location.protocol === 'https:') {
+	if (window.location.protocol === 'https:') {
 		protocol += 's';
 	}
 
-	// Get the host
-	if (host[0] === '/' && host.indexOf(location.host) !== 0) {
-		this.host = host = location.host + host;
+	// Index of the protocol slashes
+	slashes = url.indexOf('://');
+
+	// Remove protocol from the url
+	if (slashes >= 0) {
+		url = url.slice(slashes + 3);
 	}
+
+	if (url[0] === '/') {
+		url = window.location.host + url;
+	}
+
+	// Set the correct url and the filtered protocols
+	this.url = url;
+	this.protocols = protocols.filter(function (element) {
+		return typeof element === 'string';
+	});
 
 	// Set the opening flag
 	this.opening = true;
@@ -364,9 +441,9 @@ simples.ws.prototype.open = function (host, protocols) {
 
 	// Initialize the WebSocket
 	if (protocols.length) {
-		this.socket = new WebSocket(protocol + '://' + host, protocols);
+		this.socket = new WebSocket(protocol + '://' + url, protocols);
 	} else {
-		this.socket = new WebSocket(protocol + '://' + host);
+		this.socket = new WebSocket(protocol + '://' + url);
 	}
 
 	// Catch connection close
@@ -378,30 +455,8 @@ simples.ws.prototype.open = function (host, protocols) {
 	// Catch connection errors
 	this.socket.onerror = function () {
 		that.started = false;
-		that.emit('error', 'simpleS: Can not connect to the WS server');
+		that.emit('error', 'simpleS: Can not connect to the WS host');
 	};
-
-	// Transform Node.JS buffer to browser blob
-	function bufferToBlob(buffer) {
-		var string = '',
-			i;
-		for (i = 0; i < buffer.length; i++) {
-			string += String.fromCharCode(buffer[i]);
-		}
-		return new Blob([string]);
-	}
-
-	// Parse the JSON message and transform binary data if needed
-	function parseMessage(data) {
-		var message = JSON.parse(data);
-
-		// Check for binary data
-		if (message.type === 'binary') {
-			message.data = bufferToBlob(message.data);
-		}
-
-		return message;
-	}
 
 	// Listen for incoming messages
 	this.socket.onmessage = function (event) {
@@ -416,7 +471,7 @@ simples.ws.prototype.open = function (host, protocols) {
 
 		// Parse and emit complex data
 		try {
-			message = parseMessage(event.data);
+			message = simples.utils.parseMessage(event.data);
 			that.emit(message.event, message.data);
 		} catch (error) {
 			that.emit('error', 'simpleS: Can not parse incoming message');
@@ -439,7 +494,7 @@ simples.ws.prototype.open = function (host, protocols) {
 };
 
 // Send data via the WebSocket in raw or advanced mode
-simples.ws.prototype.send = function (event, data) {
+ws.prototype.send = function (event, data) {
 	'use strict';
 
 	// Prepare the data
@@ -465,7 +520,7 @@ simples.ws.prototype.send = function (event, data) {
 		// Push the message to the end of the queue
 		this.queue.push(data);
 
-		// If connection is down open a new one
+		// If connection is down then open a new one
 		if (!this.opening) {
 			this.open();
 		}

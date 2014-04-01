@@ -2,23 +2,143 @@
 
 var cache = require('simples/lib/cache'),
 	domain = require('domain'),
-	httpConnection = require('simples/lib/http/connection'),
+	path = require('path'),
+	store = require('simples/lib/store'),
 	url = require('url'),
-	utils = require('simples/utils/utils');
+	utils = require('simples/utils/utils'),
+	zlib = require('zlib');
 
 // HTTP namespace
 var http = exports;
 
-// Clear expired sessions from the host
-http.clearSessions = function (host) {
+// Link to the HTTP connection prototype constructor
+http.connection = require('simples/lib/http/connection');
 
-	var now = Date.now();
+// Relations between HTTP methods and REST verbs
+http.methods = {
+	'DELETE': 'del',
+	'GET': 'get',
+	'HEAD': 'get',
+	'POST': 'post',
+	'PUT': 'put'
+};
 
-	// Loop throught the session and find the expired sessions
-	Object.keys(host.sessions).forEach(function (element) {
-		if (host.sessions[element].expiration <= now) {
-			delete host.sessions[element];
+// Listener for HTTP requests
+http.connectionListener = function (host, request, response) {
+
+	var compression = host.conf.compression,
+		connection = new http.connection(host, request, response),
+		deflate = false,
+		encoding = connection.headers['accept-encoding'],
+		gzip = false,
+		wstream = response;
+
+	// Check for supported content encodings of the client
+	if (encoding && compression.enabled) {
+
+		// Lower case for comparing
+		encoding = encoding.toLowerCase();
+
+		// Get accepted encodings
+		deflate = encoding.indexOf('deflate') >= 0;
+		gzip = encoding.indexOf('gzip') >= 0;
+
+		// Check for supported compression
+		if (deflate && (compression.preferred === 'deflate' || !gzip)) {
+			encoding = 'deflate';
+			wstream = zlib.Deflate(compression.options);
+		} else if (gzip && (compression.preferred === 'gzip' || !deflate)) {
+			encoding = 'gzip';
+			wstream = zlib.Gzip(compression.options);
 		}
+
+		// Check for successful compression selection
+		if (wstream !== response) {
+			connection.header('Content-Encoding', encoding);
+			wstream.pipe(response);
+		}
+	}
+
+	// Set keep alive timeout, default content type and pipe to response stream
+	connection.keep(5000).type('html').pipe(wstream);
+
+	// Route the connection and parse received data if needed
+	if (connection.method === 'GET' || connection.method === 'HEAD') {
+		http.connectionProcess(connection);
+	} else if (connection.headers['content-length'] > host.conf.limit) {
+		console.error('\nsimpleS: Request Entity Too Large\n');
+		request.destroy();
+	} else {
+		http.connectionParser(connection);
+	}
+};
+
+// Decide what to do with the request depending on its method
+http.connectionProcess = function (connection) {
+
+	var config = connection.parent.conf;
+
+	// Check if sessions are enabled
+	if (config.session.enabled) {
+		utils.getSession(connection.parent, connection, http.setSession);
+	} else {
+		http.routing(connection);
+	}
+};
+
+// Populate connection body and files
+http.connectionParser = function (connection) {
+
+	var host = connection.parent,
+		length = 0,
+		parser = null,
+		parts = [];
+
+	// Split content type in two parts to get boundary if exists
+	if (connection.headers['content-type']) {
+		parts = connection.headers['content-type'].split(';');
+	}
+
+	// Choose the content parser
+	if (parts[0] === 'application/x-www-form-urlencoded') {
+		parser = new utils.parsers.qs();
+	} else if (parts[0] === 'multipart/form-data' && parts.length > 1) {
+		parser = new utils.parsers.multipart(parts[1].substr(10));
+	} else if (parts[0] === 'application/json') {
+		parser = new utils.parsers.json();
+	}
+
+	// If no parser was defined then make connection body a buffer
+	if (!parser) {
+		connection.body = new Buffer(0);
+	}
+
+	// Process received data
+	connection.request.on('readable', function () {
+
+		var data = this.read() || new Buffer(0);
+
+		// Get the read length
+		length += data.length;
+
+		// Check for request body limit and parse data
+		if (length > host.conf.limit) {
+			console.error('\nsimpleS: Request Entity Too Large\n');
+			this.destroy();
+		} else if (parser) {
+			parser.parse(data.toString());
+		} else {
+			connection.body = utils.buffer(connection.body, data, length);
+		}
+	}).on('end', function () {
+
+		// If parser is defined end parsing
+		if (parser) {
+			parser.parse(null);
+			connection.body = parser.result;
+		}
+
+		http.connectionProcess(connection);
 	});
 };
 
@@ -28,15 +148,16 @@ http.defaultConfig = function () {
 	return {
 		compression: {
 			enabled: true,
-			options: null
+			options: null, // http://nodejs.org/api/zlib.html#zlib_options
+			preferred: 'deflate' // can be 'deflate' or 'gzip'
 		},
-		limit: 1048576,
+		limit: 1048576, // bytes, by default is 1 MB
 		origins: [],
 		referers: [],
 		session: {
 			enabled: false,
-			secret: '',
-			timeout: 3600000
+			store: new store(),
+			timeout: 3600000 // miliseconds, by default 1 hour
 		}
 	};
 };
@@ -64,7 +185,8 @@ http.defaultRoutes = function () {
 			post: {},
 			put: {}
 		},
-		serve: null
+		serve: null,
+		ws: {}
 	};
 };
 
@@ -115,7 +237,7 @@ http.getDynamicRoute = function (connection, routes, verb) {
 		}
 	}
 
-	// Populat connection parameters if the route is found
+	// Populate connection parameters if the route is found
 	if (result) {
 		location.match(route.pattern).slice(1).forEach(function (param, key) {
 			connection.params[route.keys[key]] = param;
@@ -125,19 +247,10 @@ http.getDynamicRoute = function (connection, routes, verb) {
 	return result;
 };
 
-// Relations between HTTP methods and REST verbs
-http.methods = {
-	'DELETE': 'del',
-	'GET': 'get',
-	'HEAD': 'get',
-	'POST': 'post',
-	'PUT': 'put'
-};
-
 // Check if the referer header is accepted by the host
 http.refers = function (host, connection) {
 
-	var headers = connection.request.headers,
+	var headers = connection.headers,
 		hostname = url.parse(headers.referer || '').hostname || '',
 		referers = host.conf.referers,
 		valid = true;
@@ -159,145 +272,60 @@ http.refers = function (host, connection) {
 	return valid;
 };
 
-// Listener for HTTP requests
-http.requestListener = function (host, request, response) {
-
-	var config = host.conf,
-		connection = new httpConnection(host, request, response);
-
-	// Check if sessions are enabled
-	if (config.session.enabled) {
-		utils.getSession(host, connection, http.setSession);
-	} else {
-		http.requestProcess(connection);
-	}
-};
-
-// Decide what to do with the request depending on its method
-http.requestProcess = function (connection) {
-
-	var host = connection.parent,
-		request = connection.request;
-
-	// Route the request and parse it if needed
-	if (request.method === 'GET' || request.method === 'HEAD') {
-		http.routing(host, connection);
-	} else if (request.headers['content-length'] > host.conf.limit) {
-		console.error('\nsimpleS: Request Entity Too Large\n');
-		request.destroy();
-	} else {
-		http.requestParser(connection);
-	}
-};
-
-// Populate connection body and files
-http.requestParser = function (connection) {
-
-	var host = connection.parent,
-		length = 0,
-		parser,
-		parts = [],
-		request = connection.request;
-
-	// Split content type in two parts to get boundary if exists
-	if (request.headers['content-type']) {
-		parts = request.headers['content-type'].split(';');
-	}
-
-	// Choose the content parser
-	if (parts[0] === 'application/x-www-form-urlencoded') {
-		parser = new utils.parsers.qs();
-	} else if (parts[0] === 'multipart/form-data' && parts.length > 1) {
-		parser = new utils.parsers.multipart(parts[1].substr(10));
-	} else if (parts[0] === 'application/json') {
-		parser = new utils.parsers.json();
-	}
-
-	// If no parser was defined then make connection body a buffer
-	if (!parser) {
-		connection.body = new Buffer(0);
-	}
-
-	// Process received data
-	request.on('readable', function () {
-
-		var data = request.read() || new Buffer(0);
-
-		// Get the read length
-		length += data.length;
-
-		// Check for request body limit and parse data
-		if (length > host.conf.limit) {
-			console.error('\nsimpleS: Request Entity Too Large\n');
-			request.destroy();
-		} else if (parser) {
-			parser.parse(data.toString());
-		} else {
-			connection.body = utils.buffer(connection.body, data, length);
-		}
-	}).on('end', function () {
-
-		// If parser is defined end parsing
-		if (parser) {
-			parser.parse(null);
-			connection.body = parser.result;
-		}
-
-		http.routing(host, connection);
-	});
-};
-
 // Routes all the requests
-http.routing = function (host, connection) {
+http.routing = function (connection) {
 
-	var index = 0,
+	var cors = {},
+		element = null,
+		host = connection.parent,
+		index = 0,
 		length = host.middlewares.length,
 		location = connection.path.substr(1),
-		origin,
-		request = connection.request,
-		response = connection.response,
-		route,
+		route = null,
 		routes = host.routes,
-		verb = http.methods[request.method];
+		verb = http.methods[connection.method];
 
 	// Get middlewares one by one and execute them
 	function nextMiddleware(stop) {
 		if (index < length && !stop) {
 			setImmediate(host.middlewares[index], connection, nextMiddleware);
 			index++;
-		} else if (!stop) {
-
-			// Check if any logger is defined and log data
-			if (host.logger.callback) {
-				utils.log(host, connection);
-			}
-
-			// Apply the selected route
+		} else if (!stop && element) {
+			http.applyStaticRoute(connection, element);
+		} else  if (!stop) {
 			http.applyRoute(connection, route, verb);
 		}
 	}
 
 	// Check for CORS requests
-	if (request.headers.origin) {
+	if (connection.headers.origin) {
 
 		// Check if the origin is accepted
-		if (utils.accepts(host, request)) {
-			origin = request.headers.origin;
+		if (utils.accepts(host, connection)) {
+			cors.origin = connection.headers.origin;
 		} else {
-			origin = connection.protocol + '://' + connection.host;
+			cors.origin = connection.protocol + '://' + connection.host;
 		}
 
-		// Set CORS response headers
-		response.setHeader('Access-Control-Allow-Credentials', 'True');
-		response.setHeader('Access-Control-Allow-Headers', 'True');
-		response.setHeader('Access-Control-Allow-Methods', 'True');
-		response.setHeader('Access-Control-Allow-Origin', origin);
+		// Prepare CORS specific response headers
+		cors.headers = connection.headers['access-control-request-headers'];
+		cors.methods = connection.headers['access-control-request-method'];
 
-		// End the response
-		if (request.method === 'OPTIONS') {
-			response.end();
-			return;
+		// Always allow credentials
+		connection.header('Access-Control-Allow-Credentials', 'True');
+
+		// Response with the requested headers
+		if (cors.headers) {
+			connection.header('Access-Control-Allow-Headers', cors.headers);
 		}
+
+		// Response with the requested methods
+		if (cors.methods) {
+			connection.header('Access-Control-Allow-Methods', cors.methods);
+		}
+
+		// Set the accepted origin
+		connection.header('Access-Control-Allow-Origin', cors.origin);
 	}
 
 	// Find the fixed and dynamic route
@@ -311,29 +339,6 @@ http.routing = function (host, connection) {
 		}
 	}
 
-	// Wrap the connection inside a domain
-	domain.create().on('error', function (error) {
-		if (response.statusCode === 500) {
-			console.error('\nsimpleS: Can not apply route for error 500');
-			console.error(error.stack + '\n');
-		} else {
-			console.error('\nsimpleS: Internal Server Error');
-			console.error(connection.url.href);
-			console.error(error.stack + '\n');
-			response.statusCode = 500;
-			this.bind(routes.error[500]).call(host, connection);
-		}
-	}).run(nextMiddleware);
-};
-
-// Apply the selected route
-http.applyRoute = function (connection, route, verb) {
-
-	var element = null,
-		host = connection.parent,
-		location = connection.path.substr(1),
-		routes = host.routes;
-
 	// Get static content if found
 	if (!route && verb === 'get' && http.refers(host, connection)) {
 
@@ -345,57 +350,102 @@ http.applyRoute = function (connection, route, verb) {
 		}
 	}
 
-	// Check for errors 404 and 405
-	if (!verb) {
-		connection.response.statusCode = 405;
-		connection.response.setHeader('Allow', 'DELETE,GET,HEAD,POST,PUT');
-		route = routes.error[405];
-	} else if (!element && !route) {
-		connection.response.statusCode = 404;
-		route = routes.error[404];
-	}
+	// Wrap the connection inside a domain
+	domain.create().on('error', function (error) {
+		if (connection.status() === 500) {
+			console.error('\nsimpleS: Can not apply route for error 500');
+			console.error(error.stack + '\n');
+		} else {
+			console.error('\nsimpleS: Internal Server Error');
+			console.error(connection.url.href);
+			console.error(error.stack + '\n');
+			connection.status(500);
+			this.bind(routes.error[500]).call(host, connection);
+		}
+	}).run(nextMiddleware);
+};
 
-	// Apply the route
-	if (typeof route === 'string') {
-		connection.render(route);
-	} else if (element) {
-		http.applyStaticRoute(connection, element);
+// Apply the selected route
+http.applyRoute = function (connection, route, verb) {
+
+	var host = connection.parent,
+		location = connection.path.substr(1),
+		routes = host.routes;
+
+	// Check for CORS options request
+	if (connection.method === 'OPTIONS') {
+		connection.end();
 	} else {
-		route.call(host, connection);
+
+		// Check for errors 404 and 405
+		if (!verb) {
+			connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
+			route = routes.error[405];
+		} else if (!route) {
+			connection.status(404);
+			route = routes.error[404];
+		}
+
+		// Check if any logger is defined and log data
+		if (host.logger.callback) {
+			utils.log(host, connection);
+		}
+
+		// Apply the route
+		if (typeof route === 'string') {
+			connection.render(route);
+		} else {
+			route.call(host, connection);
+		}
 	}
 };
 
 // Set the session cookies for HTTP requests
-http.setSession = function (connection, sid, hash) {
+http.setSession = function (connection, session) {
 
 	var config = connection.parent.conf,
-		options = {};
+		options = {},
+		store = config.session.store;
 
 	// Prepare cookies options
 	options.expires = config.session.timeout;
 	options.httpOnly = true;
 
 	// Write the session cookies
-	connection.cookie('_session', sid, options);
-	connection.cookie('_hash', hash, options);
+	connection.cookie('_session', session.id, options);
+	connection.cookie('_hash', session.hash, options);
+
+	// Link the session container to the connection
+	connection.session = session.container;
+
+	// Write the session to the store and remove its reference
+	connection.on('finish', function () {
+		store.set(session.id, {
+			id: session.id,
+			hash: session.hash,
+			expire: config.session.timeout * 1000 + Date.now(),
+			container: connection.session
+		}, function () {
+			connection.session = null;
+		});
+	});
 
 	// Continue to process the request
-	http.requestProcess(connection);
+	http.routing(connection);
 };
 
 // The route for static files
 http.staticFileRoute = function (connection, file) {
 
-	var mtime = file.stats.mtime.valueOf();
+	var extension = path.extname(file.location).slice(1),
+		mtime = file.stats.mtime.valueOf();
 
 	// Set the last modified time and the content type of the response
-	connection.header('Last-Modified', mtime);
-	connection.type(file.location.substr(file.location.lastIndexOf('.') + 1));
+	connection.header('Last-Modified', mtime).type(extension);
 
 	// Check if modification time coincides on the client and on the server
-	if (Number(connection.request.headers['if-modified-since']) === mtime) {
-		connection.response.statusCode = 304;
-		connection.end();
+	if (Number(connection.headers['if-modified-since']) === mtime) {
+		connection.status(304).end();
 	} else {
 		connection.end(file.content);
 	}
@@ -418,7 +468,7 @@ http.applyStaticRoute = function (connection, element) {
 
 			// Prepare item object
 			item.name = name;
-			item.stats = file.files[element].stats;
+			item.stats = element.files[name].stats;
 
 			return item;
 		});

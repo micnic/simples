@@ -68,15 +68,17 @@
 
 >##### [.cookie(name, value[, attributes])](#http-connection-cookie)
 
->##### [.header(name, value)](#http-connection-cookie)
+>##### [.header(name[, value])](#http-connection-cookie)
 
->##### [.lang(language)](#http-connection-lang)
+>##### [.lang([value])](#http-connection-lang)
+
+>##### [.length([value])](#http-connection-length)
 
 >##### [.redirect(location[, permanent])](#http-connection-redirect)
 
->##### [.status(code)](#http-connection-status)
+>##### [.status([code])](#http-connection-status)
 
->##### [.type(type[, override])](#http-connection-type)
+>##### [.type([type, override])](#http-connection-type)
 
 >##### [.keep([timeout])](#http-connection-keep)
 
@@ -217,8 +219,9 @@ Change the configuration of the host. Possible attributes:
 Compression configuration:
 ```javascript
 compression: {
-    enabled: true, // Activate the compression
-    options: null // Set compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+    enabled: true, // Activate the compression, by default the compression is enabled
+    options: null, // Set compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+    preferred: 'deflate' // Set the prefereed compression type, can be `deflate` or `gzip`, by default is `deflate`
 }
 ```
 
@@ -242,10 +245,20 @@ Session configuration:
 ```javascript
 session: {
     enabled: false, // Activate the session
-    secret: '', // Set the secret string for preventing session cookies tampering, should not be empty(!)
-    timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour
+    store: simples.store(), // Session store, default is simples memcached store
+    timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour, zero for infinite timeout
 }
 ```
+
+Sessions are stored by default inside an memcached container, to define another container for them it is needed an object instance with the next methods:
+
+`.get(id, callback)` - should return inside the callback function the session container if it is found, if the session defined by the `id` parameter is not found then the callback function should return `null`;
+
+`.set(id, session, callback)` - should add the session container defined by the first two paramters and execute the callback function when the session container is saved to the sessions storage.
+
+`.clean()` - should remove the sessions that are expired by comparing the current time with the `.expires` attribute of the session containers.
+
+Note: The API is unstable at the moment, can be made some changes in the future releases
 
 ### <a name="server-host-middleware"/> Middlewares
 
@@ -436,7 +449,7 @@ directory: string
 
 callback: function(connection, files)
 
-`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and finally cache them. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
 
 ```javascript
 host.serve('root', function (connection, files) {
@@ -448,7 +461,7 @@ host.serve('root', function (connection, files) {
 
 `.leave([type, route])`
 
-type: 'all', 'error', 'get', 'post' or 'serve'
+type: 'all', 'del', 'error', 'get', 'post', 'put' or 'serve'
 
 route: 404, 405, 500, array[strings] or string
 
@@ -584,7 +597,7 @@ The object that contains parsed query string from the url.
 
 #### <a name="http-connection-session"/> .session
 
-A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 40 hexadecimal characters which will ensure security for `1.46 * 10 ^ 48` values.
+A container used to keep important data on the server-side, the clients have access to this data using the `_session` cookie sent automatically, the `_session` cookie has a value of 40 hexadecimal characters which will ensure security for `1.46 * 10 ^ 48` values. The session cookie is protected by `_hash` cookie also with a width of 40 hexadecimal characters which is a hash from the `_session` key and a secret value. The session is available only before calling the `.end()` method of the connection so all manipulations should be made before the content of the connection is sent to the client, this rule is valid for both HTTP and WS connections.
 
 #### <a name="http-connection-url"/> .url
 
@@ -610,26 +623,54 @@ connection.cookie('user', 'me', {
 });
 ```
 
-#### <a name="http-connection-header"/> .header(name, value)
+#### <a name="http-connection-header"/> .header(name[, value])
 
 name: string
 
-value: string or array[strings]
+value: array[numbers or strings], null, number, or string
 
-Sets the header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings.
+Sets, gets or removes a header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings. If the `value` parameter is not defined then the value of the previously set header defined by the `name` parameter is returned. If the `value` parameter is `null` then the header defined by the `name` parameter is removed from the response.
 
 ```javascript
-connection.header('ETag', '0123456789');
+connection.header('ETag', '0123456789'); // Set the 'ETag' header as '0123456789'
+
+connection.header('ETag'); // => '0123456789'
+
+connection.header('ETag', null); // The 'ETag' header is being removed
+
+connection.header('ETag'); // => undefined
 ```
 
-#### <a name="http-connection-lang"/> .lang(language)
+#### <a name="http-connection-lang"/> .lang([value])
 
-language: string
+value: null or string
 
-Sets the language of the response. Should be used before the `.write()` method. Should be used only once.
+Sets, gets or removes the language of the response. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set language is returned. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
 
 ```javascript
-connection.lang('ro');
+connection.lang('ro'); // Set the 'Content-Language' header as 'ro'
+
+connection.lang(); // => 'ro'
+
+connection.lang(null); // The 'Content-Language' header is being removed
+
+connection.lang(); // => undefined
+```
+
+#### <a name="http-connection-length"/> .length([value])
+
+value: null or number
+
+Sets, gets or removes the content length of the response in bytes. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set content length is returned. If the `value` parameter is `null` then the `Content-Length` header is removed from the response. Note: Node.JS send data using in chunked encoding, setting the content length will disable chunked encoding.
+
+```javascript
+connection.length(1024); // Set the 'Content-Length' header as '1024'
+
+connection.length(); // => '1024'
+
+connection.length(null); // The 'Content-Length' header is being removed
+
+connection.length(); // => undefined
 ```
 
 #### <a name="http-connection-redirect"/> .redirect(location[, permanent])
@@ -644,22 +685,30 @@ Redirects the client to the provided location. If the redirect is permanent then
 connection.redirect('/index', true);
 ```
 
-#### <a name="http-connection-status"/> .status(code)
+#### <a name="http-connection-status"/> .status([code])
 
 code: number
 
-Sets the status code of the response
+Sets or gets the status code of the response. If the `code` parameter is not defined then the current status code is returned.
 
-#### <a name="http-connection-type"/> .type(type[, override])
+#### <a name="http-connection-type"/> .type([type, override])
 
 type: string
 
 override: boolean
 
-Sets the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add mode content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied.
+Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```javascript
-connection.type('html');
+connection.type(); // => 'text/html;charset=utf-8'
+
+connection.type('txt'); // Set the 'Content-Type' header as 'text/plain;charset=utf-8'
+
+connection.type(); // => 'text/plain;charset=utf-8'
+
+connection.type('text/plain', true);
+
+connection.type(); // => 'text/plain'
 ```
 
 #### <a name="http-connection-keep"/> .keep([timeout])
@@ -676,11 +725,11 @@ connection.keep(10000); // sets the timeout for 10 seconds
 
 #### <a name="http-connection-write"/> .write(chunk[, encoding, callback])
 
-Writes to the response stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
+Writes to the connection stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
 
 #### <a name="http-connection-body"/> .end([chunk, encoding, callback])
 
-Ends the response stream, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
+Ends the connection stream, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
 
 #### <a name="http-connection-send"/> .send(data[, replacer, space])
 
@@ -690,7 +739,7 @@ replacer: array[numbers or strings] or function(key, value)
 
 space: number or string
 
-Writes preformatted data to the response stream and ends the response, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+Writes preformatted data to the connection stream and ends the connection, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
 connection.send(['Hello', 'World']);
@@ -704,7 +753,7 @@ type: string
 
 override: boolean
 
-Get the content of the file located on the specified location and write it to the response. Will set the content type of the file, can have the parameters from the `.type()` method. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
 ```javascript
 connection.drain('path/to/index.html', 'text/html', true);
@@ -971,13 +1020,13 @@ request.stop();
 
 ### <a name="client-side-ws"/> WS (WebSocket)
 
-`simples.ws(host[, config])`
+`simples.ws(url[, config])`
 
-host: string
+url: string
 
 config: object
 
-`simples.ws()` will return an object which will create an WebSocket connection to the provided host using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be the communication mode, the protocols and the type of the data which is sent, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
+`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be set the communication mode, the protocols and the type of the data which is sent, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
 ```javascript
 var socket = simples.ws('/', {
@@ -993,7 +1042,7 @@ var socket = simples.ws('/', {
 
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
-`.open([host, protocols])` - starts or restarts the WebSocket connection when needed, can be used for recycling the WebSocket connection and to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost.
+`.open([url, protocols])` - starts or restarts the WebSocket connection when needed, `url` must be a string, `protocols` - an array of strings, can be used for recycling the WebSocket connection and to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost.
 
 `.close()` - closes the WebSocket connection.
 

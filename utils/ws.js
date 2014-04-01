@@ -6,13 +6,48 @@ var domain = require('domain'),
 // WS namespace
 var ws = exports;
 
+// Link to the WS connection prototype constructor
+ws.connection = require('simples/lib/ws/connection');
+
+// Link to the WS host prototype constructor
+ws.host = require('simples/lib/ws/host');
+
+// Listener for WS requests
+ws.connectionListener = function (host, request) {
+
+	var connection = new utils.ws.connection(host, request),
+		error = '',
+		parent = host.parent;
+
+	// Check for WS errors
+	if (connection.headers.upgrade !== 'websocket') {
+		error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
+	} else if (!connection.key) {
+		error = '\nsimpleS: No WebSocket handshake key\n';
+	} else if (connection.headers['sec-websocket-version'] !== '13') {
+		error = '\nsimpleS: Unsupported WebSocket version\n';
+	} else if (!utils.accepts(parent, connection)) {
+		error = '\nsimpleS: WebSocket origin not accepted\n';
+	}
+
+	// Check if any errors appeared and continue connection processing
+	if (error) {
+		console.error(error);
+		socket.destroy();
+	} else {
+		connection.pipe(connection.socket);
+		host.connections.push(connection);
+		utils.ws.prepareHandshake(connection);
+	}
+};
+
 // Generate default config for hosts
 ws.defaultConfig = function () {
 
 	return {
-		limit: 1048576,
-		mode: 'advanced',
-		type: 'text'
+		limit: 1048576, // bytes, by default 1 MB
+		mode: 'advanced', // can be 'advanced' or 'raw'
+		type: 'text' // can be 'binary' or 'text'
 	};
 };
 
@@ -22,8 +57,7 @@ ws.guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 // Parse received WS data
 ws.parse = function (connection, frame, data) {
 
-	var length = 0,
-		socket = connection.socket;
+	var length = 0;
 
 	// Prepare data for concatenation
 	data = data || new Buffer(0);
@@ -43,28 +77,28 @@ ws.parse = function (connection, frame, data) {
 		// Check for extensions (reserved bits)
 		if (frame.data[0] & 112) {
 			console.error('\nsimpleS: WS does not support extensions\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		}
 
 		// Check for unknown frame type
 		if ((frame.opcode & 7) > 2) {
 			console.error('\nsimpleS: Unknown WS frame type\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		}
 
 		// Control frames should be <= 125 bits and not be fragmented
 		if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
 			console.error('\nsimpleS: Invalid WS control frame\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		}
 
 		// Check for mask flag
 		if (!(frame.data[1] & 128)) {
 			console.error('\nsimpleS: Unmasked frame received\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		}
 
@@ -77,16 +111,16 @@ ws.parse = function (connection, frame, data) {
 			frame.state = 3;
 		}
 
-		// Throw away header
+		// Check for control frames
 		if (frame.opcode === 8) {
-			socket.end(new Buffer([136, 0]));
+			connection.end();
 			frame.state = -1;
 		} else if (frame.opcode === 9) {
 			console.error('\nsimpleS: Ping frame received\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		} else if (frame.opcode === 10) {
-			frame.data = frame.data.slice(6 + frame.length);
+			frame.data = frame.data.slice(frame.length + 6);
 			frame.state = 0;
 		} else {
 			frame.index = 2;
@@ -103,7 +137,7 @@ ws.parse = function (connection, frame, data) {
 		// Don't accept payload length bigger than 32bit
 		if (frame.data.readUInt32BE(2)) {
 			console.error('\nsimpleS: Can not use 64bit payload length\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		}
 
@@ -119,7 +153,7 @@ ws.parse = function (connection, frame, data) {
 		// Check if message is not too big and get the masking key
 		if (frame.length + frame.message.length > frame.limit) {
 			console.error('\nsimpleS: Too big WebSocket message\n');
-			socket.end(new Buffer([136, 0]), socket.destroy);
+			connection.end(connection.socket.destroy);
 			frame.state = -1;
 		} else {
 			frame.mask = frame.data.slice(frame.index, frame.index + 4);
@@ -177,11 +211,13 @@ ws.parseMessage = function (connection, frame) {
 };
 
 // Prepare the handshake hash
-ws.prepareHandshake = function (connection, key) {
+ws.prepareHandshake = function (connection) {
 
 	var host = connection.parent,
+		key = connection.key,
 		parent = host.parent;
 
+	// Generate the base64 WS response key
 	utils.generateHash(key + utils.ws.guid, 'base64', function (handshake) {
 
 		var config = parent.conf.session,
@@ -203,19 +239,18 @@ ws.prepareHandshake = function (connection, key) {
 		if (config.enabled) {
 			utils.getSession(parent, connection, ws.setSession);
 		} else {
-			ws.requestListener(connection);
+			ws.connectionProcess(connection);
 		}
 	});
 };
 
 // Make the WS handshake
-ws.requestListener = function (connection) {
+ws.connectionProcess = function (connection) {
 
 	var frame = {},
 		host = connection.parent,
 		parent = host.parent,
-		socket = connection.socket,
-		timer = null;
+		ping = new Buffer([137, 0]);
 
 	// Prepare the frame object
 	frame.data = new Buffer(0);
@@ -224,24 +259,20 @@ ws.requestListener = function (connection) {
 	frame.message = new Buffer(0);
 	frame.state = 0;
 
-	// Write the connection head to the socket
-	socket.write(connection.head + '\r\n');
-
-	// Set socket keep alive time to 30 seconds
-	socket.setTimeout(30000);
-
-	// Parse received data
-	socket.on('readable', function () {
+	// Process readable and close events and write connection HTTP head
+	connection.socket.on('readable', function () {
 
 		// Clear the previous timer and parse the received data
-		clearTimeout(timer);
+		clearTimeout(connection.timer);
 		ws.parse(connection, frame, this.read());
 
 		// Create a new timeout to write a ping frame in 25 seconds
-		timer = setTimeout(function () {
-			socket.write(new Buffer([137, 0]));
+		connection.timer = setTimeout(function () {
+			connection.socket.write(ping);
 		}, 25000);
 	}).on('close', function () {
+
+		var index = host.connections.indexOf(connection);
 
 		// Unbind the connection from its channels
 		connection.channels.forEach(function (channel) {
@@ -249,16 +280,16 @@ ws.requestListener = function (connection) {
 		});
 
 		// Remove the connection and its timer
-		host.connections.splice(host.connections.indexOf(connection), 1);
-		clearTimeout(timer);
+		host.connections.splice(index, 1);
+		clearTimeout(connection.timer);
 		connection.emit('close');
-	});
+	}).write(connection.head + '\r\n');
 
 	// Execute user defined code for the WS host
 	domain.create().on('error', function (error) {
 		console.error('\nsimpleS: Error in WS host on "' + host.location + '"');
 		console.error(error.stack + '\n');
-		socket.destroy();
+		connection.socket.destroy();
 	}).run(function () {
 
 		// Log the new connection
@@ -266,14 +297,15 @@ ws.requestListener = function (connection) {
 			utils.log(parent, connection);
 		}
 
-		// Call the connection listener and write the first ping frame
+		// Call the connection listener, write ping frame and set time to live
 		host.listener(connection);
-		socket.write(new Buffer([137, 0]));
+		connection.socket.write(ping);
+		connection.socket.setTimeout(30000);
 	});
 };
 
 // Set the session cookies for WS requests
-ws.setSession = function (connection, sid, hash) {
+ws.setSession = function (connection, session) {
 
 	var config = null,
 		expires = 0,
@@ -285,13 +317,28 @@ ws.setSession = function (connection, sid, hash) {
 	expires = utils.utc(config.timeout);
 
 	// Add the session cookies to the connection head
-	connection.head += 'Set-Cookie: _session=' + sid + ';';
+	connection.head += 'Set-Cookie: _session=' + session.id + ';';
 	connection.head += 'expires=' + expires + ';httponly\r\n';
-	connection.head += 'Set-Cookie: _hash=' + hash + ';';
+	connection.head += 'Set-Cookie: _hash=' + session.hash + ';';
 	connection.head += 'expires=' + expires + ';httponly\r\n';
 
+	// Link the session container to the connection
+	connection.session = session.container;
+
+	// Write the session to the store and remove its reference
+	connection.on('close', function () {
+		parent.conf.session.store.set(session.id, {
+			id: session.id,
+			hash: session.hash,
+			expire: config.timeout + Date.now(),
+			container: connection.session
+		}, function () {
+			connection.session = null;
+		});
+	});
+
 	// Continue to process the request
-	ws.requestListener(connection);
+	ws.connectionProcess(connection);
 };
 
 // Unmask the WS data

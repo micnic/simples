@@ -30,6 +30,8 @@ var simples = function (port, options, callback) {
 	}
 };
 
+simples.store = require('simples/lib/store');
+
 // Inherit from host
 simples.prototype = Object.create(host.prototype, {
 	constructor: {
@@ -74,7 +76,7 @@ simples.prototype.start = function (port, callback) {
 	}
 
 	// Optional cases for port and callback
-	if (port && typeof port === 'number') {
+	if (typeof port === 'number') {
 		if (server.secured) {
 			port = 443;
 		}
@@ -141,7 +143,7 @@ simples.prototype.stop = function (callback) {
 module.exports = function (port, options, callback) {
 
 	// Optional cases for port, options and callback
-	if (port && typeof port === 'number') {
+	if (typeof port === 'number') {
 		if (typeof options === 'object' && typeof callback === 'function') {
 			port = 443;
 		} else if (typeof options === 'object') {

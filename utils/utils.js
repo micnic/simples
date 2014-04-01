@@ -2,7 +2,6 @@
 
 var crypto = require('crypto'),
 	fs = require('fs'),
-	session = require('simples/lib/session'),
 	stream = require('stream'),
 	url = require('url');
 
@@ -10,17 +9,17 @@ var crypto = require('crypto'),
 var utils = exports;
 
 // Check if the origin header is accepted by the host (CORS)
-utils.accepts = function (host, request) {
+utils.accepts = function (host, connection) {
 
 	var accepted = true,
-		origin = request.headers.origin,
+		origin = connection.headers.origin,
 		origins = host.conf.origins;
 
 	// Get the hostname from the origin
 	origin = url.parse(origin).hostname || origin;
 
 	// Check if the origin is accepted
-	if (origin && origin !== request.headers.host.split(':')[0]) {
+	if (origin && origin !== connection.host) {
 		if (origins.indexOf(origin) < 0) {
 			accepted = origins[0] === '*';
 		} else {
@@ -78,11 +77,13 @@ utils.generateHash = function (data, encoding, callback) {
 // Generate session id and hash
 utils.generateSession = function (host, connection, callback) {
 
-	var config = host.conf.session,
-		instance = new session(config.timeout);
+	var config = host.conf.session;
 
 	// Generate a random session id of 20 bytes
 	crypto.randomBytes(20, function (error, buffer) {
+
+		var id = buffer.toString('hex'),
+			secret = Array.apply(null, buffer);
 
 		// Check for error, which, eventually, should never happen(!)
 		if (error) {
@@ -90,15 +91,22 @@ utils.generateSession = function (host, connection, callback) {
 			throw error;
 		}
 
-		// Set session id and append the session container to the connection
-		instance.id = buffer.toString('hex');
-		host.sessions[instance.id] = instance;
-		connection.session = instance.container;
+		// Sort randomly the bytes of the generated id
+		secret.sort(function () {
+			return 0.5 - Math.random();
+		});
+
+		// Set the id as a hex string
+		secret = new Buffer(secret).toString('hex');
 
 		// Generate the session hash
-		utils.generateHash(instance.id + config.secret, 'hex', function (hash) {
-			instance.hash = hash;
-			callback(connection, instance.id, instance.hash);
+		utils.generateHash(id + secret, 'hex', function (hash) {
+			callback(connection, {
+				id: id,
+				hash: hash,
+				expires: config.timeout + Date.now(),
+				container: {}
+			});
 		});
 	});
 };
@@ -106,20 +114,20 @@ utils.generateSession = function (host, connection, callback) {
 // Generate the session container
 utils.getSession = function (host, connection, callback) {
 
-	var cookies = connection.cookies;
+	var config = host.conf.session,
+		cookies = connection.cookies;
 
-	// Generate new session if it does not exist
-	if (!cookies._session || !host.sessions[cookies._session]) {
-		utils.generateSession(host, connection, callback);
+	// Validate session cookies and get the session container
+	if (cookies._session) {
+		config.store.get(cookies._session, function (session) {
+			if (session && session.hash === cookies._hash) {
+				callback(connection, session);
+			} else {
+				utils.generateSession(host, connection, callback);
+			}
+		});
 	} else {
-		if (host.sessions[cookies._session].hash !== cookies._hash) {
-			delete host.sessions[cookies._session];
-			utils.generateSession(host, connection, callback);
-		} else {
-			connection.session = host.sessions[cookies._session].container;
-			host.sessions[cookies._session].update();
-			callback(connection, cookies._session, cookies._hash);
-		}
+		utils.generateSession(host, connection, callback);
 	}
 };
 
@@ -129,34 +137,37 @@ utils.http = require('simples/utils/http');
 // Log data on new connections
 utils.log = function (host, connection) {
 
-	var log = {},
+	var data = {},
+		log = null,
 		logger = host.logger;
 
-	// Prepare log object
+	// Prepare source data object
 	Object.keys(connection).filter(function (attribute) {
 		return typeof connection[attribute] !== 'function';
 	}).forEach(function (attribute) {
-		log[attribute] = connection[attribute];
+		data[attribute] = connection[attribute];
 	});
 
-	// Apply the log object
-	log = logger.callback(log);
+	// Apply the data object
+	log = logger.callback(data);
 
-	// Check if the logger has defined a result and write to stream
+	// Write to the stream only if the logger has defined a result
 	if (log !== undefined) {
 
 		// Stringify log data
 		if (typeof log !== 'string') {
-			log = JSON.stringify(log);
+			log = JSON.stringify(log, null, ' ');
 		}
 
-		// Write the log on a new line in the host logger
-		logger.stream.write(log + '\n');
+		// Write the log on a new line in the stream
+		if (logger.stream.writable) {
+			logger.stream.write(log + '\n');
+		}
 	}
 };
 
-// Get the cookies of the request
-utils.parseCookies = function (request) {
+// Get the cookies of the connection
+utils.parseCookies = function (connection) {
 
 	var cookies = {},
 		current = '',
@@ -165,9 +176,9 @@ utils.parseCookies = function (request) {
 		name = '',
 		value = '';
 
-	// Check if the request has a cookie header
-	if (request.headers.cookie) {
-		header = request.headers.cookie;
+	// Check if the connection has the cookie header
+	if (connection.headers.cookie) {
+		header = connection.headers.cookie;
 	}
 
 	// Get the first character
@@ -214,7 +225,7 @@ utils.parseCookies = function (request) {
 };
 
 // Get the languages accepted by the client
-utils.parseLangs = function (request) {
+utils.parseLangs = function (connection) {
 
 	var current = '',
 		header = '',
@@ -224,9 +235,9 @@ utils.parseLangs = function (request) {
 		quality = '',
 		ready = false;
 
-	// Check if the request has an accept-language header
-	if (request.headers['accept-language']) {
-		header = request.headers['accept-language'];
+	// Check if the connection has the accept-language header
+	if (connection.headers['accept-language']) {
+		header = connection.headers['accept-language'];
 	}
 
 	// Get the first character

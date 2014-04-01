@@ -1,7 +1,19 @@
+## 0.5.6
+- Improved client-side API
+- Improved connection API to return headers values, status code
+- Added the possibility to remove headers from the response
+- Implemented session store
+- Removed the need in session secret key
+- Added prefered type of compression
+- Added `.length()` method to define or get the content length header
+- Fixed static directory routing
+- Internal structure improvements
+
 ## 0.5.5
 - Improved dynamic routes searching
 - Improved general routing performance
-- Added '*' wildcard character to dynamic routes to match any string
+- Added `*` wildcard character to dynamic routes to match any string
+- Added `.close()` method for the connection interface as an synonym for `.end()`
 - Small bugfixes
 
 ## 0.5.4
