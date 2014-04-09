@@ -8,6 +8,22 @@ var crypto = require('crypto'),
 // Utils namespace
 var utils = exports;
 
+// Export abstract connection prototype constructor
+utils.connection = require('simples/lib/connection');
+
+// Export http utils
+utils.http = require('simples/utils/http');
+
+// Export the parsers
+utils.parsers = {
+	json: require('simples/utils/parsers/json'),
+	multipart: require('simples/utils/parsers/multipart'),
+	qs: require('simples/utils/parsers/qs')
+};
+
+// Export ws utils
+utils.ws = require('simples/utils/ws');
+
 // Check if the origin header is accepted by the host (CORS)
 utils.accepts = function (host, connection) {
 
@@ -46,12 +62,14 @@ utils.copyConfig = function (destination, source, stop) {
 
 		var dtype = typeof destination[property],
 			stype = typeof source[property],
+			object = dtype === 'object',
+			primitive = utils.toString(destination[property]) !== '[object Object]',
 			valid = dtype === stype;
 
 		// Copy the property if it has the same type
-		if (destination[property] === null || dtype !== 'object' && valid) {
+		if (destination[property] === null || primitive && valid) {
 			destination[property] = source[property];
-		} else if (dtype === 'object' && valid && !stop) {
+		} else if (object && valid && !stop) {
 			utils.copyConfig(destination[property], source[property], true);
 		}
 	});
@@ -131,8 +149,19 @@ utils.getSession = function (host, connection, callback) {
 	}
 };
 
-// Export http utils
-utils.http = require('simples/utils/http');
+// Return if the object was creating using a native constructor
+utils.isPrimitive = function (object) {
+
+	return utils.toString(object) !== '[object Object]';
+};
+
+// Return object constructor string representation
+utils.toString = function (object) {
+
+	var prototype = Object.prototype.toString;
+
+	return prototype.call(object);
+};
 
 // Log data on new connections
 utils.log = function (host, connection) {
@@ -303,17 +332,7 @@ utils.parseLangs = function (connection) {
 	});
 };
 
-// Export the parsers
-utils.parsers = {
-	json: require('simples/utils/parsers/json'),
-	multipart: require('simples/utils/parsers/multipart'),
-	qs: require('simples/utils/parsers/qs')
-};
-
 // Generate UTC string for a numeric time value
 utils.utc = function (time) {
 	return new Date(Date.now() + time).toUTCString();
 };
-
-// Export ws utils
-utils.ws = require('simples/utils/ws');

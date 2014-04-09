@@ -1,3 +1,10 @@
+## 0.5.7
+- Implemented filtered compression by content type
+- Improved ws client simple API
+- Added `.link()` method for defining relations with other locations
+- Removed `.length()` method because of possible unexpected behavior with compression
+- Fixed incorrect multipart data attaching to the connection object
+
 ## 0.5.6
 - Improved client-side API
 - Improved connection API to return headers values, status code

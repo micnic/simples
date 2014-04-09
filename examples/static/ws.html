@@ -3,10 +3,12 @@
 	<head>
 		<script src="/simples.js"></script>
 		<script>
-			var echoSocket = simples.ws('/echo', true).on('message', function (message) {
-				document.getElementById('result').innerHTML = message;
+			var echoSocket = simples.ws('/echo', {
+				mode: 'raw'
+			}).on('message', function (message) {
+				document.getElementById('result').innerHTML = message + '<br>' + document.getElementById('result').innerHTML;
 			});
-			
+
 			document.addEventListener('DOMContentLoaded', function () {
 				document.getElementById('sender').addEventListener('keypress', function (event) {
 					if (event.which === 13) {

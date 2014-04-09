@@ -1,7 +1,8 @@
 'use strict';
 
 var host = require('simples/lib/http/host'),
-	server = require('simples/lib/server');
+	server = require('simples/lib/server'),
+	store = require('simples/lib/store');
 
 // SimpleS prototype constructor
 var simples = function (port, options, callback) {
@@ -30,7 +31,10 @@ var simples = function (port, options, callback) {
 	}
 };
 
-simples.store = require('simples/lib/store');
+// Create a new session store instance
+simples.store = function () {
+	return new store();
+};
 
 // Inherit from host
 simples.prototype = Object.create(host.prototype, {

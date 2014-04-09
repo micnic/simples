@@ -15,7 +15,7 @@ var http = exports;
 http.connection = require('simples/lib/http/connection');
 
 // Relations between HTTP methods and REST verbs
-http.methods = {
+http.verbs = {
 	'DELETE': 'del',
 	'GET': 'get',
 	'HEAD': 'get',
@@ -23,18 +23,83 @@ http.methods = {
 	'PUT': 'put'
 };
 
-// Listener for HTTP requests
-http.connectionListener = function (host, request, response) {
+// Apply the selected route
+http.applyRoute = function (connection, route) {
 
-	var compression = host.conf.compression,
-		connection = new http.connection(host, request, response),
+	var host = connection.parent;
+
+	// Check if any logger is defined and log data
+	if (host.logger.callback) {
+		utils.log(host, connection);
+	}
+
+	// Apply the route
+	if (typeof route === 'function') {
+		route.call(host, connection);
+	} else if (typeof route === 'string') {
+		connection.render(route);
+	} else {
+		http.applyStaticRoute(connection, route);
+	}
+};
+
+// Apply the routes for static files and directories
+http.applyStaticRoute = function (connection, element) {
+
+	var directory = null,
+		extension = '',
+		host = connection.parent,
+		mtime = 0,
+		routes = host.routes,
+		stats = element.stats;
+
+	// Check if the element is a directory or a file
+	if (stats.isDirectory()) {
+
+		// Prepare directory items
+		directory = Object.keys(element.files).map(function (name) {
+
+			var item = {};
+
+			// Prepare item object
+			item.name = name;
+			item.stats = element.files[name].stats;
+
+			return item;
+		});
+
+		// Apply the route for the directory
+		routes.serve.call(host, connection, directory);
+	} else {
+
+		// Prepare element properties
+		extension = path.extname(element.location).slice(1);
+		mtime = stats.mtime.valueOf();
+
+		// Set the last modified time and the content type of the response
+		connection.header('Last-Modified', mtime).type(extension);
+
+		// Check if modification time coincides on the client and on the server
+		if (Number(connection.headers['if-modified-since']) === mtime) {
+			connection.status(304).end();
+		} else {
+			connection.end(element.content);
+		}
+	}
+};
+
+// Set compression for HTTP connections
+http.compress = function (connection) {
+
+	var compression = connection.parent.conf.compression,
 		deflate = false,
 		encoding = connection.headers['accept-encoding'],
 		gzip = false,
-		wstream = response;
+		type = connection.type(),
+		wstream = connection.response;
 
 	// Check for supported content encodings of the client
-	if (encoding && compression.enabled) {
+	if (encoding && compression.enabled && compression.filter.test(type)) {
 
 		// Lower case for comparing
 		encoding = encoding.toLowerCase();
@@ -53,18 +118,26 @@ http.connectionListener = function (host, request, response) {
 		}
 
 		// Check for successful compression selection
-		if (wstream !== response) {
+		if (wstream !== connection.response) {
 			connection.header('Content-Encoding', encoding);
-			wstream.pipe(response);
+			wstream.pipe(connection.response);
 		}
 	}
 
-	// Set keep alive timeout, default content type and pipe to response stream
-	connection.keep(5000).type('html').pipe(wstream);
+	// Pipe the connection to the compress stream or the response stream
+	connection.pipe(wstream);
+};
+
+// Listener for HTTP requests
+http.connectionListener = function (host, request, response) {
+
+	var connection = new http.connection(host, request, response);
 
 	// Route the connection and parse received data if needed
 	if (connection.method === 'GET' || connection.method === 'HEAD') {
 		http.connectionProcess(connection);
+	} else if (connection.method === 'OPTIONS') {
+		connection.end();
 	} else if (connection.headers['content-length'] > host.conf.limit) {
 		console.error('\nsimpleS: Request Entity Too Large\n');
 		request.destroy();
@@ -135,7 +208,8 @@ http.connectionParser = function (connection) {
 		// If parser is defined end parsing
 		if (parser) {
 			parser.parse(null);
-			connection.body = parser.result;
+			connection.body = parser.result.body;
+			connection.files = parser.result.files;
 		}
 
 		http.connectionProcess(connection);
@@ -148,6 +222,7 @@ http.defaultConfig = function () {
 	return {
 		compression: {
 			enabled: true,
+			filter: /^.+$/i,
 			options: null, // http://nodejs.org/api/zlib.html#zlib_options
 			preferred: 'deflate' // can be 'deflate' or 'gzip'
 		},
@@ -275,30 +350,81 @@ http.refers = function (host, connection) {
 // Routes all the requests
 http.routing = function (connection) {
 
-	var cors = {},
-		element = null,
-		host = connection.parent,
+	var host = connection.parent,
 		index = 0,
 		length = host.middlewares.length,
 		location = connection.path.substr(1),
 		route = null,
 		routes = host.routes,
-		verb = http.methods[connection.method];
+		verb = http.verbs[connection.method];
 
 	// Get middlewares one by one and execute them
 	function nextMiddleware(stop) {
 		if (index < length && !stop) {
 			setImmediate(host.middlewares[index], connection, nextMiddleware);
 			index++;
-		} else if (!stop && element) {
-			http.applyStaticRoute(connection, element);
-		} else  if (!stop) {
-			http.applyRoute(connection, route, verb);
+		} else if (!stop) {
+			http.applyRoute(connection, route);
 		}
 	}
 
+	// Find the fixed and dynamic route
+	if (verb) {
+		if (routes.fixed[verb][location]) {
+			route = routes.fixed[verb][location];
+		} else if (routes.fixed.all[location]) {
+			route = routes.fixed.all[location];
+		} else {
+			route = http.getDynamicRoute(connection, routes.dynamic, verb);
+		}
+	}
+
+	// Get static content if found
+	if (!route && verb === 'get' && http.refers(host, connection)) {
+
+		// Check for client side API file serve
+		if (location === 'simples.js') {
+			route = cache.client;
+		} else {
+			route = host.cache.read(location);
+		}
+	}
+
+	// Check for errors 404 and 405
+	if (!verb) {
+		connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
+		route = routes.error[405];
+	} else if (!route) {
+		connection.status(404);
+		route = routes.error[404];
+	}
+
+	// Wrap the connection inside a domain
+	domain.create().on('error', function (error) {
+		if (connection.status() === 500) {
+			console.error('\nsimpleS: Can not apply route for error 500');
+			console.error(error.stack + '\n');
+		} else {
+			console.error('\nsimpleS: Internal Server Error');
+			console.error(connection.url.href);
+			console.error(error.stack + '\n');
+			connection.status(500);
+			this.bind(routes.error[500]).call(host, connection);
+		}
+	}).run(nextMiddleware);
+};
+
+// Set needed headers that are missing
+http.prepareConnection = function (connection) {
+
+	var cors = null,
+		host = connection.parent;
+
 	// Check for CORS requests
 	if (connection.headers.origin) {
+
+		// Prepare the cors headers container
+		cors = {};
 
 		// Check if the origin is accepted
 		if (utils.accepts(host, connection)) {
@@ -328,76 +454,16 @@ http.routing = function (connection) {
 		connection.header('Access-Control-Allow-Origin', cors.origin);
 	}
 
-	// Find the fixed and dynamic route
-	if (verb) {
-		if (routes.fixed[verb][location]) {
-			route = routes.fixed[verb][location];
-		} else if (routes.fixed.all[location]) {
-			route = routes.fixed.all[location];
-		} else {
-			route = http.getDynamicRoute(connection, routes.dynamic, verb);
-		}
+	// Check if the content type was defined and set the default if it is not
+	if (!connection.type()) {
+		connection.type('html');
 	}
 
-	// Get static content if found
-	if (!route && verb === 'get' && http.refers(host, connection)) {
+	// Set the keep alive timeout
+	connection.keep(5000);
 
-		// Check for client side API file serve
-		if (location === 'simples.js') {
-			element = cache.client;
-		} else {
-			element = host.cache.read(location);
-		}
-	}
-
-	// Wrap the connection inside a domain
-	domain.create().on('error', function (error) {
-		if (connection.status() === 500) {
-			console.error('\nsimpleS: Can not apply route for error 500');
-			console.error(error.stack + '\n');
-		} else {
-			console.error('\nsimpleS: Internal Server Error');
-			console.error(connection.url.href);
-			console.error(error.stack + '\n');
-			connection.status(500);
-			this.bind(routes.error[500]).call(host, connection);
-		}
-	}).run(nextMiddleware);
-};
-
-// Apply the selected route
-http.applyRoute = function (connection, route, verb) {
-
-	var host = connection.parent,
-		location = connection.path.substr(1),
-		routes = host.routes;
-
-	// Check for CORS options request
-	if (connection.method === 'OPTIONS') {
-		connection.end();
-	} else {
-
-		// Check for errors 404 and 405
-		if (!verb) {
-			connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
-			route = routes.error[405];
-		} else if (!route) {
-			connection.status(404);
-			route = routes.error[404];
-		}
-
-		// Check if any logger is defined and log data
-		if (host.logger.callback) {
-			utils.log(host, connection);
-		}
-
-		// Apply the route
-		if (typeof route === 'string') {
-			connection.render(route);
-		} else {
-			route.call(host, connection);
-		}
-	}
+	// Set the started flag
+	connection.started = true;
 };
 
 // Set the session cookies for HTTP requests
@@ -432,50 +498,4 @@ http.setSession = function (connection, session) {
 
 	// Continue to process the request
 	http.routing(connection);
-};
-
-// The route for static files
-http.staticFileRoute = function (connection, file) {
-
-	var extension = path.extname(file.location).slice(1),
-		mtime = file.stats.mtime.valueOf();
-
-	// Set the last modified time and the content type of the response
-	connection.header('Last-Modified', mtime).type(extension);
-
-	// Check if modification time coincides on the client and on the server
-	if (Number(connection.headers['if-modified-since']) === mtime) {
-		connection.status(304).end();
-	} else {
-		connection.end(file.content);
-	}
-};
-
-// Apply the routes for static files and directories
-http.applyStaticRoute = function (connection, element) {
-
-	var directory = null,
-		host = connection.parent,
-		routes = host.routes;
-
-	// Check if the element is a directory or a file
-	if (element.stats.isDirectory()) {
-
-		// Prepare directory items
-		directory = Object.keys(element.files).map(function (name) {
-
-			var item = {};
-
-			// Prepare item object
-			item.name = name;
-			item.stats = element.files[name].stats;
-
-			return item;
-		});
-
-		// Apply the route for the directory
-		routes.serve.call(host, connection, directory);
-	} else {
-		http.staticFileRoute.call(host, connection, element);
-	}
 };

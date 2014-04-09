@@ -12,6 +12,9 @@ ws.connection = require('simples/lib/ws/connection');
 // Link to the WS host prototype constructor
 ws.host = require('simples/lib/ws/host');
 
+// The WebSocket GUID
+ws.guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+
 // Listener for WS requests
 ws.connectionListener = function (host, request) {
 
@@ -50,9 +53,6 @@ ws.defaultConfig = function () {
 		type: 'text' // can be 'binary' or 'text'
 	};
 };
-
-// The WebSocket GUID
-ws.guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 // Parse received WS data
 ws.parse = function (connection, frame, data) {

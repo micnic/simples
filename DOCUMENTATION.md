@@ -72,7 +72,7 @@
 
 >##### [.lang([value])](#http-connection-lang)
 
->##### [.length([value])](#http-connection-length)
+>##### [.link(links)](#http-connection-link)
 
 >##### [.redirect(location[, permanent])](#http-connection-redirect)
 
@@ -108,7 +108,7 @@
 
 >##### [WS (WebSocket)](#client-side-ws)
 
-```javascript
+```js
 var simples = require('simples');
 ```
 
@@ -124,7 +124,7 @@ callback: function
 
 simpleS needs only the port number and it sets up a HTTP server on this port.
 
-```javascript
+```js
 var server = simples(80);
 
 // or simpler
@@ -134,7 +134,7 @@ var server = simples(); // the server will be set on the port 80
 
 To set up an HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `.pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server an HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
-```javascript
+```js
 var server = simples(443, {
     key: 'path/to/key.pem',
     cert: 'path/to/cert.pem'
@@ -150,7 +150,7 @@ var server = simples({ // the server will be set on port 443
 
 To redirect the client to HTTPS, use a structure like this:
 
-```javascript
+```js
 server.get('/', function (connection) {
     if (connection.protocol === 'http') {
         connection.redirect('https://' + connection.url.host + connection.url.path, true);
@@ -174,7 +174,7 @@ callback: function()
 
 Start listening for requests on the provided port. If the server is already started then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port.
 
-```javascript
+```js
 server.start(80, function () {
     // Application logic
 });
@@ -188,7 +188,7 @@ callback: function()
 
 Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served.
 
-```javascript
+```js
 server.stop(function () {
     // Application logic
 });
@@ -204,7 +204,7 @@ config: object
 
 simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration.
 
-```javascript
+```js
 var host = server.host('example.com');
 ```
 
@@ -217,9 +217,10 @@ config: object
 Change the configuration of the host. Possible attributes:
 
 Compression configuration:
-```javascript
+```js
 compression: {
     enabled: true, // Activate the compression, by default the compression is enabled
+    filter: /^.+$/i, // Filter file types that will be compressed, by default all kinds of file types are compressed
     options: null, // Set compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
     preferred: 'deflate' // Set the prefereed compression type, can be `deflate` or `gzip`, by default is `deflate`
 }
@@ -228,21 +229,21 @@ compression: {
 `limit: number // 1048576` - Set the limit of the request body in bytes, default is 1MB.
 
 `origins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
-```javascript
+```js
 ['null', 'localhost', 'example.com'] // Will accept requests only from these 3 hosts
 
 ['*', 'example.com'] // Will accept requests from all hosts except 'example.com'
 ```
 
 `referers: array of strings // []` - Set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
-```javascript
+```js
 ['*', 'example.com'] // will respond to all referers except 'example.com'
 
 ['example.com', 'test.com'] // Will respond only to these 2 referers
 ```
 
 Session configuration:
-```javascript
+```js
 session: {
     enabled: false, // Activate the session
     store: simples.store(), // Session store, default is simples memcached store
@@ -270,7 +271,7 @@ remove: boolean
 
 Each host accepts middlewares to be implemented, which allow to add some additional implementations which are not available out of the box. The middlewares can manipulate the connection object and to call the next middleware or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value.
 
-```javascript
+```js
 host.middleware(function (connection, next) {
     if (connection.path = '/restricted') {
         connection.end('You do not have right to be here');
@@ -289,7 +290,7 @@ engine: object
 
 To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
 
-```javascript
+```js
 
 var noopEngine = {
     render: function (source) {
@@ -319,7 +320,7 @@ host.engine({
 
 All the methods described below are applicable on each host independently (see [Virtual Hosting](#virtual-hosting)). All route paths are case sensitive and should contain only paths without queries to exclude possible unexpected behavior and to ensure improved performance, undesired data will be cut off. All routes are relative to the host root and may not begin with `/`, simpleS will ignore it anyway. The routes may be fixed or can contain named parameters. Fixed routes are fast and simple, while the second ones are more flexible and handy in complex applications. The named parameters in the advanced routes are mandatory, if at least one component of the route is absent in the url then the url is not routed.
 
-```javascript
+```js
 'user/john/action/thinking'; // Fixed route
 
 'user/:user/action/:action'; // Advanced routing with named parameters
@@ -421,7 +422,7 @@ Listen for errors that can have place and uses a callback function with connecti
 
 #### <a name="example-routes"/> Examples for routing methods:
 
-```javascript
+```js
 host.all('/', function (connection) {
     // Application logic
 });
@@ -451,7 +452,7 @@ callback: function(connection, files)
 
 `directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
 
-```javascript
+```js
 host.serve('root', function (connection, files) {
     // Application logic
 });
@@ -463,11 +464,11 @@ host.serve('root', function (connection, files) {
 
 type: 'all', 'del', 'error', 'get', 'post', 'put' or 'serve'
 
-route: 404, 405, 500, array[strings] or string
+route: 404, 405 or 500 with type 'error' and array[strings] or string with other types
 
 Removes a specific route, a set od routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
 
-```javascript
+```js
 host.leave('post');
 
 host.leave('get', '/nothing');
@@ -490,7 +491,7 @@ callback: function(connection)
 
 Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests.
 
-```javascript
+```js
 host.log(function (connection) {
     return connection.url.href;
 });
@@ -500,7 +501,7 @@ host.log(function (connection) {
 
 The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a transform stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
 
-```javascript
+```js
 {
     body: {},
     cookies: {
@@ -613,7 +614,7 @@ attributes: object
 
 Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before `.write()` method.
 
-```javascript
+```js
 connection.cookie('user', 'me', {
     expires: 3600,          // or maxAge: 3600, Set the expiration time of the cookie in seconds
     path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
@@ -631,7 +632,7 @@ value: array[numbers or strings], null, number, or string
 
 Sets, gets or removes a header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings. If the `value` parameter is not defined then the value of the previously set header defined by the `name` parameter is returned. If the `value` parameter is `null` then the header defined by the `name` parameter is removed from the response.
 
-```javascript
+```js
 connection.header('ETag', '0123456789'); // Set the 'ETag' header as '0123456789'
 
 connection.header('ETag'); // => '0123456789'
@@ -647,7 +648,7 @@ value: null or string
 
 Sets, gets or removes the language of the response. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set language is returned. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
 
-```javascript
+```js
 connection.lang('ro'); // Set the 'Content-Language' header as 'ro'
 
 connection.lang(); // => 'ro'
@@ -657,20 +658,19 @@ connection.lang(null); // The 'Content-Language' header is being removed
 connection.lang(); // => undefined
 ```
 
-#### <a name="http-connection-length"/> .length([value])
+#### <a name="http-connection-link"/> .link(links)
 
-value: null or number
+links: object
 
-Sets, gets or removes the content length of the response in bytes. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set content length is returned. If the `value` parameter is `null` then the `Content-Length` header is removed from the response. Note: Node.JS send data using in chunked encoding, setting the content length will disable chunked encoding.
+Define the relations of the current location with the other locations and populate `Link` header.
 
-```javascript
-connection.length(1024); // Set the 'Content-Length' header as '1024'
+```js
+connection.link({
+    next: '/page/2',
+    prev: '/page/0'
+});
 
-connection.length(); // => '1024'
-
-connection.length(null); // The 'Content-Length' header is being removed
-
-connection.length(); // => undefined
+// Link: </page/2>; rel="next", </page/0>; rel="prev"
 ```
 
 #### <a name="http-connection-redirect"/> .redirect(location[, permanent])
@@ -681,7 +681,7 @@ permanent: boolean
 
 Redirects the client to the provided location. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
 
-```javascript
+```js
 connection.redirect('/index', true);
 ```
 
@@ -699,7 +699,7 @@ override: boolean
 
 Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
-```javascript
+```js
 connection.type(); // => 'text/html;charset=utf-8'
 
 connection.type('txt'); // Set the 'Content-Type' header as 'text/plain;charset=utf-8'
@@ -717,7 +717,7 @@ timeout: number
 
 Each connection has a 5 seconds timeout for inactivity on the socket to prevent too many connections in the same time. To change the value of this timeout the `.keep()` method is called with the a new value in miliseconds, `0` for removing the timeout.
 
-```javascript
+```js
 connection.keep(); // or connection.keep(0); removes the timeout
 
 connection.keep(10000); // sets the timeout for 10 seconds
@@ -741,7 +741,7 @@ space: number or string
 
 Writes preformatted data to the connection stream and ends the connection, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
-```javascript
+```js
 connection.send(['Hello', 'World']);
 ```
 
@@ -755,7 +755,7 @@ override: boolean
 
 Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
-```javascript
+```js
 connection.drain('path/to/index.html', 'text/html', true);
 ```
 
@@ -767,7 +767,7 @@ imports: object
 
 Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
 
-```javascript
+```js
 connection.render('Hello <%= world %>', {
     world: 'World'
 });
@@ -779,7 +779,7 @@ callback: function()
 
 Closes the connection and append an optional callback function to the `finish` event. It is similar to the `.end()` method but has only the callback parameter, can be used as a semantic synonym of the `.end()` method.
 
-```javascript
+```js
 connection.close(function () {
     console.log('Connection closed');
 });
@@ -801,7 +801,7 @@ listener: function(connection)
 
 Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `config` parameter in bytes, default is 1048576 (10 MiB). The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources. To specify the type of the content which will be sent via the WebSocket connection the `type` parameter should be defined as `binary` or `text`, by default is `text`.
 
-```javascript
+```js
 var echo = server.ws('/', {
     limit: 1024,
     mode: 'raw',
@@ -819,7 +819,7 @@ callback: function(connection)
 
 Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed.
 
-```javascript
+```js
 echo.open({
     limit: 512,
 }, function (connection) {
@@ -837,7 +837,7 @@ filter: function(element, index, array)
 
 Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`.
 
-```javascript
+```js
 echo.broadcast('HelloWorld', function (element, index, array) {
     return element.protocols.indexOf('echo') >= 0; // Will send the message to clients that use "chat" as a sub protocol
 });
@@ -990,7 +990,7 @@ method: 'delete', 'get', 'head', 'post' or 'put'
 
 `simples.ajax()` will return an object which will create an XMLHttpRequest to the provided url, will send the needed parameters using the methods DELETE, GET (default), HEAD, POST or PUT. This object has 3 methods to attach listeners for error, progress and success events, which are named with the respective events. The AJAX request can also be aborted by the `.stop()` method.
 
-```javascript
+```js
 var request = simples.ajax('/', {
     user: 'me',
     password: 'ok'
@@ -1028,7 +1028,7 @@ config: object
 
 `simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be set the communication mode, the protocols and the type of the data which is sent, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
-```javascript
+```js
 var socket = simples.ws('/', {
     mode: 'raw',
     protocols: ['echo'],
@@ -1060,7 +1060,7 @@ Based on the third parameter in `simples.ws()` the communication with the server
 
 ##### Receiving Data in Raw Mode
 
-```javascript
+```js
 socket.on('message', function (message) {
     // Application logic
 });
@@ -1068,7 +1068,7 @@ socket.on('message', function (message) {
 
 ##### Receiving Data in Advanced Mode
 
-```javascript
+```js
 socket.on(event, function (data) {
     // Application logic
 });
@@ -1076,12 +1076,12 @@ socket.on(event, function (data) {
 
 ##### Sending Data in Raw Mode
 
-```javascript
+```js
 socket.send(data);
 ```
 
 ##### Sending Data in Advanced Mode
 
-```javascript
+```js
 socket.send(event, data);
 ```

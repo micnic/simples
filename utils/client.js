@@ -313,7 +313,7 @@ var ws = simples.ws = function (url, config) {
 	}
 
 	// Set default config
-	if (!config) {
+	if (!config || typeof config !== 'object') {
 		config = {};
 	}
 
@@ -406,7 +406,7 @@ ws.prototype.open = function (url, protocols) {
 	}
 
 	// Make the protocols optional
-	if (!Array.isArray(url)) {
+	if (!Array.isArray(protocols)) {
 		protocols = this.protocols;
 	}
 
