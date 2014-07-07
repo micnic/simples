@@ -1,303 +1,254 @@
 'use strict';
 
-// Parse data with content-type multipart/form-data
-var multipartParser = function (boundary) {
-	this.boundary = boundary;
-	this.buffer = '';
-	this.content = new Buffer(0);
-	this.encoding = 'binary';
-	this.name = '';
-	this.result = {
-		body: {},
-		files: {}
-	};
-	this.state = 0;
-	this.type = '';
+var events = require('events'),
+	stream = require('stream');
+
+var multipartParser = function(type) {
+
+	var boundary = '',
+		match = type.match(multipartParser.boundaryRegExp);
+
+	// Call events.EventEmitter in this context
+	events.EventEmitter.call(this);
+
+	// Select the content boundary
+	if (match) {
+		if (match[1]) {
+			boundary = match[1];
+		} else if (match[2]) {
+			boundary = match[2];
+		}
+		this.state = 0;
+	} else {
+		this.emit('error', new Error('No boundary found for multipart parser'));
+		this.state = -1;
+	}
+
+	// Prepare parser members
+	this.bindex = 2;
+	this.boundary = new Buffer('\r\n--' + boundary);
+	this.blength = this.boundary.length;
+	this.buffer = [];
+	this.field = null;
+	this.pindex = 0;
+	this.prev = 0;
+	this.sindex = 0;
 };
 
-// Parse received data
-multipartParser.prototype.parse = function (data) {
+// RegExp to match content boundary
+multipartParser.boundaryRegExp = /boundary=(?:"([^"]+)"|([^;]+))/i;
 
-	var current = '',
-		delimiter = '\r\n--' + this.boundary,
-		index = 0,
-		length = delimiter.length,
-		that = this;
+// RegExp to get field name and possible file name
+multipartParser.dRegExp = /^form-data; name="([^"]+)"(?:; filename="(.*?)")?$/i;
 
-	// Delimit data inputs
-	function getInputBoundary() {
+// Field prototype constructor
+multipartParser.field = function (title) {
 
-		var buffer = that.buffer;
+	// Call stream.PassThrough in this context
+	stream.PassThrough.call(this);
 
-		// Fill the buffer with the content of the boundary
-		while (current && buffer.length < length) {
-			buffer += current;
-			index++;
-			current = data[index];
+	// Prepare field members
+	this.name = title[1];
+	this.headers = {};
+
+	// Check for file upload
+	if (title[2]) {
+		this.filename = title[2];
+		this.type = null;
+	}
+};
+
+// Inherit from stream.PassThrough
+multipartParser.field.prototype = Object.create(stream.PassThrough.prototype, {
+	constructor: {
+		value: multipartParser.field
+	}
+});
+
+// Inherit from events.EventEmitter
+multipartParser.prototype = Object.create(events.EventEmitter.prototype, {
+	constructor: {
+		value: multipartParser
+	}
+});
+
+// Add last chunk of data, reset parser members and set next state
+multipartParser.prototype.endPartData = function(data, state) {
+	this.field.end(data);
+	this.field = null;
+	this.prev = 0;
+	this.bindex = 0;
+	this.state = state;
+	this.pindex = 0;
+};
+
+// Get chunks of data
+multipartParser.prototype.getData = function(data, index, current) {
+
+	// Select the data from the beggining
+	if (index === 0) {
+		this.pindex = 0;
+	}
+
+	// Filter boundary bytes
+	if (current === this.boundary[this.bindex]) {
+		if (this.bindex === 0) {
+			this.sindex = index;
 		}
-
-		// Check the validity of the boundary structure
-		if (buffer === '--' + that.boundary + '\r\n') {
-			that.buffer = '';
-			that.state = 1;
-		} else if (buffer === '--' + that.boundary + '--') {
-			that.buffer = '';
-			that.state = 3;
-		} else if (buffer.length >= length) {
-			that.state = -1;
+		this.bindex++;
+	} else if (this.bindex === this.blength) {
+		if (current === 13) {
+			this.prev = 13;
+			this.bindex++;
+		} else if (current === 45) {
+			this.prev = 45;
+			this.bindex++;
 		} else {
-			that.buffer = buffer;
+			this.emit('error', new Error('Unexpected boundary symbol found'));
+			this.state = -1;
 		}
-	}
-
-	// Extract the needed data from the headers
-	function parseHeader(expected, string) {
-
-		var split;
-
-		// Split the header string in name and value
-		split = string.split(': ');
-
-		// Get the header value if it is possible
-		if (split.length !== 2 || split[0].toLowerCase() !== expected) {
-			that.state = -1;
-		} else if (expected === 'content-type') {
-			that.type = split[1];
-		} else if (expected === 'content-transfer-encoding') {
-			that.encoding = split[1];
-		}
-	}
-
-	// Extract the content type of the received file
-	function parseFileHeaders() {
-
-		var buffer = that.buffer,
-			parts,
-			start = 51 + that.name.length + that.filename.length;
-
-		// Get the headers of the file from the buffer
-		parts = buffer.substr(start).split('\r\n');
-		that.buffer = '';
-
-		// Check the number of headers and their order
-		if (parts.length < 3 || parts.length > 5) {
-			that.state = -1;
-		} else if (parts.length === 4) {
-			parseHeader('content-type', parts[1]);
-			that.state = 2;
-		} else if (parts.length === 5) {
-			parseHeader('content-type', parts[1]);
-			parseHeader('content-transfer-encoding', parts[2]);
-			that.state = 2;
-		}
-	}
-
-	// Extract data after name was parsed
-	function parseAfterName() {
-
-		var end,
-			start = 38 + that.name.length;
-
-		// Choose what to parse next
-		if (that.buffer.substr(start) === '"\r\n\r\n') {
-			that.buffer = '';
-			that.state = 2;
-		} else if (that.buffer.substr(start, 13) === '"; filename="') {
-			start += 13;
-			end = that.buffer.indexOf('"', start);
-			that.filename = that.buffer.substr(start, end - start);
-			parseFileHeaders();
+	} else if (this.bindex > this.blength) {
+		if (current === 10 && this.prev === 13) {
+			this.endPartData(data.slice(this.pindex, this.sindex), 1);
+		} else if (current === 45 && this.prev === 45) {
+			this.endPartData(data.slice(this.pindex, this.sindex), 4);
 		} else {
-			that.state = -1;
+			this.emit('error', new Error('Unexpected boundary symbol found'));
+			this.state = -1;
 		}
+	} else if (index === data.length - 1) {
+		this.field.write(data.slice(this.pindex));
+		this.pindex = 0;
+	} else if (this.bindex !== 0 && current === this.boundary[0]) {
+		this.sindex = index;
+		this.bindex = 1;
 	}
+};
 
-	// Extract input name from the input header
-	function parseName() {
-
-		var begin = that.buffer.substr(0, 38),
-			end,
-			start;
-
-		// Validate first part of the header
-		if (begin.toLowerCase() === 'content-disposition: form-data; name="') {
-			start = 38;
-			end = that.buffer.indexOf('"', start);
-			that.name = that.buffer.substr(start, end - start);
-			parseAfterName();
+// Get header name and value for a field
+multipartParser.prototype.getHeader = function(index, current) {
+	if (current === 13) {
+		this.prev = 13;
+	} else if (current === 10 && this.prev === 13) {
+		if (this.buffer.length) {
+			this.parseHeader();
 		} else {
-			that.state = -1;
+			this.state = 2;
+			this.pindex = index + 1;
+			this.emit('field', this.field);
 		}
+	} else {
+		this.buffer.push(current);
 	}
+};
 
-	// Get data about input
-	function getInputHeader() {
-
-		var buffer = that.buffer;
-
-		// Get input header
-		while (current && buffer.substr(-4) !== '\r\n\r\n') {
-			buffer += current;
-			index++;
-			current = data[index];
-		}
-
-		// Prepare the buffer
-		that.buffer = buffer;
-
-		// Parse input header
-		if (buffer.substr(-4) === '\r\n\r\n') {
-			parseName();
-		}
+// Validate request end
+multipartParser.prototype.getRequestEnd = function(current) {
+	if (current === 13 && this.prev === 0) {
+		this.prev = 13;
+	} else if (current !== 10 && this.prev !== 13) {
+		this.emit('error', new Error('Invalid multipart request ending'));
+		this.state = -1;
 	}
+};
 
-	// Add data to the result
-	function addData() {
+// Create a new part based on content disposition
+multipartParser.prototype.newPart = function(disposition) {
 
-		var key = that.name,
-			result = that.result.body,
-			value = that.content;
+	var title = disposition.match(multipartParser.dRegExp);
 
-		if (!result[key]) {
-			result[key] = value;
-		} else if (!Array.isArray(result[key])) {
-			result[key] = [result[key], value];
-		} else if (result[key].indexOf(value) < 0) {
-			result[key].push(value);
-		}
+	// Check for a valid disposition and create a new field
+	if (title) {
+		this.field = new multipartParser.field(title);
+	} else {
+		this.emit('error', new Error('Invalid content disposition structure'));
+		this.state = -1;
 	}
+};
 
-	// Add received files
-	function addFile() {
+// Extract header name and value from header definition
+multipartParser.prototype.parseHeader = function() {
 
-		var content,
-			file,
-			files = that.result.files;
+	var field = this.field,
+		index = this.buffer.indexOf(58),
+		header = String.fromCharCode.apply(String, this.buffer.slice(0, index)),
+		value = String.fromCharCode.apply(String, this.buffer.slice(index + 1));
 
-		// Encode the content in the needed encoding
-		if (that.encoding === 'binary') {
-			content = new Buffer(that.content);
-		} else if (that.encoding === 'base64') {
-			content = new Buffer(that.content).toString('base64');
-		} else if (that.encoding === '7bit') {
-			content = new Buffer(that.content).toString('ascii');
+	// Remove possible redundant whitespace
+	header = header.trim();
+	value = value.trim();
+
+	// Reset buffer
+	this.buffer = [];
+
+	// Check if colon found and get the header name and value
+	if (index > 0) {
+		if (!field && header === 'Content-Disposition') {
+			this.newPart(value);
+		} else if (field && field.filename && header === 'Content-Type') {
+			field.type = value;
+		} else if (field) {
+			field.headers[header] = value;
 		} else {
-			content = that.content;
+			this.state = -1;
 		}
-
-		// Create the file object
-		file = {
-			filename: that.filename,
-			content: content,
-			type: that.type
-		};
-
-		// Add the file to the files container
-		if (files[that.name] && Array.isArray(files[that.name])) {
-			files[that.name].push(file);
-		} else if (files[that.name]) {
-			files[that.name] = [files[that.name], file];
-		} else {
-			files[that.name] = file;
-		}
+	} else {
+		this.emit('error', new Error('No header name delimiter found'));
+		this.state = -1;
 	}
+};
 
-	// Add append data to connection body or add files
-	function addInput() {
-
-		// Choose behavior
-		if (that.filename) {
-			addFile();
-		} else {
-			addData(that.result, that.name, that.content);
-		}
-
-		// Reset parser data
-		that.state = 0;
-		that.type = '';
-		that.filename = '';
-		that.name = '';
-		that.buffer = that.buffer.substr(-that.boundary.length - 2);
+// Skip the beginning of the multipart data
+multipartParser.prototype.skipFirstBoundary = function(current) {
+	if (current === this.boundary[this.bindex]) {
+		this.bindex++;
+	} else if (this.bindex === this.blength && current === 13) {
+		this.prev = 13;
+		this.bindex++;
+	} else if (this.bindex > this.blength && current === 10 && this.prev === 13) {
+		this.bindex = 0;
+		this.prev = 0;
+		this.state = 1;
+	} else {
+		this.emit('error', new Error('Unexpected boundary symbol found'));
+		this.state = -1;
 	}
+};
 
-	// Extract the content of the input
-	function parseContent() {
+// Write data to the parser and parse it
+multipartParser.prototype.write = function(data) {
 
-		var buffer = that.buffer;
+	var current = data[0],
+		index = 0;
 
-		// Get input content with boundary
-		while (current && buffer.substr(-length) !== delimiter) {
-			buffer += current;
-			index++;
-			current = data[index];
-		}
-
-		that.buffer = buffer;
-
-		// Remove the boundary from the content
-		if (buffer.substr(-length) === delimiter) {
-			that.content = buffer.substr(0, buffer.length - length);
-			addInput();
-		}
-	}
-
-	// Wait for the last boundary statement
-	function getRequestEnd() {
-
-		var buffer = that.buffer;
-
-		// Get 2 symbols to check if it ends with \r\n
-		while (current && buffer.length !== 2) {
-			buffer += current;
-			index++;
-			current = data[index];
-		}
-
-		// Save the buffer
-		that.buffer = buffer;
-
-		// Check the parser buffer and validate them
-		if (!current && buffer === '\r\n') {
-			that.state = 4;
-		} else {
-			that.state = -1;
-		}
-	}
-
-	// Check for final data chunk
-	if (data !== null) {
-		current = data[index];
-	}
-
-	// Parse char by char in a loop
-	while (current) {
+	// Loop throught all received bytes
+	while (current !== undefined) {
 
 		// Stop parsing if the request is invalid
 		if (this.state === -1) {
-			this.buffer = data = current = '';
+			break;
 		}
 
-		// Wait for boundary statement
+		// Parse data
 		if (this.state === 0) {
-			getInputBoundary();
+			this.skipFirstBoundary(current);
+		} else if (this.state === 1) {
+			this.getHeader(index, current);
+		} else if (this.state === 2) {
+			this.getData(data, index, current);
+		} else if (this.state === 3) {
+			this.getRequestEnd(current);
 		}
 
-		// Wait for header statement
-		if (this.state === 1) {
-			getInputHeader();
-		}
-
-		// Wait for content of the input
-		if (this.state === 2) {
-			parseContent();
-		}
-
-		// Wait for ending \r\n sequence
-		if (this.state === 3) {
-			getRequestEnd();
-		}
+		// Get next byte
+		index++;
+		current = data[index];
 	}
 };
 
-// Export the parser
+// End parsing data
+multipartParser.prototype.end = function() {
+	this.emit('end');
+};
+
 module.exports = multipartParser;

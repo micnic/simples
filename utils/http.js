@@ -4,6 +4,7 @@ var cache = require('simples/lib/cache'),
 	domain = require('domain'),
 	path = require('path'),
 	store = require('simples/lib/store'),
+	stream = require('stream'),
 	url = require('url'),
 	utils = require('simples/utils/utils'),
 	zlib = require('zlib');
@@ -14,7 +15,10 @@ var http = exports;
 // Link to the HTTP connection prototype constructor
 http.connection = require('simples/lib/http/connection');
 
-// Relations between HTTP methods and REST verbs
+// Link to the HTTP form prototype constructor
+http.form = require('simples/lib/http/form');
+
+// Relations between HTTP methods and used REST verbs
 http.verbs = {
 	'DELETE': 'del',
 	'GET': 'get',
@@ -131,89 +135,17 @@ http.compress = function (connection) {
 // Listener for HTTP requests
 http.connectionListener = function (host, request, response) {
 
-	var connection = new http.connection(host, request, response);
+	var config = host.conf,
+		connection = new http.connection(host, request, response);
 
-	// Route the connection and parse received data if needed
-	if (connection.method === 'GET' || connection.method === 'HEAD') {
-		http.connectionProcess(connection);
-	} else if (connection.method === 'OPTIONS') {
+	// Prepare connection for routing
+	if (connection.method === 'OPTIONS') {
 		connection.end();
-	} else if (connection.headers['content-length'] > host.conf.limit) {
-		console.error('\nsimpleS: Request Entity Too Large\n');
-		request.destroy();
-	} else {
-		http.connectionParser(connection);
-	}
-};
-
-// Decide what to do with the request depending on its method
-http.connectionProcess = function (connection) {
-
-	var config = connection.parent.conf;
-
-	// Check if sessions are enabled
-	if (config.session.enabled) {
-		utils.getSession(connection.parent, connection, http.setSession);
+	} else if (config.session.enabled) {
+		utils.getSession(host, connection, http.setSession);
 	} else {
 		http.routing(connection);
 	}
-};
-
-// Populate connection body and files
-http.connectionParser = function (connection) {
-
-	var host = connection.parent,
-		length = 0,
-		parser = null,
-		parts = [];
-
-	// Split content type in two parts to get boundary if exists
-	if (connection.headers['content-type']) {
-		parts = connection.headers['content-type'].split(';');
-	}
-
-	// Choose the content parser
-	if (parts[0] === 'application/x-www-form-urlencoded') {
-		parser = new utils.parsers.qs();
-	} else if (parts[0] === 'multipart/form-data' && parts.length > 1) {
-		parser = new utils.parsers.multipart(parts[1].substr(10));
-	} else if (parts[0] === 'application/json') {
-		parser = new utils.parsers.json();
-	}
-
-	// If no parser was defined then make connection body a buffer
-	if (!parser) {
-		connection.body = new Buffer(0);
-	}
-
-	// Process received data
-	connection.request.on('readable', function () {
-
-		var data = this.read() || new Buffer(0);
-
-		// Get the read length
-		length += data.length;
-
-		// Check for request body limit and parse data
-		if (length > host.conf.limit) {
-			console.error('\nsimpleS: Request Entity Too Large\n');
-			this.destroy();
-		} else if (parser) {
-			parser.parse(data.toString());
-		} else {
-			connection.body = utils.buffer(connection.body, data, length);
-		}
-	}).on('end', function () {
-
-		// If parser is defined end parsing
-		if (parser) {
-			parser.parse(null);
-			connection.body = parser.result.body;
-			connection.files = parser.result.files;
-		}
-
-		http.connectionProcess(connection);
-	});
 };
 
 // Generate default config for hosts
@@ -226,7 +158,6 @@ http.defaultConfig = function () {
 			options: null, // http://nodejs.org/api/zlib.html#zlib_options
 			preferred: 'deflate' // can be 'deflate' or 'gzip'
 		},
-		limit: 1048576, // bytes, by default is 1 MB
 		origins: [],
 		referers: [],
 		session: {
@@ -237,7 +168,7 @@ http.defaultConfig = function () {
 	};
 };
 
-// Generate empty routes
+// Generate empty containers for routes
 http.defaultRoutes = function () {
 
 	return {
@@ -330,13 +261,8 @@ http.refers = function (host, connection) {
 		referers = host.conf.referers,
 		valid = true;
 
-	// Check for referer
-	if (headers.referer && hostname !== connection.host) {
-		valid = false;
-	}
-
 	// Check if referer is found in the accepted referers list
-	if (!valid && hostname && referers.length) {
+	if (referers.length && hostname !== connection.host) {
 		if (referers.indexOf(hostname) < 0) {
 			valid = referers[0] === '*';
 		} else {
@@ -414,24 +340,14 @@ http.routing = function (connection) {
 	}).run(nextMiddleware);
 };
 
-// Set needed headers that are missing
-http.prepareConnection = function (connection) {
+http.handleCORS = function (connection) {
 
-	var cors = null,
+	var cors = {},
 		host = connection.parent;
 
-	// Check for CORS requests
-	if (connection.headers.origin) {
-
-		// Prepare the cors headers container
-		cors = {};
-
-		// Check if the origin is accepted
-		if (utils.accepts(host, connection)) {
-			cors.origin = connection.headers.origin;
-		} else {
-			cors.origin = connection.protocol + '://' + connection.host;
-		}
+	// Check if the origin is accepted
+	if (utils.accepts(host, connection)) {
+		cors.origin = connection.headers.origin;
 
 		// Prepare CORS specific response headers
 		cors.headers = connection.headers['access-control-request-headers'];
@@ -449,9 +365,21 @@ http.prepareConnection = function (connection) {
 		if (cors.methods) {
 			connection.header('Access-Control-Allow-Methods', cors.methods);
 		}
+	} else {
+		cors.origin = connection.protocol + '://' + connection.host;
+		connection.valid = false;
+	}
 
-		// Set the accepted origin
-		connection.header('Access-Control-Allow-Origin', cors.origin);
+	// Set the accepted origin
+	connection.header('Access-Control-Allow-Origin', cors.origin);
+};
+
+// Set needed headers that are missing
+http.prepareConnection = function (connection) {
+
+	// Check for CORS requests
+	if (connection.headers.origin) {
+		http.handleCORS(connection);
 	}
 
 	// Check if the content type was defined and set the default if it is not

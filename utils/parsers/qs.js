@@ -1,112 +1,126 @@
 'use strict';
 
+var events = require('events');
+
 // Parse data with content-type x-www-form-urlencoded
 var qsParser = function () {
+
+	// Call events.EventEmitter in this context
+	events.EventEmitter.call(this);
+
+	// Prepare parser members
+	this.buffer = [];
 	this.key = '';
 	this.result = {};
 	this.state = 0;
 	this.value = '';
 };
 
-// Parse received data
-qsParser.prototype.parse = function (data) {
-
-	var current = '',
-		index = 0,
-		that = this;
-
-	// Add data to the result
-	function addData() {
-
-		var key = decodeURIComponent(that.key),
-			result = that.result,
-			value = decodeURIComponent(that.value);
-
-		// Check key entry
-		if (!result[key]) {
-			result[key] = value;
-		} else if (!Array.isArray(result[key])) {
-			result[key] = [result[key], value];
-		} else if (result[key].indexOf(value) < 0) {
-			result[key].push(value);
-		}
-
-		// Reset data
-		that.key = '';
-		that.state = 0;
-		that.value = '';
-
-		// Get next char if data available
-		if (data) {
-			index++;
-			current = data[index];
-		}
+// Inherit from events.EventEmitter
+qsParser.prototype = Object.create(events.EventEmitter.prototype, {
+	constructor: {
+		value: qsParser
 	}
+});
 
-	// Parse query string key
-	function parseKey() {
+// Add data to the result
+qsParser.prototype.addData = function () {
 
-		var key = that.key;
+	var key = decodeURIComponent(this.key),
+		value = decodeURIComponent(this.value);
 
-		// Concatenate key characters
-		while (current && current !== '=' && current !== '&') {
-			key += current;
-			index++;
-			current = data[index];
+	// Add the key and the value to the result
+	if (key) {
+
+		// Add value or merge multiple values
+		if (!this.result[key]) {
+			this.result[key] = value;
+		} else if (!Array.isArray(this.result[key])) {
+			this.result[key] = [this.result[key], value];
+		} else if (this.result[key].indexOf(value) < 0) {
+			this.result[key].push(value);
 		}
 
-		// Prepare the key
-		that.key = key;
-
-		// Check when the key is ready
-		if (current === '=' || current === '&') {
-			index++;
-			current = data[index];
-			that.state = 1;
-		}
+		// Reset the key and the value
+		this.key = '';
+		this.value = '';
 	}
+};
 
-	// Parse query string value
-	function parseValue() {
+// Parse key bytes
+qsParser.prototype.getKey = function (current) {
 
-		var value = that.value;
+	// Check for key boundaries
+	if (current === 38 || current === 61) {
 
-		// Concatenate value characters
-		while (current && current !== '&') {
-			value += current;
-			index++;
-			current = data[index];
+		// Stringify key and reset buffer
+		this.key = String.fromCharCode.apply(String, this.buffer);
+		this.buffer = [];
+
+		// Add the data or continue to value parsing
+		if (current === 38) {
+			this.addData();
+		} else if (current === 61) {
+			this.state = 1;
 		}
-
-		// Prepare the value
-		that.value = value;
-
-		// Check when the key and the value are ready
-		if (current === '&') {
-			addData();
-		}
-	}
-
-	// Check for final data chunk
-	if (data === null) {
-		addData();
 	} else {
+		this.buffer.push(current);
+	}
+};
+
+// Parse value bytes
+qsParser.prototype.getValue = function (current) {
+
+	// Check for values boundaries
+	if (current === 38) {
+		this.value = String.fromCharCode.apply(String, this.buffer);
+		this.buffer = [];
+		this.addData();
+		this.state = 0;
+	} else {
+		this.buffer.push(current);
+	}
+};
+
+// Write data to the parser and parse it
+qsParser.prototype.write = function (data) {
+
+	var current = data[0],
+		index = 0;
+
+	// Loop throught all received bytes
+	while (current !== undefined) {
+
+		// Stop parsing if the request is invalid
+		if (this.state === -1) {
+			break;
+		}
+
+		// Parse data
+		if (this.state === 0) {
+			this.getKey(current);
+		} else if (this.state === 1) {
+			this.getValue(current);
+		}
+
+		// Get next byte
+		index++;
 		current = data[index];
 	}
+};
 
-	// Parse char by char in a loop
-	while (current) {
+// End parsing data
+qsParser.prototype.end = function () {
 
-		// Wait for key
-		if (this.state === 0) {
-			parseKey();
-		}
-
-		// Wait for value
-		if (this.state === 1) {
-			parseValue();
-		}
+	// Stringify buffer
+	if (this.state === 0) {
+		this.key = String.fromCharCode.apply(String, this.buffer);
+	} else if (this.state === 1) {
+		this.value = String.fromCharCode.apply(String, this.buffer);
 	}
+
+	// Add last field
+	this.addData();
 };
 
 // Export the parser

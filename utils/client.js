@@ -58,7 +58,7 @@ var ajax = simples.ajax = function (url, data, method) {
 		return new simples.ajax(url, data, method);
 	}
 
-	// Define special properties for simples.ajax
+	// Define private properties for simples.ajax
 	Object.defineProperties(this, {
 		listeners: {
 			value: listeners
@@ -332,7 +332,7 @@ var ws = simples.ws = function (url, config) {
 		config.type = 'text';
 	}
 
-	// Define special properties for simples.ws
+	// Define private properties for simples.ws
 	Object.defineProperties(this, {
 		url: {
 			value: url,

@@ -38,11 +38,7 @@
 >##### [Connections logging](#host-log)
 
 ### [Connection Interface](#http-connection)
->##### [.body](#http-connection-body)
-
 >##### [.cookies](#http-connection-cookies)
-
->##### [.files](#http-connection-files)
 
 >##### [.headers](#http-connection-headers)
 
@@ -65,6 +61,8 @@
 >##### [.session](#http-connection-session)
 
 >##### [.url](#http-connection-url)
+
+>##### [.parse(config)](#http-connection-parse)
 
 >##### [.cookie(name, value[, attributes])](#http-connection-cookie)
 
@@ -158,6 +156,17 @@ server.get('/', function (connection) {
         // Application logic
     }
 });
+
+// or using a middleware for an universal behavior
+
+server.middleware(function (connection, next) {
+    if (connection.protocol === 'http' && /\/secured\/.+/i.test(connection.path)) { // Filter by connection.path
+        connection.redirect('https://' + connection.url.host + connection.url.path, true);
+        next(true); // Stop the middleware chain
+    } else {
+        next(); // Do nothing for other paths
+    }
+});
 ```
 
 The third parameter `callback` is used to know when the server has started running.
@@ -172,7 +181,7 @@ port: number
 
 callback: function()
 
-Start listening for requests on the provided port. If the server is already started then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port.
+Start listening for requests on the provided port. If the server is already started then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
 
 ```js
 server.start(80, function () {
@@ -186,7 +195,7 @@ server.start(80, function () {
 
 callback: function()
 
-Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served.
+Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. Returns current instance, so calls can be chained.
 
 ```js
 server.stop(function () {
@@ -202,7 +211,7 @@ name: string
 
 config: object
 
-simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration.
+simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration. Returns current instance, so calls can be chained.
 
 ```js
 var host = server.host('example.com');
@@ -214,19 +223,18 @@ var host = server.host('example.com');
 
 config: object
 
-Change the configuration of the host. Possible attributes:
+Change the configuration of the host. Returns current instance, so calls can be chained. Possible attributes for the configuration:
 
 Compression configuration:
 ```js
 compression: {
     enabled: true, // Activate the compression, by default the compression is enabled
-    filter: /^.+$/i, // Filter file types that will be compressed, by default all kinds of file types are compressed
-    options: null, // Set compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
-    preferred: 'deflate' // Set the prefereed compression type, can be `deflate` or `gzip`, by default is `deflate`
+    filter: /^.+$/i, // Filter content types that will be compressed, by default all kinds of file types are compressed
+    options: null, // Compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+    preferred: 'deflate' // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
-
-`limit: number // 1048576` - Set the limit of the request body in bytes, default is 1MB.
+```
 
 `origins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
 ```js
@@ -245,7 +253,7 @@ compression: {
 Session configuration:
 ```js
 session: {
-    enabled: false, // Activate the session
+    enabled: false, // Activate the session, by default sessions are disabled
     store: simples.store(), // Session store, default is simples memcached store
     timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour, zero for infinite timeout
 }
@@ -269,16 +277,23 @@ callback: function(connection, next)
 
 remove: boolean
 
-Each host accepts middlewares to be implemented, which allow to add some additional implementations which are not available out of the box. The middlewares can manipulate the connection object and to call the next middleware or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value.
+Each host accepts middlewares to be implemented, which allow to add some additional implementations with a global behavior which are not available out of the box. The middlewares can manipulate the connection object and to call the next middleware or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value. Returns current instance, so calls can be chained.
 
 ```js
 host.middleware(function (connection, next) {
-    if (connection.path = '/restricted') {
+    if (connection.path = '/restricted' && !connection.session.user) {
         connection.end('You do not have right to be here');
         next(true); // Will stop the middleware chain and connection routing
     } else {
         next(); // Will continue to the next middleware if it exists or will continue to connection routing
     }
+});
+
+// another example to set X-Powered-By Header for all connections
+
+host.middleware(function (connection, next) {
+    connection.header('X-Powered-By Header', 'simpleS');
+    next();
 });
 ```
 
@@ -288,7 +303,7 @@ host.middleware(function (connection, next) {
 
 engine: object
 
-To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
+To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Returns current instance, so calls can be chained. Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
 
 ```js
 
@@ -357,7 +372,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method has less priority then the other methods described below to allow specific behavior for routes.
+Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method has less priority then the other methods described below to allow specific behavior for routes. Returns current instance, so calls can be chained.
 
 ### <a name="host-del"/> DELETE Requests
 
@@ -367,7 +382,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
 
 ### <a name="host-get"/> GET Requests
 
@@ -377,7 +392,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for `GET` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `GET` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
 
 ### <a name="host-post"/> POST Requests
 
@@ -387,7 +402,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
 
 ### <a name="host-put"/> PUT Requests
 
@@ -397,7 +412,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`).
+Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
 
 ### <a name="host-route"/> General routing
 `.route(verb, route, result)`
@@ -408,7 +423,7 @@ route: array[strings] or string
 
 result: function(connection) or string
 
-Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts.
+Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts. Returns current instance, so calls can be chained.
 
 ### <a name="host-error"/> Error Routes
 
@@ -418,7 +433,7 @@ code: 404, 405 or 500
 
 result: function(connection) or string
 
-Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used.
+Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Returns current instance, so calls can be chained.
 
 #### <a name="example-routes"/> Examples for routing methods:
 
@@ -450,7 +465,7 @@ directory: string
 
 callback: function(connection, files)
 
-`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
 
 ```js
 host.serve('root', function (connection, files) {
@@ -466,19 +481,23 @@ type: 'all', 'del', 'error', 'get', 'post', 'put' or 'serve'
 
 route: 404, 405 or 500 with type 'error' and array[strings] or string with other types
 
-Removes a specific route, a set od routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added.
+Removes a specific route, a set of routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added. Returns current instance, so calls can be chained.
 
 ```js
-host.leave('post');
+host.leave('post'); // All POST routes are removed
 
-host.leave('get', '/nothing');
+host.leave('get', '/nothing'); // One, selected, GET route is removed
 
-host.leave('serve');
+host.leave('serve'); // Only one parameter needed, removes the cached static files
 
-host.leave('all', [
+host.leave('all', [ // Removes the selected routes for routes with general behavior defined
     '/home',
     '/index'
 ]);
+
+host.leave(404); // Removes the route for '404' error code and set the default route for it
+
+host.leave(); // Removes all routes and set default error routes
 ```
 
 ### <a name="host-log"/> Logging
@@ -489,7 +508,7 @@ stream: object(writable stream instance) or string
 
 callback: function(connection)
 
-Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests.
+Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests. Returns current instance, so calls can be chained.
 
 ```js
 host.log(function (connection) {
@@ -497,18 +516,16 @@ host.log(function (connection) {
 });
 ```
 
-### <a name="http-connection"/>  Connection Interface
+### <a name="http-connection"/> Connection Interface
 
 The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a transform stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
 
 ```js
 {
-    body: {},
     cookies: {
         user: 'me',
         pass: 'password'
     },
-    files: {},
     headers: {
         host: 'localhost:12345',
         'user-agent': 'myBrowser',
@@ -549,23 +566,16 @@ The parameter provided in callbacks for routing requests is an object that conta
 }
 ```
 
-#### <a name="http-connection-body"/>  .body
-
-The content of the body of the request, for `GET` requests it is an empty object, for other types of requests it will contain parsed data if the request comes with a specific content type, otherwise it will contain plain data as a buffer, parsed files from requests with `multipart/form-data` are contained in `connection.files`
-
 #### <a name="http-connection-cookies"/> .cookies
 
 An object that contains the cookies provided by the client.
-
-#### <a name="http-connection-files"/> .files
-
-An object that contains files sent with `multipart/form-data` content type.
 
 #### <a name="http-connection-headers"/> .headers
 
 An object that contains the HTTP headers of the request.
 
 #### <a name="http-connection-host"/> .host
+
 The hostname from the `Host` header.
 
 #### <a name="http-connection-ip"/> .ip
@@ -604,6 +614,93 @@ A container used to keep important data on the server-side, the clients have acc
 
 The url of the request split in components, see [`url`](http://nodejs.org/api/url.html) core module for more details.
 
+#### <a name="http-connection-parse"/> .parse(config)
+
+config: object
+
+Receive and parse data that comes from the client. Is designed to process `JSON`, `urlencoded` and `multipart/form-data`. The raw data can be received using `plain` callback function, the `form` object will behave as a readable stream. It is possible to limit the length of the request data by specifying the `limit` attribute in bytes. It is recommended to always handle errors that may raise while parsing the requests by attaching `error` event listener. The structure of the config object:
+
+```js
+connection.parse({
+    limit: 1024 * 1024, // 1 MB
+    plain: function (form) {
+
+        // Form as readable stream
+        form.on('readable', function () {
+            this.read();
+        }).on('end', function () {
+            // do something
+        });
+
+        // or form.pipe(wstream);
+
+        // Form error handling
+        form.on('error', function (error) {
+            error;
+        });
+    },
+    json: function (form) {
+
+        // Get form result
+        form.on('end', function () {
+            form.result;
+        });
+
+        // Form error handling
+        form.on('error', function (error) {
+            error;
+        });
+    },
+    multipart: function (form) {
+
+        // Get form fields
+        form.on('field', function (field) {
+            field.name;
+
+            if (field.filename) { // file received
+                field.filename;
+                field.type; // Content-Type of the file
+            }
+
+            field.on('readable', function () {
+                this.read();
+            }).on('end', function () {
+                // do something
+            });
+
+            // or field.pipe(wstream);
+
+            // Field error handling
+            field.on('error', function (error) {
+                error;
+            });
+        });
+
+        // Check for form ending
+        form.on('end', function () {
+            // Do something
+        });
+
+        // Form error handling
+        form.on('error', function (error) {
+            error;
+        });
+    },
+    urlencoded: function (form) {
+
+        // Get form result
+        form.on('end', function () {
+            form.result;
+        });
+
+        // Form error handling
+        form.on('error', function (error) {
+            error;
+        });
+    }
+});
+```
+
 #### <a name="http-connection-cookie"/> .cookie(name, value[, attributes])
 
 name: string
@@ -612,15 +709,15 @@ value: string
 
 attributes: object
 
-Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before `.write()` method.
+Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before `.write()` method. Returns current instance, so calls can be chained.
 
 ```js
 connection.cookie('user', 'me', {
     expires: 3600,          // or maxAge: 3600, Set the expiration time of the cookie in seconds
-    path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the first slash may be omitted, simpleS will add it
+    path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the root slash may be omitted, it will be added
     domain: 'localhost',    // Domain of the cookie, should be defined only if it is different from the current host
-    secure: false,          // Set if the cookie is secured and should be used only by HTTPS
-    httpOnly: false,        // Set if the cookie should not be changed from client-side
+    secure: false,          // Set if the cookie is secured and should be used only with HTTPS
+    httpOnly: false,        // Set if the cookie should not be modfied from client-side
 });
 ```
 
@@ -628,9 +725,9 @@ connection.cookie('user', 'me', {
 
 name: string
 
-value: array[numbers or strings], null, number, or string
+value: array[strings], boolean, number, string or null
 
-Sets, gets or removes a header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings. If the `value` parameter is not defined then the value of the previously set header defined by the `name` parameter is returned. If the `value` parameter is `null` then the header defined by the `name` parameter is removed from the response.
+Sets, gets or removes a header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings. If the `value` parameter is not defined then the value of the previously set header defined by the `name` parameter is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the header defined by the `name` parameter is removed from the response. Bolean and numeric values are stringified before being applied.
 
 ```js
 connection.header('ETag', '0123456789'); // Set the 'ETag' header as '0123456789'
@@ -646,7 +743,7 @@ connection.header('ETag'); // => undefined
 
 value: null or string
 
-Sets, gets or removes the language of the response. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set language is returned. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
+Sets, gets or removes the language of the response. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set language is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
 
 ```js
 connection.lang('ro'); // Set the 'Content-Language' header as 'ro'
@@ -662,7 +759,7 @@ connection.lang(); // => undefined
 
 links: object
 
-Define the relations of the current location with the other locations and populate `Link` header.
+Define the relations of the current location with the other locations and populate `Link` header. Returns current instance, so calls can be chained.
 
 ```js
 connection.link({
@@ -679,7 +776,7 @@ location: string
 
 permanent: boolean
 
-Redirects the client to the provided location. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before.
+Redirects the client to the provided location. If the redirect is permanent then the second parameter should be set as true. For permanent redirects the code `302` is set, for temporary redirects - `301`. Should not be used with the other methods except `.cookie()`, which should be placed before. Returns current instance, so calls can be chained.
 
 ```js
 connection.redirect('/index', true);
@@ -689,7 +786,7 @@ connection.redirect('/index', true);
 
 code: number
 
-Sets or gets the status code of the response. If the `code` parameter is not defined then the current status code is returned.
+Sets or gets the status code of the response. If the `code` parameter is not defined then the current status code is returned. Returns current instance, so calls can be chained.
 
 #### <a name="http-connection-type"/> .type([type, override])
 
@@ -697,7 +794,7 @@ type: string
 
 override: boolean
 
-Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
+Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```js
 connection.type(); // => 'text/html;charset=utf-8'
@@ -715,7 +812,7 @@ connection.type(); // => 'text/plain'
 
 timeout: number
 
-Each connection has a 5 seconds timeout for inactivity on the socket to prevent too many connections in the same time. To change the value of this timeout the `.keep()` method is called with the a new value in miliseconds, `0` for removing the timeout.
+Each connection has a 5 seconds timeout for inactivity on the socket to prevent too many connections in the same time. To change the value of this timeout the `.keep()` method is called with the a new value in miliseconds, `0` for removing the timeout. Returns current instance, so calls can be chained.
 
 ```js
 connection.keep(); // or connection.keep(0); removes the timeout
@@ -727,7 +824,7 @@ connection.keep(10000); // sets the timeout for 10 seconds
 
 Writes to the connection stream, same as [stream.writable.write](http://nodejs.org/api/stream.html#stream_writable_write_chunk_encoding_callback_1)
 
-#### <a name="http-connection-body"/> .end([chunk, encoding, callback])
+#### <a name="http-connection-end"/> .end([chunk, encoding, callback])
 
 Ends the connection stream, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
 
@@ -799,7 +896,7 @@ config: object
 
 listener: function(connection)
 
-Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `config` parameter in bytes, default is 1048576 (10 MiB). The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources. To specify the type of the content which will be sent via the WebSocket connection the `type` parameter should be defined as `binary` or `text`, by default is `text`.
+Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `config` parameter in bytes, default is 1048576 (1 MiB). The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources. To specify the type of the content which will be sent via the WebSocket connection the `type` parameter should be defined as `binary` or `text`, by default is `text`.
 
 ```js
 var echo = server.ws('/', {
@@ -817,7 +914,7 @@ config: object
 
 callback: function(connection)
 
-Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed.
+Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. Returns current instance, so calls can be chained.
 
 ```js
 echo.open({
@@ -835,7 +932,7 @@ data: string or buffer
 
 filter: function(element, index, array)
 
-Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`.
+Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`. Returns current instance, so calls can be chained.
 
 ```js
 echo.broadcast('HelloWorld', function (element, index, array) {
@@ -853,7 +950,7 @@ Opens a new channel with the provided name. If `filter` is defined, then all the
 
 #### <a name="ws-host-close"/> .close()
 
-Close all existing connections to the host, but the host still can receive new connections after this.
+Close all existing connections to the host, but the host still can receive new connections after this. Returns current instance, so calls can be chained.
 
 #### <a name="ws-host-destroy"/> .destroy()
 
@@ -912,7 +1009,7 @@ Ends the connection socket, same as [stream.writable.end](http://nodejs.org/api/
 `.close([callback])`
 callback: function()
 
-Sends the last frame of the WebSocket connection and then closes the socket. Can have an optional callback function, which is fired when the connection is closed
+See Connection Interface `.close([callback])`.
 
 `.send([event, ]data)`
 event: string
@@ -946,13 +1043,13 @@ The object that groups a set of connections. This is useful for sending messages
 
 connection: WebSocket Connection Instance
 
-Adds the connection to the channel. Emits `bind` event with the `connection` as parameter.
+Adds the connection to the channel. Emits `bind` event with the `connection` as parameter. Returns current instance, so calls can be chained.
 
 #### <a name="ws-channel-unbind"/> .unbind(connection)
 
 connection: WebSocket Connection Instance
 
-Removes the connection from the channel. The connection remains alive. Emits `unbind` event with `connection` as parameter.
+Removes the connection from the channel. The connection remains alive. Emits `unbind` event with `connection` as parameter. Returns current instance, so calls can be chained.
 
 #### <a name="ws-channel-close"/> .close()
 
@@ -966,7 +1063,7 @@ data: string or buffer
 
 filter: function(element, index, array)
 
-Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters.
+Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
 ## <a name="client-side"/> Client-Side Simple API
 

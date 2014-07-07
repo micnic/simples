@@ -36,7 +36,7 @@ ws.connectionListener = function (host, request) {
 	// Check if any errors appeared and continue connection processing
 	if (error) {
 		console.error(error);
-		socket.destroy();
+		connection.socket.destroy();
 	} else {
 		connection.pipe(connection.socket);
 		host.connections.push(connection);
@@ -57,14 +57,15 @@ ws.defaultConfig = function () {
 // Parse received WS data
 ws.parse = function (connection, frame, data) {
 
-	var length = 0;
+	var error = '',
+		length = 0;
 
 	// Prepare data for concatenation
 	data = data || new Buffer(0);
 	length = frame.data.length + data.length;
 
 	// Concatenate frame data with the received data
-	frame.data = utils.buffer(frame.data, data, length);
+	frame.data = Buffer.concat([frame.data, data], length);
 
 	// Wait for header
 	if (frame.state === 0 && frame.data.length >= 2) {
@@ -74,56 +75,51 @@ ws.parse = function (connection, frame, data) {
 		frame.opcode = frame.data[0] & 15;
 		frame.length = frame.data[1] & 127;
 
+		// Set read index after the header
+		frame.index = 2;
+
 		// Check for extensions (reserved bits)
 		if (frame.data[0] & 112) {
-			console.error('\nsimpleS: WS does not support extensions\n');
-			connection.end(connection.socket.destroy);
-			frame.state = -1;
+			error = '\nsimpleS: WS extensions are not supported\n';
 		}
 
 		// Check for unknown frame type
 		if ((frame.opcode & 7) > 2) {
-			console.error('\nsimpleS: Unknown WS frame type\n');
-			connection.end(connection.socket.destroy);
-			frame.state = -1;
+			error = '\nsimpleS: Unknown WS frame type\n';
 		}
 
 		// Control frames should be <= 125 bits and not be fragmented
 		if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
-			console.error('\nsimpleS: Invalid WS control frame\n');
-			connection.end(connection.socket.destroy);
-			frame.state = -1;
+			error = '\nsimpleS: Invalid WS control frame\n';
+		}
+
+		// Client should not send ping frames
+		if (frame.opcode === 9) {
+			error = '\nsimpleS: Ping frame received\n';
 		}
 
 		// Check for mask flag
 		if (!(frame.data[1] & 128)) {
-			console.error('\nsimpleS: Unmasked frame received\n');
-			connection.end(connection.socket.destroy);
-			frame.state = -1;
+			error = '\nsimpleS: Unmasked frame received\n';
 		}
 
-		// Extend payload length or wait for masking key
-		if (frame.length === 126) {
+		// Check for error, close and pong frame, extend payload length
+		if (error) {
+			console.error(error);
+			connection.socket.destroy();
+			frame.state = -1;
+		} else if (frame.opcode === 8) {
+			connection.end();
+			frame.state = 5;
+		} else if (frame.opcode === 10) {
+			frame.data = frame.data.slice(frame.length + 6);
+			frame.state = 0;
+		} else if (frame.length === 126) {
 			frame.state = 1;
 		} else if (frame.length === 127) {
 			frame.state = 2;
 		} else {
 			frame.state = 3;
-		}
-
-		// Check for control frames
-		if (frame.opcode === 8) {
-			connection.end();
-			frame.state = -1;
-		} else if (frame.opcode === 9) {
-			console.error('\nsimpleS: Ping frame received\n');
-			connection.end(connection.socket.destroy);
-			frame.state = -1;
-		} else if (frame.opcode === 10) {
-			frame.data = frame.data.slice(frame.length + 6);
-			frame.state = 0;
-		} else {
-			frame.index = 2;
 		}
 	}
 
@@ -137,7 +133,7 @@ ws.parse = function (connection, frame, data) {
 		// Don't accept payload length bigger than 32bit
 		if (frame.data.readUInt32BE(2)) {
 			console.error('\nsimpleS: Can not use 64bit payload length\n');
-			connection.end(connection.socket.destroy);
+			connection.socket.destroy();
 			frame.state = -1;
 		}
 
@@ -153,7 +149,7 @@ ws.parse = function (connection, frame, data) {
 		// Check if message is not too big and get the masking key
 		if (frame.length + frame.message.length > frame.limit) {
 			console.error('\nsimpleS: Too big WebSocket message\n');
-			connection.end(connection.socket.destroy);
+			connection.socket.destroy();
 			frame.state = -1;
 		} else {
 			frame.mask = frame.data.slice(frame.index, frame.index + 4);
@@ -174,14 +170,11 @@ ws.parseMessage = function (connection, frame) {
 
 	var type = 'text';
 
-	// Check for binary opcode
-	if (frame.opcode === 2) {
-		type = 'binary';
-	}
-
-	// Stringify text messages
-	if (type === 'text') {
+	// Stringify text messages or set binary type
+	if (frame.opcode === 1) {
 		frame.message = frame.message.toString();
+	} else {
+		type = 'binary';
 	}
 
 	// Prepare messages depending on their type
@@ -262,11 +255,11 @@ ws.connectionProcess = function (connection) {
 	// Process readable and close events and write connection HTTP head
 	connection.socket.on('readable', function () {
 
-		// Clear the previous timer and parse the received data
-		clearTimeout(connection.timer);
+		// Parse the received data
 		ws.parse(connection, frame, this.read());
 
-		// Create a new timeout to write a ping frame in 25 seconds
+		// Clear the previous timer and create a new timeout for ping frames
+		clearTimeout(connection.timer);
 		connection.timer = setTimeout(function () {
 			connection.socket.write(ping);
 		}, 25000);
@@ -367,7 +360,7 @@ ws.unmasking = function (connection, frame) {
 		// Concatenate payload data to the message
 		data = frame.data.slice(0, size);
 		length = frame.message.length + size;
-		frame.message = utils.buffer(frame.message, data, length);
+		frame.message = Buffer.concat([frame.message, data], length);
 
 		// Cut off the read data
 		frame.data = frame.data.slice(size);

@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.5.7
+# 0.5.8
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 
@@ -47,13 +47,13 @@ var server = simples(12345); // Your server is set up on port 12345
 
 ```javascript
 server.get('/', function (connection) {
-    connection.end('root');
+    connection.end('Simples Works');
 });
 
 server.serve('static_files'); // Route for static files located in the folder "static_files"
 
 server.error(404, function (connection) {
-    connection.end('404');
+    connection.end('Error 404 caught');
 });
 ```
 

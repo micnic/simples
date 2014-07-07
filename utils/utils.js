@@ -24,6 +24,15 @@ utils.parsers = {
 // Export ws utils
 utils.ws = require('simples/utils/ws');
 
+// RegExp to replace star wildcard
+utils.allPatternRegExp = /\*/gi;
+
+// RegExp to escape all special characters
+utils.escapeRegExp = /[\-\[\]\/\{\}\(\)\+\?\.\\\^\$\|]/gi;
+
+// RegExp to match named parameters
+utils.paramsRegExp = /:([^\\.]+)/gi;
+
 // Check if the origin header is accepted by the host (CORS)
 utils.accepts = function (host, connection) {
 
@@ -46,31 +55,22 @@ utils.accepts = function (host, connection) {
 	return accepted;
 };
 
-// Create a new Buffer instance from a list of buffers
-utils.buffer = function () {
-
-	var args = Array.apply(null, arguments);
-
-	return Buffer.concat(args.slice(0, -1), args[args.length - 1]);
-};
-
 // Copy configuration from one object to another
-utils.copyConfig = function (destination, source, stop) {
+utils.copyConfig = function (destination, config, stop) {
 
-	// Iterate through the source keys to copy them
-	Object.keys(source).forEach(function (property) {
+	// Iterate through the config keys to copy them
+	Object.keys(config).forEach(function (property) {
 
-		var dtype = typeof destination[property],
-			stype = typeof source[property],
-			object = dtype === 'object',
-			primitive = utils.toString(destination[property]) !== '[object Object]',
-			valid = dtype === stype;
+		var cproperty = config[property],
+			dproperty = destination[property],
+			object = utils.isObject(dproperty),
+			valid = !stop && typeof dproperty === typeof cproperty;
 
 		// Copy the property if it has the same type
-		if (destination[property] === null || primitive && valid) {
-			destination[property] = source[property];
-		} else if (object && valid && !stop) {
-			utils.copyConfig(destination[property], source[property], true);
+		if (object && valid) {
+			utils.copyConfig(dproperty, cproperty, true);
+		} else if (dproperty === null || valid) {
+			destination[property] = cproperty;
 		}
 	});
 };
@@ -86,7 +86,7 @@ utils.generateHash = function (data, encoding, callback) {
 		var chunk = this.read() || new Buffer(0);
 
 		// Append data to the hash
-		hash = utils.buffer(hash, chunk, hash.length + chunk.length);
+		hash = Buffer.concat([hash, chunk], hash.length + chunk.length);
 	}).on('end', function () {
 		callback(hash.toString(encoding));
 	}).end(data);
@@ -97,11 +97,11 @@ utils.generateSession = function (host, connection, callback) {
 
 	var config = host.conf.session;
 
-	// Generate a random session id of 20 bytes
-	crypto.randomBytes(20, function (error, buffer) {
+	// Generate a random session id of 16 bytes
+	crypto.randomBytes(16, function (error, buffer) {
 
 		var id = buffer.toString('hex'),
-			secret = Array.apply(null, buffer);
+			secret = Array.apply(Array, buffer);
 
 		// Check for error, which, eventually, should never happen(!)
 		if (error) {
@@ -149,18 +149,12 @@ utils.getSession = function (host, connection, callback) {
 	}
 };
 
-// Return if the object was creating using a native constructor
-utils.isPrimitive = function (object) {
-
-	return utils.toString(object) !== '[object Object]';
-};
-
-// Return object constructor string representation
-utils.toString = function (object) {
+// Check for a plain object
+utils.isObject = function (object) {
 
 	var prototype = Object.prototype.toString;
 
-	return prototype.call(object);
+	return prototype.call(object) === '[object Object]';
 };
 
 // Log data on new connections
@@ -193,143 +187,6 @@ utils.log = function (host, connection) {
 			logger.stream.write(log + '\n');
 		}
 	}
-};
-
-// Get the cookies of the connection
-utils.parseCookies = function (connection) {
-
-	var cookies = {},
-		current = '',
-		header = '',
-		index = 0,
-		name = '',
-		value = '';
-
-	// Check if the connection has the cookie header
-	if (connection.headers.cookie) {
-		header = connection.headers.cookie;
-	}
-
-	// Get the first character
-	current = header[0];
-
-	// Populate cookies
-	while (current) {
-
-		// Skip whitespace
-		while (current === ' ') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the name of the cookie
-		while (current && current !== '=') {
-			name += current;
-			index++;
-			current = header[index];
-		}
-
-		// Skip "="
-		if (current === '=') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the value of the cookie
-		while (current && current !== ';') {
-			value += current;
-			index++;
-			current = header[index];
-		}
-
-		// Set the current cookie and wait for the next one
-		cookies[name] = decodeURIComponent(value);
-		name = '';
-		value = '';
-		index++;
-		current = header[index];
-	}
-
-	return cookies;
-};
-
-// Get the languages accepted by the client
-utils.parseLangs = function (connection) {
-
-	var current = '',
-		header = '',
-		index = 0,
-		langs = [],
-		name = '',
-		quality = '',
-		ready = false;
-
-	// Check if the connection has the accept-language header
-	if (connection.headers['accept-language']) {
-		header = connection.headers['accept-language'];
-	}
-
-	// Get the first character
-	current = header[0];
-
-	// Populate langs
-	while (current) {
-
-		// Skip whitespace
-		while (current === ' ') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the name of the language
-		while (current && current !== ',' && current !== ';') {
-			name += current;
-			index++;
-			current = header[index];
-		}
-
-		// Set the quality factor to 1 if none found or continue to get it
-		if (!current || current === ',') {
-			quality = '1';
-			ready = true;
-		} else if (current === ';') {
-			index++;
-			current = header[index];
-		}
-
-		// Check for quality factor
-		if (!ready && header.substr(index, 2) === 'q=') {
-			index += 2;
-			current = header[index];
-		}
-
-		// Get the quality factor of the languages
-		while (!ready && current && current !== ',') {
-			quality += current;
-			index++;
-			current = header[index];
-		}
-
-		// Add the language to the set
-		langs.push({
-			name: name,
-			quality: Number(quality)
-		});
-
-		// Reset flags and wait for the next language
-		name = '';
-		quality = '';
-		ready = false;
-		index++;
-		current = header[index];
-	}
-
-	// Sort the languages in the order of their importance and return them
-	return langs.sort(function (first, second) {
-		return second.quality - first.quality;
-	}).map(function (element) {
-		return element.name;
-	});
 };
 
 // Generate UTC string for a numeric time value

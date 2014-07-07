@@ -1,3 +1,14 @@
+## 0.5.8
+- Implemented new API for HTTP connection parsing using `.parse()` method
+- Removed `connection.body` and `connection.files` in favor of `connection.parse()`
+- Improvements for WS messages creation
+- Improved HTTP request parsers
+- Adjusted some implementation inaccuracy to the documentation
+- Documentation updates
+- Adapted host configuration to the new request parsing API
+- Improved internal structure
+- Small bufixes
+
 ## 0.5.7
 - Implemented filtered compression by content type
 - Improved ws client simple API

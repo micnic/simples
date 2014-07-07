@@ -1,20 +1,45 @@
 'use strict';
 
+var events = require('events');
+
 // Parse data with content-type application/json
 var jsonParser = function () {
-	this.content = '';
+
+	// Call events.EventEmitter in this context
+	events.EventEmitter.call(this);
+
+	// Prepare parser members
+	this.buffer = '';
 	this.result = null;
 };
 
-// Parse received data
-jsonParser.prototype.parse = function (data) {
-
-	// Parse data when all the chunks are received
-	if (data === null) {
-		this.result = JSON.parse(this.content);
-	} else {
-		this.content += data;
+// Inherit from events.EventEmitter
+jsonParser.prototype = Object.create(events.EventEmitter.prototype, {
+	constructor: {
+		value: jsonParser
 	}
+});
+
+// Concatenate received data
+jsonParser.prototype.write = function (data) {
+	this.buffer += data.toString();
+};
+
+// End received data concatenation and parse it
+jsonParser.prototype.end = function () {
+
+	// Parse the received data
+	try {
+		this.result = JSON.parse(this.buffer);
+	} catch (error) {
+		this.emit('error', error);
+	}
+
+	// Reset buffer
+	this.buffer = null;
+
+	// Emit ending event
+	this.emit('end');
 };
 
 // Export the parser
