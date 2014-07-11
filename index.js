@@ -74,7 +74,6 @@ simples.addListeners = function (server) {
 		if (host) {
 			utils.ws.connectionListener(host, request);
 		} else {
-			server.emit('error', new Error('Inexistent WebSocket host called'));
 			socket.destroy();
 		}
 	}
