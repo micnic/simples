@@ -1,3 +1,8 @@
+## 0.5.9
+- Modified error handling for the server and hosts
+- Improved internal structure
+- Fixed configuration copy
+
 ## 0.5.8
 - Implemented new API for HTTP connection parsing using `.parse()` method
 - Removed `connection.body` and `connection.files` in favor of `connection.parse()`

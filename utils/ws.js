@@ -24,18 +24,24 @@ ws.connectionListener = function (host, request) {
 
 	// Check for WS errors
 	if (connection.headers.upgrade !== 'websocket') {
-		error = '\nsimpleS: Unsupported WebSocket upgrade header\n';
+		error = 'Unsupported WebSocket upgrade header';
 	} else if (!connection.key) {
-		error = '\nsimpleS: No WebSocket handshake key\n';
+		error = 'No WebSocket handshake key';
 	} else if (connection.headers['sec-websocket-version'] !== '13') {
-		error = '\nsimpleS: Unsupported WebSocket version\n';
+		error = 'Unsupported WebSocket version';
 	} else if (!utils.accepts(parent, connection)) {
-		error = '\nsimpleS: WebSocket origin not accepted\n';
+		error = 'WebSocket origin not accepted';
 	}
 
 	// Check if any errors appeared and continue connection processing
 	if (error) {
-		console.error(error);
+
+		// Emit the error to the host if it has any error listeners
+		if (host.listeners('error').length) {
+			host.emit('error', new Error(error));
+		}
+
+		// Destroy the connection socket
 		connection.socket.destroy();
 	} else {
 		connection.pipe(connection.socket);
@@ -70,7 +76,7 @@ ws.parse = function (connection, frame, data) {
 	// Wait for header
 	if (frame.state === 0 && frame.data.length >= 2) {
 
-		// Header components
+		// Get header components
 		frame.fin = frame.data[0] & 128;
 		frame.opcode = frame.data[0] & 15;
 		frame.length = frame.data[1] & 127;
@@ -78,34 +84,22 @@ ws.parse = function (connection, frame, data) {
 		// Set read index after the header
 		frame.index = 2;
 
-		// Check for extensions (reserved bits)
+		// Check for WebSocket errors
 		if (frame.data[0] & 112) {
-			error = '\nsimpleS: WS extensions are not supported\n';
+			error = 'WebSocket extensions are not supported';
+		} else if ((frame.opcode & 7) > 2) {
+			error = 'Unknown WebSocket frame type';
+		} else if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
+			error = 'Invalid WebSocket control frame';
+		} else if (frame.opcode === 9) {
+			error = 'Ping frame received';
+		} else if (!(frame.data[1] & 128)) {
+			error = 'Unmasked frame received';
 		}
 
-		// Check for unknown frame type
-		if ((frame.opcode & 7) > 2) {
-			error = '\nsimpleS: Unknown WS frame type\n';
-		}
-
-		// Control frames should be <= 125 bits and not be fragmented
-		if (frame.opcode > 7 && (frame.length > 125 || !frame.fin)) {
-			error = '\nsimpleS: Invalid WS control frame\n';
-		}
-
-		// Client should not send ping frames
-		if (frame.opcode === 9) {
-			error = '\nsimpleS: Ping frame received\n';
-		}
-
-		// Check for mask flag
-		if (!(frame.data[1] & 128)) {
-			error = '\nsimpleS: Unmasked frame received\n';
-		}
-
-		// Check for error, close and pong frame, extend payload length
+		// Emit errors and check for close and pong frame, wait for data length
 		if (error) {
-			console.error(error);
+			connection.emit('error', new Error(error));
 			connection.socket.destroy();
 			frame.state = -1;
 		} else if (frame.opcode === 8) {
@@ -123,24 +117,21 @@ ws.parse = function (connection, frame, data) {
 		}
 	}
 
-	// Wait for 16bit, 64bit payload length
+	// Wait for 16bit or get only 32bit from 64bit payload length
 	if (frame.state === 1 && frame.data.length >= 4) {
 		frame.length = frame.data.readUInt16BE(2);
 		frame.index += 2;
 		frame.state = 3;
 	} else if (frame.state === 2 && frame.data.length >= 10) {
-
-		// Don't accept payload length bigger than 32bit
 		if (frame.data.readUInt32BE(2)) {
-			console.error('\nsimpleS: Can not use 64bit payload length\n');
+			connection.emit('error', new Error('Undue frame payload length'));
 			connection.socket.destroy();
 			frame.state = -1;
+		} else {
+			frame.length = frame.data.readUInt32BE(6);
+			frame.index += 8;
+			frame.state = 3;
 		}
-
-		// Get 32bit payload length (<= 4GB)
-		frame.length = frame.data.readUInt32BE(6);
-		frame.index += 8;
-		frame.state = 3;
 	}
 
 	// Wait for masking key
@@ -148,7 +139,7 @@ ws.parse = function (connection, frame, data) {
 
 		// Check if message is not too big and get the masking key
 		if (frame.length + frame.message.length > frame.limit) {
-			console.error('\nsimpleS: Too big WebSocket message\n');
+			connection.emit('error', new Error('Too big WebSocket message'));
 			connection.socket.destroy();
 			frame.state = -1;
 		} else {
@@ -185,8 +176,7 @@ ws.parseMessage = function (connection, frame) {
 		});
 	} else {
 		domain.create().on('error', function (error) {
-			console.error('\nsimpleS: cannot parse incoming WS message');
-			console.error(error.stack + '\n');
+			connection.emit('error', error);
 		}).run(function () {
 			frame.message = JSON.parse(frame.message);
 			connection.emit(frame.message.event, frame.message.data);
@@ -280,8 +270,15 @@ ws.connectionProcess = function (connection) {
 
 	// Execute user defined code for the WS host
 	domain.create().on('error', function (error) {
-		console.error('\nsimpleS: Error in WS host on "' + host.location + '"');
-		console.error(error.stack + '\n');
+
+		// Emit the error to the host if it has any error listeners
+		if (host.listeners('error').length) {
+			host.emit('error', error);
+		} else {
+			console.error('\n' + error.stack + '\n');
+		}
+
+		// Destroy the connection socket
 		connection.socket.destroy();
 	}).run(function () {
 

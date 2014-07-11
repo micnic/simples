@@ -8,6 +8,8 @@
 
 > ##### [Stopping](#server-stop)
 
+> ##### [Server error handling](#server-error-handling)
+
 > ##### [Virtual Hosting](#server-host)
 
 > ##### [Host Configuration](#server-host-config)
@@ -203,6 +205,20 @@ server.stop(function () {
 });
 ```
 
+### <a name="server-error-handling"/> Server error handling
+
+Any simpleS instance is an event emitter, all possible errors that may appear at the level of the server can be caught using the usual error event listener attached to the instance object. The same approach can be applied for HTTP and WS hosts, in this case the error listeners will catch errors to the level of the host. It is recommended to attach error event listeners to the server and all its hosts to prevent any undesired behavior.
+
+```js
+server.on('error', function (error) {
+    // Handle any fatal errors that may occur at the level of the server
+});
+
+host.on('error', function (error) {
+    // Handle any error that occurs at the level of the host
+});
+```
+
 ### <a name="server-host"/> Virtual Hosting
 
 `.host(name[, config])`
@@ -254,6 +270,7 @@ Session configuration:
 ```js
 session: {
     enabled: false, // Activate the session, by default sessions are disabled
+    filter: /^.+$/i, // Filter content types that will use sessions, by default all kinds of file types will use sessions
     store: simples.store(), // Session store, default is simples memcached store
     timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour, zero for infinite timeout
 }
@@ -1030,6 +1047,10 @@ Using the template engine, send data through the WebSocket connection.
 #### <a name="ws-connection-events"/> WebSocket Connection Events
 
 As the WebSocket connection is a writable stream it emits all the events which are emitted by writable streams
+
+`error`
+
+Emitted when the client breaks the WebSocket protocol, the length of the message it too big or the structure of a received message has an invalid json structure.
 
 `message`
 

@@ -61,16 +61,14 @@ utils.copyConfig = function (destination, config, stop) {
 	// Iterate through the config keys to copy them
 	Object.keys(config).forEach(function (property) {
 
-		var cproperty = config[property],
-			dproperty = destination[property],
-			object = utils.isObject(dproperty),
-			valid = !stop && typeof dproperty === typeof cproperty;
+		var object = utils.isObject(destination[property]),
+			valid = typeof destination[property] === typeof config[property];
 
 		// Copy the property if it has the same type
-		if (object && valid) {
-			utils.copyConfig(dproperty, cproperty, true);
-		} else if (dproperty === null || valid) {
-			destination[property] = cproperty;
+		if (object && valid && !stop) {
+			utils.copyConfig(destination[property], config[property], true);
+		} else if (destination[property] === null || !object && valid) {
+			destination[property] = config[property];
 		}
 	});
 };
@@ -97,17 +95,11 @@ utils.generateSession = function (host, connection, callback) {
 
 	var config = host.conf.session;
 
-	// Generate a random session id of 16 bytes
-	crypto.randomBytes(16, function (error, buffer) {
+	// Process the buffer of random bytes and prepare hashes for the session
+	function prepareSessionHashes(buffer) {
 
 		var id = buffer.toString('hex'),
 			secret = Array.apply(Array, buffer);
-
-		// Check for error, which, eventually, should never happen(!)
-		if (error) {
-			console.error('\nsimpleS: can not generate random bytes');
-			throw error;
-		}
 
 		// Sort randomly the bytes of the generated id
 		secret.sort(function () {
@@ -126,6 +118,15 @@ utils.generateSession = function (host, connection, callback) {
 				container: {}
 			});
 		});
+	}
+
+	// Generate a random session id of 16 bytes
+	crypto.randomBytes(16, function (error, buffer) {
+		if (error) {
+			host.emit('error', error);
+		} else {
+			prepareSessionHashes(buffer);
+		}
 	});
 };
 

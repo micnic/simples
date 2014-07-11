@@ -3,11 +3,9 @@
 var cache = require('simples/lib/cache'),
 	domain = require('domain'),
 	path = require('path'),
-	store = require('simples/lib/store'),
 	stream = require('stream'),
 	url = require('url'),
-	utils = require('simples/utils/utils'),
-	zlib = require('zlib');
+	utils = require('simples/utils/utils');
 
 // HTTP namespace
 var http = exports;
@@ -92,123 +90,24 @@ http.applyStaticRoute = function (connection, element) {
 	}
 };
 
-// Set compression for HTTP connections
-http.compress = function (connection) {
-
-	var compression = connection.parent.conf.compression,
-		deflate = false,
-		encoding = connection.headers['accept-encoding'],
-		gzip = false,
-		type = connection.type(),
-		wstream = connection.response;
-
-	// Check for supported content encodings of the client
-	if (encoding && compression.enabled && compression.filter.test(type)) {
-
-		// Lower case for comparing
-		encoding = encoding.toLowerCase();
-
-		// Get accepted encodings
-		deflate = encoding.indexOf('deflate') >= 0;
-		gzip = encoding.indexOf('gzip') >= 0;
-
-		// Check for supported compression
-		if (deflate && (compression.preferred === 'deflate' || !gzip)) {
-			encoding = 'deflate';
-			wstream = zlib.Deflate(compression.options);
-		} else if (gzip && (compression.preferred === 'gzip' || !deflate)) {
-			encoding = 'gzip';
-			wstream = zlib.Gzip(compression.options);
-		}
-
-		// Check for successful compression selection
-		if (wstream !== connection.response) {
-			connection.header('Content-Encoding', encoding);
-			wstream.pipe(connection.response);
-		}
-	}
-
-	// Pipe the connection to the compress stream or the response stream
-	connection.pipe(wstream);
-};
-
 // Listener for HTTP requests
 http.connectionListener = function (host, request, response) {
 
-	var config = host.conf,
-		connection = new http.connection(host, request, response);
+	var session = host.conf.session,
+		connection = new http.connection(host, request, response),
+		type = connection.type();
+
+	// Set the default keep alive timeout to 5 seconds
+	connection.keep(5000);
 
 	// Prepare connection for routing
 	if (connection.method === 'OPTIONS') {
 		connection.end();
-	} else if (config.session.enabled) {
+	} else if (session.enabled && session.filter.test(type)) {
 		utils.getSession(host, connection, http.setSession);
 	} else {
 		http.routing(connection);
 	}
-};
-
-// Generate default config for hosts
-http.defaultConfig = function () {
-
-	return {
-		compression: {
-			enabled: true,
-			filter: /^.+$/i,
-			options: null, // http://nodejs.org/api/zlib.html#zlib_options
-			preferred: 'deflate' // can be 'deflate' or 'gzip'
-		},
-		origins: [],
-		referers: [],
-		session: {
-			enabled: false,
-			store: new store(),
-			timeout: 3600000 // miliseconds, by default 1 hour
-		}
-	};
-};
-
-// Generate empty containers for routes
-http.defaultRoutes = function () {
-
-	return {
-		dynamic: {
-			all: {},
-			del: {},
-			get: {},
-			post: {},
-			put: {}
-		},
-		error: {
-			404: http.e404,
-			405: http.e405,
-			500: http.e500
-		},
-		fixed: {
-			all: {},
-			del: {},
-			get: {},
-			post: {},
-			put: {}
-		},
-		serve: null,
-		ws: {}
-	};
-};
-
-// Default callback for "Not Found"
-http.e404 = function (connection) {
-	connection.end('"' + connection.url.path + '" Not Found');
-};
-
-// Default callback for "Method Not Allowed"
-http.e405 = function (connection) {
-	connection.end('"' + connection.method + '" Method Not Allowed');
-};
-
-// Default callback for "Internal Server Error"
-http.e500 = function (connection) {
-	connection.end('"' + connection.url.path + '" Internal Server Error');
 };
 
 // Returns the advanced route if found
@@ -327,71 +226,20 @@ http.routing = function (connection) {
 
 	// Wrap the connection inside a domain
 	domain.create().on('error', function (error) {
-		if (connection.status() === 500) {
-			console.error('\nsimpleS: Can not apply route for error 500');
-			console.error(error.stack + '\n');
+
+		// Emit the error to the host if it has any error listeners
+		if (host.listeners('error').length) {
+			host.emit('error', error);
 		} else {
-			console.error('\nsimpleS: Internal Server Error');
-			console.error(connection.url.href);
-			console.error(error.stack + '\n');
+			console.error('\n' + error.stack + '\n');
+		}
+
+		// Try to apply the route for error 500
+		if (connection.status() !== 500) {
 			connection.status(500);
 			this.bind(routes.error[500]).call(host, connection);
 		}
 	}).run(nextMiddleware);
-};
-
-http.handleCORS = function (connection) {
-
-	var cors = {},
-		host = connection.parent;
-
-	// Check if the origin is accepted
-	if (utils.accepts(host, connection)) {
-		cors.origin = connection.headers.origin;
-
-		// Prepare CORS specific response headers
-		cors.headers = connection.headers['access-control-request-headers'];
-		cors.methods = connection.headers['access-control-request-method'];
-
-		// Always allow credentials
-		connection.header('Access-Control-Allow-Credentials', 'True');
-
-		// Response with the requested headers
-		if (cors.headers) {
-			connection.header('Access-Control-Allow-Headers', cors.headers);
-		}
-
-		// Response with the requested methods
-		if (cors.methods) {
-			connection.header('Access-Control-Allow-Methods', cors.methods);
-		}
-	} else {
-		cors.origin = connection.protocol + '://' + connection.host;
-		connection.valid = false;
-	}
-
-	// Set the accepted origin
-	connection.header('Access-Control-Allow-Origin', cors.origin);
-};
-
-// Set needed headers that are missing
-http.prepareConnection = function (connection) {
-
-	// Check for CORS requests
-	if (connection.headers.origin) {
-		http.handleCORS(connection);
-	}
-
-	// Check if the content type was defined and set the default if it is not
-	if (!connection.type()) {
-		connection.type('html');
-	}
-
-	// Set the keep alive timeout
-	connection.keep(5000);
-
-	// Set the started flag
-	connection.started = true;
 };
 
 // Set the session cookies for HTTP requests

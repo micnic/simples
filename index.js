@@ -42,20 +42,8 @@ var simples = function (port, options, callback) {
 	// Set current instance as the main host
 	this.hosts.main = this;
 
-	// Create the internal instance server
-	if (utils.isObject(options)) {
-		simples.getCertificates(options, function (result) {
-			that.secured = true;
-			that.instance = https.Server(result);
-			that.secondary = http.Server();
-			simples.addListeners(that);
-			that.start(callback);
-		});
-	} else {
-		this.instance = http.Server();
-		simples.addListeners(that);
-		this.start(callback);
-	}
+	// Initialize the server
+	simples.prepareServer(this, options, callback);
 };
 
 // Add event listeners to the internal instances
@@ -65,8 +53,7 @@ simples.addListeners = function (server) {
 	function onError(error) {
 		server.busy = false;
 		server.started = false;
-		console.error('\nsimpleS: Server error\n');
-		throw error;
+		server.emit('error', error);
 	}
 
 	// Listener for HTTP requests
@@ -78,16 +65,16 @@ simples.addListeners = function (server) {
 		utils.http.connectionListener(host, request, response);
 	}
 
-	// Listener for WS requests
+	// Listener for WebSocket requests
 	function onUpgrade(request, socket) {
 
 		var host = simples.getHost(server, request);
 
-		// Create a new WS connection if the host is defined
+		// Check for a defined WebSocket host
 		if (host) {
 			utils.ws.connectionListener(host, request);
 		} else {
-			console.error('\nsimpleS: Request to inexistent WebSocket host\n');
+			server.emit('error', new Error('Inexistent WebSocket host called'));
 			socket.destroy();
 		}
 	}
@@ -116,14 +103,13 @@ simples.addListeners = function (server) {
 
 		// Attach the listeners for the secondary HTTP server instance
 		server.secondary.on('error', function (error) {
-			console.error('\nsimpleS: Error inside the secondary HTTP server');
 			server.instance.emit('error', error);
 		}).on('request', onRequest).on('upgrade', onUpgrade);
 	}
 };
 
 // Read the certificates for the HTTPS server
-simples.getCertificates = function (options, callback) {
+simples.getCertificates = function (server, options, callback) {
 
 	var files = [],
 		result = {};
@@ -133,9 +119,14 @@ simples.getCertificates = function (options, callback) {
 
 		// Check for error on reading files
 		if (error) {
-			console.error('\nsimpleS: Can not read SSL certificates');
-			throw error;
+			server.emit('error', new Error('Can not read SSL certificates'));
+		} else {
+			setFileContent(content);
 		}
+	}
+
+	// Set the content of the current file and read the next one
+	function setFileContent(content) {
 
 		// Set the content of the file in the options object
 		result[files.shift()] = content;
@@ -164,15 +155,15 @@ simples.getCertificates = function (options, callback) {
 	if (files.length) {
 		fs.readFile(result[files[0]], onFileRead);
 	} else {
-		throw new Error('simpleS: No SSL certificates defined');
+		server.emit('error', new Error('No SSL certificates defined'));
 	}
 };
 
 // Returns the host object depending on the request
-simples.getHost = function (instance, request) {
+simples.getHost = function (server, request) {
 
 	var headers = request.headers,
-		host = instance.hosts.main,
+		host = server.hosts.main,
 		hostname = '';
 
 	// Check if host is provided by the host header
@@ -182,18 +173,35 @@ simples.getHost = function (instance, request) {
 		hostname = headers.host.split(':')[0];
 
 		// Check for existing HTTP host
-		if (instance.hosts[hostname]) {
-			host = instance.hosts[hostname];
+		if (server.hosts[hostname]) {
+			host = server.hosts[hostname];
 		}
 	}
 
-	// Check for WS host
+	// Check for WebSocket host
 	if (headers.upgrade) {
 		hostname = url.parse(request.url).pathname;
 		host = host.routes.ws[hostname];
 	}
 
 	return host;
+};
+
+// Create the internal server instance
+simples.prepareServer = function (server, options, callback) {
+	if (utils.isObject(options)) {
+		simples.getCertificates(server, options, function (result) {
+			server.secured = true;
+			server.instance = https.Server(result);
+			server.secondary = http.Server();
+			simples.addListeners(server);
+			server.start(callback);
+		});
+	} else {
+		server.instance = http.Server();
+		simples.addListeners(server);
+		server.start(callback);
+	}
 };
 
 // Inherit from host
@@ -206,12 +214,17 @@ simples.prototype = Object.create(host.prototype, {
 // Create a new host or return an existing one
 simples.prototype.host = function (name, config) {
 
-	// Check for an existing host or create a new host
+	// Select the main host or use another one
 	if (typeof name === 'string') {
-		if (this.hosts[name]) {
+
+		// Create a new host if it does not exist
+		if (!this.hosts[name]) {
+			this.hosts[name] = new host(this, name);
+		}
+
+		// Set the host configuration
+		if (utils.isObject(config)) {
 			this.hosts[name].config(config);
-		} else {
-			this.hosts[name] = new host(this, name, config);
 		}
 	} else {
 		name = 'main';
