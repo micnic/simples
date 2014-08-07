@@ -5,9 +5,9 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
 
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -31,7 +31,7 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a name="057" class="anchor" href="#057"><span class="octicon octicon-link"></span></a>0.5.7</h1>
+<a name="059" class="anchor" href="#059"><span class="octicon octicon-link"></span></a>0.5.9</h1>
 
 <p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
 
@@ -92,13 +92,13 @@
 <a name="routing" class="anchor" href="#routing"><span class="octicon octicon-link"></span></a>Routing</h2>
 
 <div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'root'</span><span class="p">);</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Simples Works'</span><span class="p">);</span>
 <span class="p">});</span>
 
 <span class="nx">server</span><span class="p">.</span><span class="nx">serve</span><span class="p">(</span><span class="s1">'static_files'</span><span class="p">);</span> <span class="c1">// Route for static files located in the folder "static_files"</span>
 
 <span class="nx">server</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'404'</span><span class="p">);</span>
+    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Error 404 caught'</span><span class="p">);</span>
 <span class="p">});</span>
 </pre></div>
 
