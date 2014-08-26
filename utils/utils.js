@@ -1,8 +1,6 @@
 'use strict';
 
 var crypto = require('crypto'),
-	fs = require('fs'),
-	stream = require('stream'),
 	url = require('url');
 
 // Utils namespace
@@ -73,6 +71,15 @@ utils.copyConfig = function (destination, config, stop) {
 	});
 };
 
+// Emit safely errors to avoid fatal errors
+utils.emitError = function (emitter, error, log) {
+	if (emitter.listeners('error').length) {
+		emitter.emit('error', error);
+	} else if (log) {
+		console.error('\n' + error.stack + '\n');
+	}
+};
+
 // Generate hash from data and send it to the callback
 utils.generateHash = function (data, encoding, callback) {
 
@@ -123,14 +130,14 @@ utils.generateSession = function (host, connection, callback) {
 	// Generate a random session id of 16 bytes
 	crypto.randomBytes(16, function (error, buffer) {
 		if (error) {
-			host.emit('error', error);
+			utils.emitError(host, error, true);
 		} else {
 			prepareSessionHashes(buffer);
 		}
 	});
 };
 
-// Generate the session container
+// Get an existing stored session or generate a new one
 utils.getSession = function (host, connection, callback) {
 
 	var config = host.conf.session,
@@ -158,36 +165,20 @@ utils.isObject = function (object) {
 	return prototype.call(object) === '[object Object]';
 };
 
-// Log data on new connections
-utils.log = function (host, connection) {
+// Write the session to the host storage
+utils.setSession = function (host, connection, session) {
 
-	var data = {},
-		log = null,
-		logger = host.logger;
+	var config = host.conf.session;
 
-	// Prepare source data object
-	Object.keys(connection).filter(function (attribute) {
-		return typeof connection[attribute] !== 'function';
-	}).forEach(function (attribute) {
-		data[attribute] = connection[attribute];
+	// Write the session object and remove its reference inside the connection
+	config.store.set(session.id, {
+		id: session.id,
+		hash: session.hash,
+		expire: config.timeout * 1000 + Date.now(),
+		container: connection.session
+	}, function () {
+		connection.session = null;
 	});
-
-	// Apply the data object
-	log = logger.callback(data);
-
-	// Write to the stream only if the logger has defined a result
-	if (log !== undefined) {
-
-		// Stringify log data
-		if (typeof log !== 'string') {
-			log = JSON.stringify(log, null, ' ');
-		}
-
-		// Write the log on a new line in the stream
-		if (logger.stream.writable) {
-			logger.stream.write(log + '\n');
-		}
-	}
 };
 
 // Generate UTC string for a numeric time value

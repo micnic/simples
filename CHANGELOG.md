@@ -1,3 +1,12 @@
+## 0.6.0
+- Improved cookies and langs parsers
+- Revealed `connection.request` and `connection.response` in the public docs
+- Removed session for static content
+- Implemented `connection.log()`
+- Removed `host.log` in favor of `connection.log`
+- Now session stores should manage expired sessions
+- Fixed incorect session cookie expire time
+
 ## 0.5.9
 - Modified error handling for the server and hosts
 - Improved internal structure

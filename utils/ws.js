@@ -15,6 +15,9 @@ ws.host = require('simples/lib/ws/host');
 // The WebSocket GUID
 ws.guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
+// Ping frame buffer
+ws.ping = new Buffer([137, 0]);
+
 // Listener for WS requests
 ws.connectionListener = function (host, request) {
 
@@ -36,13 +39,11 @@ ws.connectionListener = function (host, request) {
 	// Check if any errors appeared and continue connection processing
 	if (error) {
 
-		// Emit the error to the host if it has any error listeners
-		if (host.listeners('error').length) {
-			host.emit('error', new Error(error));
-		}
+		// Emit safely the error to the host
+		utils.emitError(host, new Error(error));
 
-		// Destroy the connection socket
-		connection.socket.destroy();
+		// Destroy the connection
+		connection.destroy();
 	} else {
 		connection.pipe(connection.socket);
 		host.connections.push(connection);
@@ -99,9 +100,9 @@ ws.parse = function (connection, frame, data) {
 
 		// Emit errors and check for close and pong frame, wait for data length
 		if (error) {
-			connection.emit('error', new Error(error));
-			connection.socket.destroy();
 			frame.state = -1;
+			connection.destroy();
+			utils.emitError(connection, new Error(error));
 		} else if (frame.opcode === 8) {
 			connection.end();
 			frame.state = 5;
@@ -124,9 +125,9 @@ ws.parse = function (connection, frame, data) {
 		frame.state = 3;
 	} else if (frame.state === 2 && frame.data.length >= 10) {
 		if (frame.data.readUInt32BE(2)) {
-			connection.emit('error', new Error('Undue frame payload length'));
-			connection.socket.destroy();
 			frame.state = -1;
+			connection.socket.destroy();
+			utils.emitError(connection, new Error('Long frame payload length'));
 		} else {
 			frame.length = frame.data.readUInt32BE(6);
 			frame.index += 8;
@@ -139,9 +140,9 @@ ws.parse = function (connection, frame, data) {
 
 		// Check if message is not too big and get the masking key
 		if (frame.length + frame.message.length > frame.limit) {
-			connection.emit('error', new Error('Too big WebSocket message'));
-			connection.socket.destroy();
 			frame.state = -1;
+			connection.socket.destroy();
+			utils.emitError(connection, new Error('Too big WebSocket message'));
 		} else {
 			frame.mask = frame.data.slice(frame.index, frame.index + 4);
 			frame.data = frame.data.slice(frame.index + 4);
@@ -176,7 +177,7 @@ ws.parseMessage = function (connection, frame) {
 		});
 	} else {
 		domain.create().on('error', function (error) {
-			connection.emit('error', error);
+			utils.emitError(connection, error);
 		}).run(function () {
 			frame.message = JSON.parse(frame.message);
 			connection.emit(frame.message.event, frame.message.data);
@@ -231,9 +232,7 @@ ws.prepareHandshake = function (connection) {
 ws.connectionProcess = function (connection) {
 
 	var frame = {},
-		host = connection.parent,
-		parent = host.parent,
-		ping = new Buffer([137, 0]);
+		host = connection.parent;
 
 	// Prepare the frame object
 	frame.data = new Buffer(0);
@@ -251,7 +250,7 @@ ws.connectionProcess = function (connection) {
 		// Clear the previous timer and create a new timeout for ping frames
 		clearTimeout(connection.timer);
 		connection.timer = setTimeout(function () {
-			connection.socket.write(ping);
+			connection.socket.write(ws.ping);
 		}, 25000);
 	}).on('close', function () {
 
@@ -271,26 +270,15 @@ ws.connectionProcess = function (connection) {
 	// Execute user defined code for the WS host
 	domain.create().on('error', function (error) {
 
-		// Emit the error to the host if it has any error listeners
-		if (host.listeners('error').length) {
-			host.emit('error', error);
-		} else {
-			console.error('\n' + error.stack + '\n');
-		}
+		// Emit safely the error to the host
+		utils.emitError(host, error, true);
 
-		// Destroy the connection socket
-		connection.socket.destroy();
+		// Destroy the connection
+		connection.destroy();
 	}).run(function () {
-
-		// Log the new connection
-		if (parent.logger.callbak) {
-			utils.log(parent, connection);
-		}
-
-		// Call the connection listener, write ping frame and set time to live
-		host.listener(connection);
-		connection.socket.write(ping);
+		connection.socket.write(ws.ping);
 		connection.socket.setTimeout(30000);
+		host.listener(connection);
 	});
 };
 
@@ -304,7 +292,7 @@ ws.setSession = function (connection, session) {
 
 	// Prepare expiration time for the session cookies
 	config = parent.conf.session;
-	expires = utils.utc(config.timeout);
+	expires = utils.utc(config.timeout * 1000);
 
 	// Add the session cookies to the connection head
 	connection.head += 'Set-Cookie: _session=' + session.id + ';';
@@ -317,14 +305,7 @@ ws.setSession = function (connection, session) {
 
 	// Write the session to the store and remove its reference
 	connection.on('close', function () {
-		parent.conf.session.store.set(session.id, {
-			id: session.id,
-			hash: session.hash,
-			expire: config.timeout + Date.now(),
-			container: connection.session
-		}, function () {
-			connection.session = null;
-		});
+		utils.setSession(parent, connection, session);
 	});
 
 	// Continue to process the request

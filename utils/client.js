@@ -161,7 +161,7 @@ ajax.prototype.stop = function () {
 	this.xhr.abort();
 };
 
-// Set the succes listener
+// Set the success listener
 ajax.prototype.success = function (listener) {
 	'use strict';
 
@@ -173,7 +173,7 @@ ajax.prototype.success = function (listener) {
 	return this;
 };
 
-// Client-side Node.JS event emitter implementation
+// Client-side simplified Node.JS event emitter implementation
 var ee = simples.ee = function () {
 	'use strict';
 
@@ -254,7 +254,7 @@ ee.prototype.once = function (event, listener) {
 	'use strict';
 
 	// Prepare the one time listener
-	var onceListener = function () {
+	function onceListener() {
 		listener.apply(this, arguments);
 		this.removeListener(event, onceListener);
 	};
@@ -295,7 +295,7 @@ ee.prototype.removeListener = function (event, listener) {
 	return this;
 };
 
-// WS microframework
+// WebSocket microframework
 var ws = simples.ws = function (url, config) {
 	'use strict';
 
@@ -322,7 +322,7 @@ var ws = simples.ws = function (url, config) {
 		config.mode = 'advanced';
 	}
 
-	// Check for WS subprotocols
+	// Check for WebSocket subprotocols
 	if (!Array.isArray(config.protocols)) {
 		config.protocols = [];
 	}
@@ -455,7 +455,7 @@ ws.prototype.open = function (url, protocols) {
 	// Catch connection errors
 	this.socket.onerror = function () {
 		that.started = false;
-		that.emit('error', 'simpleS: Can not connect to the WS host');
+		that.emit('error', 'simpleS: Can not connect to the WebSocket host');
 	};
 
 	// Listen for incoming messages

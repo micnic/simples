@@ -1,5 +1,3 @@
-***simpleS is under active development, the API may change from version to version, it is highly recommended to read the documentation of the current version as there may me be some radical changes***
-
 ## Table of Contents:
 
 ### [New simpleS Instance](#server)
@@ -37,8 +35,6 @@
 
 >##### [Removing Routes](#host-leave)
 
->##### [Connections logging](#host-log)
-
 ### [Connection Interface](#http-connection)
 >##### [.cookies](#http-connection-cookies)
 
@@ -59,6 +55,10 @@
 >##### [.protocol](#http-connection-protocol)
 
 >##### [.query](#http-connection-query)
+
+>##### [.request](#http-connection-request)
+
+>##### [.response](#http-connection-response)
 
 >##### [.session](#http-connection-session)
 
@@ -84,7 +84,7 @@
 
 >##### [.write(chunk[, encoding, callback])](#http-connection-write)
 
->##### [.end(chunk[, encoding, callback])](#http-connection-end)
+>##### [.end([chunk, encoding, callback])](#http-connection-end)
 
 >##### [.send(data[, replacer, space])](#http-connection-send)
 
@@ -92,7 +92,11 @@
 
 >##### [.render(source[, imports])](#http-connection-render)
 
+>##### [.log([stream, ]data)](#http-connection-log)
+
 >##### [.close([callback])](#http-connection-close)
+
+>##### [.destroy()](#http-connection-destroy)
 
 ### [WebSocket](#websocket)
 >##### [WebSocket Host](#ws-host)
@@ -250,7 +254,6 @@ compression: {
     preferred: 'deflate' // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
-```
 
 `origins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
 ```js
@@ -270,9 +273,7 @@ Session configuration:
 ```js
 session: {
     enabled: false, // Activate the session, by default sessions are disabled
-    filter: /^.+$/i, // Filter content types that will use sessions, by default all kinds of file types will use sessions
-    store: simples.store(), // Session store, default is simples memcached store
-    timeout: 3600 // Set the time to live of a session in seconds, default is 1 hour, zero for infinite timeout
+    store: simples.store(3600), // Session store, the default is simples memcached store with 1 hour timeout
 }
 ```
 
@@ -282,9 +283,7 @@ Sessions are stored by default inside an memcached container, to define another 
 
 `.set(id, session, callback)` - should add the session container defined by the first two paramters and execute the callback function when the session container is saved to the sessions storage.
 
-`.clean()` - should remove the sessions that are expired by comparing the current time with the `.expires` attribute of the session containers.
-
-Note: The API is unstable at the moment, can be made some changes in the future releases
+Note: The third party session store also have to implement its own technique for cleaning up expired sessions.
 
 ### <a name="server-host-middleware"/> Middlewares
 
@@ -517,25 +516,9 @@ host.leave(404); // Removes the route for '404' error code and set the default r
 host.leave(); // Removes all routes and set default error routes
 ```
 
-### <a name="host-log"/> Logging
-
-`.log([stream, ]callback)`
-
-stream: object(writable stream instance) or string
-
-callback: function(connection)
-
-Allows to log data about the established connections, will write data to the `process.stdout` stream or a defined writable stream, if the `stream` parameter is a string then the logger will write to file with the path described in the string. The `callback` parameter should return data which will be shown in the console. This function is triggered on new HTTP and WS requests. Returns current instance, so calls can be chained.
-
-```js
-host.log(function (connection) {
-    return connection.url.href;
-});
-```
-
 ### <a name="http-connection"/> Connection Interface
 
-The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection is a transform stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
+The parameter provided in callbacks for routing requests is an object that contains data about the current request and the data sent to the client. The connection interface wraps the request and the response objects that comes from the Node.JS server, these objects can be used for compatibility with some other third party modules. The connection is a transform stream, see [`stream`](http://nodejs.org/api/stream.html) core module for more details.
 
 ```js
 {
@@ -562,6 +545,8 @@ The parameter provided in callbacks for routing requests is an object that conta
     params: {},
     path: '/',
     protocol: 'http',
+    request: { /* Node.JS server request object */ },
+    response: { /* Node.JS server response object */ },
     session: {},
     url: {
         /* These will never be filled
@@ -622,6 +607,14 @@ The name of the protocol of the request, can be `http` or `https`.
 #### <a name="http-connection-query"/> .query
 
 The object that contains parsed query string from the url.
+
+#### <a name="http-connection-request"/> .request
+
+The Node.JS server request object instance, may be used for compatibility with some third party modules, not recommended to be used because of possible side effects.
+
+#### <a name="http-connection-response"/> .response
+
+The Node.JS server response object instance, may be used for compatibility with some third party modules, not recommended to be used because of possible side effects.
 
 #### <a name="http-connection-session"/> .session
 
@@ -726,7 +719,7 @@ value: string
 
 attributes: object
 
-Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before `.write()` method. Returns current instance, so calls can be chained.
+Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before writing any data to the connection. Returns current instance, so calls can be chained.
 
 ```js
 connection.cookie('user', 'me', {
@@ -760,7 +753,7 @@ connection.header('ETag'); // => undefined
 
 value: null or string
 
-Sets, gets or removes the language of the response. Should be used before the `.write()` method. Should be used only once. If the `value` parameter is not defined then the value of the previously set language is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
+Sets, gets or removes the language of the response. Should be used only once before writing any data to the connection. If the `value` parameter is not defined then the value of the previously set language is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
 
 ```js
 connection.lang('ro'); // Set the 'Content-Language' header as 'ro'
@@ -811,7 +804,7 @@ type: string
 
 override: boolean
 
-Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once and before the `.write()` method. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
+Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once before writing any data to the connection. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```js
 connection.type(); // => 'text/html;charset=utf-8'
@@ -853,7 +846,7 @@ replacer: array[numbers or strings] or function(key, value)
 
 space: number or string
 
-Writes preformatted data to the connection stream and ends the connection, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+Writes preformatted data to the connection stream and ends the connection, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. If the connection does not have a `Content-Type` defined and the `data` parameter is not a buffer nor a string then it will have the type `application/json`. Should be used only once and should not be used with `.write()` or `.end()` methods.
 
 ```js
 connection.send(['Hello', 'World']);
@@ -867,7 +860,7 @@ type: string
 
 override: boolean
 
-Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should be used only once and should not be used with `.write()` or `.end()` methods.
 
 ```js
 connection.drain('path/to/index.html', 'text/html', true);
@@ -879,13 +872,65 @@ source: string
 
 imports: object
 
-Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should not be used with `.write()` or `.end()` methods, but `.write()` method can be used before. Should be used only once.
+Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should be used only once and should not be used with `.write()` or `.end()` methods.
 
 ```js
 connection.render('Hello <%= world %>', {
     world: 'World'
 });
 ```
+
+#### <a name="http-connection-log"/> .log([stream, ]data)
+
+stream: writable stream
+
+data: any data
+
+Log data to a defined stream or to the process.stdout by default. The data may contain some special tokens to insert useful data. Accepted tokens:
+
+`%req[HEADER]` - insert the value of a request header
+
+`%res[HEADER]` - insert the value of a response header
+
+`%protocol` - insert the protocol used by the connection (`http(s)` or `ws(s)`)
+
+`%method` - insert the method of the request
+
+`%host` - insert the hostname of the request
+
+`%path` - insert the pathname of the request
+
+`%ip` - insert the remote ip address
+
+`%status` - insert the status code of the response
+
+`%lang` - insert the defined `Content-Language` header for the response
+
+`%type` - insert the defined `Content-Type` header for the response
+
+Time related tokens:
+
+`%date` - insert the string representing current date
+
+`%short-date` - insert the current date in the format `dd.mm.yyyy`
+
+`%time` - insert the current time in the format `hh:mm:ss`
+
+`%short-time` - insert the current time in the format `hh:mm`
+
+`%timestamp` - insert the UNIX time value
+
+`%year` - insert the current year as a 4 digit number
+
+`%month` - insert the current month of the year
+
+`%day` - insert the current day of the month
+
+`%hour` - insert the current hour of the day
+
+`%minute` - insert the current minute of the hour
+
+`%second` - insert the current second of the minute
 
 #### <a name="http-connection-close"/> .close([callback])
 
@@ -898,6 +943,10 @@ connection.close(function () {
     console.log('Connection closed');
 });
 ```
+
+#### <a name="http-connection-destroy"/> .destroy()
+
+Destroy the underlaying network socket, it is mostly used internally by the framework and is not recommended in resulting apps.
 
 ## <a name="websocket"/> WebSocket
 
@@ -965,13 +1014,9 @@ filter: function(element, index, array)
 
 Opens a new channel with the provided name. If `filter` is defined, then all the connections of the WebSocket host that respect the filter callback will be bound to the channel. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
 
-#### <a name="ws-host-close"/> .close()
-
-Close all existing connections to the host, but the host still can receive new connections after this. Returns current instance, so calls can be chained.
-
 #### <a name="ws-host-destroy"/> .destroy()
 
-Close all existing connections and remove the host from the WebSocket hosts list.
+Destroy all existing connections and remove the host from the WebSocket hosts list.
 
 ### <a name="ws-connection"/> WebSocket Connection
 
@@ -1023,10 +1068,9 @@ Writes to the connection socket, same as [stream.writable.write](http://nodejs.o
 
 Ends the connection socket, same as [stream.writable.end](http://nodejs.org/api/stream.html#stream_writable_end_chunk_encoding_callback)
 
-`.close([callback])`
-callback: function()
+`.log([stream, ]data)`
 
-See Connection Interface `.close([callback])`.
+See Connection Interface `.log([stream, ]data)`.
 
 `.send([event, ]data)`
 event: string
@@ -1043,6 +1087,15 @@ source: string
 imports: object
 
 Using the template engine, send data through the WebSocket connection.
+
+`.close([callback])`
+callback: function()
+
+See Connection Interface `.close([callback])`.
+
+`.destory()`
+
+See Connection Interface `.destroy()`.
 
 #### <a name="ws-connection-events"/> WebSocket Connection Events
 

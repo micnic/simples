@@ -11,8 +11,6 @@ var fs = require('fs'),
 // SimpleS prototype constructor
 var simples = function (port, options, callback) {
 
-	var that = this;
-
 	// Call host in this context and name it as main
 	host.call(this, this, 'main');
 
@@ -78,13 +76,13 @@ simples.addListeners = function (server) {
 		}
 	}
 
-	// Attach the listeners for the primary HTTP server instance
+	// Attach the listeners for the primary HTTP(S) server instance
 	server.instance.on('release', function (callback) {
 
 		// Remove busy flag
 		server.busy = false;
 
-		// Call the callback function when the server is free
+		// Call the callback function if it is defined
 		if (callback) {
 			callback();
 		}
@@ -142,7 +140,7 @@ simples.getCertificates = function (server, options, callback) {
 	Object.keys(options).forEach(function (element) {
 
 		// Get certificate file names
-		if (['cert', 'key', 'pfx'].indexOf(element) >= 0) {
+		if (/^(?:cert|key|pfx)$/.test(element)) {
 			files.push(element);
 		}
 
@@ -270,7 +268,7 @@ simples.prototype.start = function (port, callback) {
 		if (this.secured) {
 			port = 443;
 		}
-		if (typeof callback === 'function`') {
+		if (typeof callback !== 'function') {
 			callback = null;
 		}
 	} else if (typeof port === 'function') {
@@ -306,11 +304,6 @@ simples.prototype.stop = function (callback) {
 		// Set status flags
 		that.busy = true;
 		that.started = false;
-
-		// Clear all existing hosts
-		Object.keys(that.hosts).forEach(function (host) {
-			that.hosts[host].close();
-		});
 
 		// On server instance close emit release event
 		that.instance.close(function () {
@@ -374,6 +367,6 @@ module.exports = function (port, options, callback) {
 };
 
 // Create a new session store instance
-exports.store = function () {
-	return new store();
+exports.store = function (timeout) {
+	return new store(timeout);
 };
