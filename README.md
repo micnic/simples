@@ -1,5 +1,7 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.6.0
+# 0.6.1
+
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
 
 simpleS is a simple HTTP(S) server for Node.JS that has some special features:
 

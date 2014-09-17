@@ -9,7 +9,7 @@ var fs = require('fs'),
 	utils = require('simples/utils/utils');
 
 // SimpleS prototype constructor
-var simples = function (port, options, callback) {
+var simples = function () {
 
 	// Call host in this context and name it as main
 	host.call(this, this, 'main');
@@ -24,7 +24,7 @@ var simples = function (port, options, callback) {
 			value: {}
 		},
 		port: {
-			value: port,
+			value: 80,
 			writable: true
 		},
 		secured: {
@@ -39,13 +39,87 @@ var simples = function (port, options, callback) {
 
 	// Set current instance as the main host
 	this.hosts.main = this;
+};
 
-	// Initialize the server
-	simples.prepareServer(this, options, callback);
+// Read the certificates for the HTTPS server
+simples.getCertificates = function (server, options, callback) {
+
+	var files = [],
+		result = {};
+
+	// Listener for file reading end
+	function onFileRead(error, content) {
+		if (error) {
+			server.emit('error', new Error('Can not read SSL certificates'));
+		} else {
+			setFileContent(content);
+		}
+	}
+
+	// Set the content of the current file and read the next one
+	function setFileContent(content) {
+
+		// Set the content of the file in the options object
+		result[files.shift()] = content;
+
+		// Read the next file or call the callback function
+		if (files.length) {
+			fs.readFile(result[files[0]], onFileRead);
+		} else {
+			callback(result);
+		}
+	}
+
+	// Process options members
+	Object.keys(options).forEach(function (element) {
+
+		// Get certificate file names
+		if (/^(?:cert|key|pfx)$/.test(element)) {
+			files.push(element);
+		}
+
+		// Copy options members
+		result[element] = options[element];
+	});
+
+	// Start reading files
+	if (files.length) {
+		fs.readFile(result[files[0]], onFileRead);
+	} else {
+		server.emit('error', new Error('No SSL certificates defined'));
+	}
+};
+
+// Returns the host object depending on the request
+simples.getHost = function (server, request) {
+
+	var headers = request.headers,
+		host = server.hosts.main,
+		hostname = '';
+
+	// Check if host is provided by the host header
+	if (headers.host) {
+
+		// Get the host name
+		hostname = headers.host.split(':')[0];
+
+		// Check for existing HTTP host
+		if (server.hosts[hostname]) {
+			host = server.hosts[hostname];
+		}
+	}
+
+	// Check for WebSocket host
+	if (headers.upgrade) {
+		hostname = url.parse(request.url).pathname;
+		host = host.routes.ws[hostname];
+	}
+
+	return host;
 };
 
 // Add event listeners to the internal instances
-simples.addListeners = function (server) {
+simples.prepareServer = function (server, port, callback) {
 
 	// Listener for fatal errors
 	function onError(error) {
@@ -103,102 +177,9 @@ simples.addListeners = function (server) {
 			server.instance.emit('error', error);
 		}).on('request', onRequest).on('upgrade', onUpgrade);
 	}
-};
 
-// Read the certificates for the HTTPS server
-simples.getCertificates = function (server, options, callback) {
-
-	var files = [],
-		result = {};
-
-	// Listener for file reading end
-	function onFileRead(error, content) {
-
-		// Check for error on reading files
-		if (error) {
-			server.emit('error', new Error('Can not read SSL certificates'));
-		} else {
-			setFileContent(content);
-		}
-	}
-
-	// Set the content of the current file and read the next one
-	function setFileContent(content) {
-
-		// Set the content of the file in the options object
-		result[files.shift()] = content;
-
-		// Read the next file or call the callback function
-		if (files.length) {
-			fs.readFile(result[files[0]], onFileRead);
-		} else {
-			callback(result);
-		}
-	}
-
-	// Process options members
-	Object.keys(options).forEach(function (element) {
-
-		// Get certificate file names
-		if (/^(?:cert|key|pfx)$/.test(element)) {
-			files.push(element);
-		}
-
-		// Copy options members
-		result[element] = options[element];
-	});
-
-	// Read the first file
-	if (files.length) {
-		fs.readFile(result[files[0]], onFileRead);
-	} else {
-		server.emit('error', new Error('No SSL certificates defined'));
-	}
-};
-
-// Returns the host object depending on the request
-simples.getHost = function (server, request) {
-
-	var headers = request.headers,
-		host = server.hosts.main,
-		hostname = '';
-
-	// Check if host is provided by the host header
-	if (headers.host) {
-
-		// Get the host name
-		hostname = headers.host.split(':')[0];
-
-		// Check for existing HTTP host
-		if (server.hosts[hostname]) {
-			host = server.hosts[hostname];
-		}
-	}
-
-	// Check for WebSocket host
-	if (headers.upgrade) {
-		hostname = url.parse(request.url).pathname;
-		host = host.routes.ws[hostname];
-	}
-
-	return host;
-};
-
-// Create the internal server instance
-simples.prepareServer = function (server, options, callback) {
-	if (utils.isObject(options)) {
-		simples.getCertificates(server, options, function (result) {
-			server.secured = true;
-			server.instance = https.Server(result);
-			server.secondary = http.Server();
-			simples.addListeners(server);
-			server.start(callback);
-		});
-	} else {
-		server.instance = http.Server();
-		simples.addListeners(server);
-		server.start(callback);
-	}
+	// Start the server
+	server.start(port, callback);
 };
 
 // Inherit from host
@@ -230,7 +211,7 @@ simples.prototype.host = function (name, config) {
 	return this.hosts[name];
 };
 
-// Start simples server
+// Start simpleS server
 simples.prototype.start = function (port, callback) {
 
 	var that = this;
@@ -331,6 +312,8 @@ simples.prototype.stop = function (callback) {
 // Export a new simpleS instance
 module.exports = function (port, options, callback) {
 
+	var server = new simples();
+
 	// Optional cases for port, options and callback
 	if (typeof port === 'number') {
 		if (utils.isObject(options) && typeof callback === 'function') {
@@ -363,7 +346,20 @@ module.exports = function (port, options, callback) {
 		callback = null;
 	}
 
-	return new simples(port, options, callback);
+	// Create the internal server instance
+	if (utils.isObject(options)) {
+		simples.getCertificates(server, options, function (result) {
+			server.secured = true;
+			server.instance = https.Server(result);
+			server.secondary = http.Server();
+			simples.prepareServer(server, port, callback);
+		});
+	} else {
+		server.instance = http.Server();
+		simples.prepareServer(server, port, callback);
+	}
+
+	return server;
 };
 
 // Create a new session store instance

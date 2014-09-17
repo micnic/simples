@@ -22,15 +22,6 @@ utils.parsers = {
 // Export ws utils
 utils.ws = require('simples/utils/ws');
 
-// RegExp to replace star wildcard
-utils.allPatternRegExp = /\*/gi;
-
-// RegExp to escape all special characters
-utils.escapeRegExp = /[\-\[\]\/\{\}\(\)\+\?\.\\\^\$\|]/gi;
-
-// RegExp to match named parameters
-utils.paramsRegExp = /:([^\\.]+)/gi;
-
 // Check if the origin header is accepted by the host (CORS)
 utils.accepts = function (host, connection) {
 

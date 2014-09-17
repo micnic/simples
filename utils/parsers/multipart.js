@@ -6,7 +6,7 @@ var events = require('events'),
 var multipartParser = function(type) {
 
 	var boundary = '',
-		match = type.match(multipartParser.boundaryRegExp);
+		match = type.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
 
 	// Call events.EventEmitter in this context
 	events.EventEmitter.call(this);
@@ -34,12 +34,6 @@ var multipartParser = function(type) {
 	this.prev = 0;
 	this.sindex = 0;
 };
-
-// RegExp to match content boundary
-multipartParser.boundaryRegExp = /boundary=(?:"([^"]+)"|([^;]+))/i;
-
-// RegExp to get field name and possible file name
-multipartParser.dRegExp = /^form-data; name="([^"]+)"(?:; filename="(.*?)")?$/i;
 
 // Field prototype constructor
 multipartParser.field = function (title) {
@@ -155,7 +149,7 @@ multipartParser.prototype.getRequestEnd = function(current) {
 // Create a new part based on content disposition
 multipartParser.prototype.newPart = function(disposition) {
 
-	var title = disposition.match(multipartParser.dRegExp);
+	var title = disposition.match(/^form-data; name="([^"]+)"(?:; filename="(.*?)")?$/i);
 
 	// Check for a valid disposition and create a new field
 	if (title) {

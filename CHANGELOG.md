@@ -1,3 +1,10 @@
+## 0.6.1
+- Fixed default session store crash
+- Fixed `Last-Modified` header to have value compliant the HTTP standard
+- Added `Last-Modified` header for cached directories
+- Reworked the server instance creation
+- Some documentation fixes
+
 ## 0.6.0
 - Improved cookies and langs parsers
 - Revealed `connection.request` and `connection.response` in the public docs

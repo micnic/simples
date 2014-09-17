@@ -58,42 +58,32 @@ http.applyStaticRoute = function (connection, route) {
 	var directory = null,
 		extension = '',
 		host = connection.parent,
-		mtime = 0,
 		routes = host.routes,
-		stats = route.stats;
+		stats = route.stats,
+		time = stats.mtime.toUTCString();
 
-	// Check if the route is a directory or a file
-	if (stats.isDirectory()) {
+	// Set the last modified time
+	connection.header('Last-Modified', time);
+
+	// Check if the resources were modified after last access
+	if (connection.headers['if-modified-since'] === time) {
+		connection.status(304).end();
+	} else if (stats.isDirectory()) {
 
 		// Prepare directory items
 		directory = Object.keys(route.files).map(function (name) {
-
-			var item = {};
-
-			// Prepare item object
-			item.name = name;
-			item.stats = route.files[name].stats;
-
-			return item;
+			return route.files[name];
 		});
 
 		// Apply the route for the directory
 		routes.serve.call(host, connection, directory);
 	} else {
 
-		// Prepare route properties
+		// Prepare file extension
 		extension = path.extname(route.location).slice(1);
-		mtime = stats.mtime.valueOf();
 
-		// Set the last modified time and the content type of the response
-		connection.header('Last-Modified', mtime).type(extension);
-
-		// Check if modification time coincides on the client and on the server
-		if (Number(connection.headers['if-modified-since']) === mtime) {
-			connection.status(304).end();
-		} else {
-			connection.end(route.content);
-		}
+		// Set the content type of the response
+		connection.type(extension).end(route.content);
 	}
 };
 

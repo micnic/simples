@@ -21,7 +21,7 @@ ws.ping = new Buffer([137, 0]);
 // Listener for WS requests
 ws.connectionListener = function (host, request) {
 
-	var connection = new utils.ws.connection(host, request),
+	var connection = new ws.connection(host, request),
 		error = '',
 		parent = host.parent;
 
@@ -47,7 +47,7 @@ ws.connectionListener = function (host, request) {
 	} else {
 		connection.pipe(connection.socket);
 		host.connections.push(connection);
-		utils.ws.prepareHandshake(connection);
+		ws.prepareHandshake(connection);
 	}
 };
 
@@ -202,7 +202,7 @@ ws.prepareHandshake = function (connection) {
 		parent = host.parent;
 
 	// Generate the base64 WS response key
-	utils.generateHash(key + utils.ws.guid, 'base64', function (handshake) {
+	utils.generateHash(key + ws.guid, 'base64', function (handshake) {
 
 		var config = parent.conf.session,
 			protocols = connection.protocols.join(', ');

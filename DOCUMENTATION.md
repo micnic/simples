@@ -12,6 +12,8 @@
 
 > ##### [Host Configuration](#server-host-config)
 
+> ##### [Middlewares](#middlewares)
+
 > ##### [Templating](#server-templating)
 
 ### [Routing](#host-routing)
@@ -162,18 +164,9 @@ server.get('/', function (connection) {
         // Application logic
     }
 });
-
-// or using a middleware for an universal behavior
-
-server.middleware(function (connection, next) {
-    if (connection.protocol === 'http' && /\/secured\/.+/i.test(connection.path)) { // Filter by connection.path
-        connection.redirect('https://' + connection.url.host + connection.url.path, true);
-        next(true); // Stop the middleware chain
-    } else {
-        next(); // Do nothing for other paths
-    }
-});
 ```
+
+or try [simples-redirect](https://github.com/micnic/simples-redirect) middleware with some more options.
 
 The third parameter `callback` is used to know when the server has started running.
 
@@ -308,7 +301,7 @@ host.middleware(function (connection, next) {
 // another example to set X-Powered-By Header for all connections
 
 host.middleware(function (connection, next) {
-    connection.header('X-Powered-By Header', 'simpleS');
+    connection.header('X-Powered-By', 'simpleS');
     next();
 });
 ```
