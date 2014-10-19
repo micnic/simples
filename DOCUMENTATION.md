@@ -800,8 +800,6 @@ override: boolean
 Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once before writing any data to the connection. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```js
-connection.type(); // => 'text/html;charset=utf-8'
-
 connection.type('txt'); // Set the 'Content-Type' header as 'text/plain;charset=utf-8'
 
 connection.type(); // => 'text/plain;charset=utf-8'

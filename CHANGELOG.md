@@ -1,3 +1,10 @@
+## 0.6.2
+- Fixed routes which rendered views
+- Added importer functional for `connection.render()`
+- Fixed channels container structure
+- Improved internal structure
+- Documentation fixes
+
 ## 0.6.1
 - Fixed default session store crash
 - Fixed `Last-Modified` header to have value compliant the HTTP standard

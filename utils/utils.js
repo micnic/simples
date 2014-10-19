@@ -1,6 +1,7 @@
 'use strict';
 
 var crypto = require('crypto'),
+	fs = require('fs'),
 	url = require('url');
 
 // Utils namespace
@@ -148,12 +149,291 @@ utils.getSession = function (host, connection, callback) {
 	}
 };
 
-// Check for a plain object
-utils.isObject = function (object) {
+// Check for an object value
+utils.isObject = function (value) {
+	return Object.prototype.toString.call(value) === '[object Object]';
+};
 
-	var prototype = Object.prototype.toString;
+// Get the cookies of the request
+utils.parseCookies = function (header) {
 
-	return prototype.call(object) === '[object Object]';
+	var cookies = {},
+		current = header[0],
+		index = 0,
+		length = 0,
+		name = '',
+		value = '';
+
+	// Populate cookies
+	while (current) {
+
+		// Skip whitespace
+		while (current === ' ') {
+			index++;
+			current = header[index];
+		}
+
+		// Get the length of the name of the cookie
+		while (current && current !== '=') {
+			length++;
+			current = header[index + length];
+		}
+
+		// Get the name of the cookie
+		name = header.substr(index, length);
+
+		// Set the new index and reset length
+		index += length;
+		length = 0;
+
+		// Skip "="
+		if (current === '=') {
+			index++;
+			current = header[index];
+		}
+
+		// Get the length of the value of the cookie
+		while (current && current !== ';') {
+			length++;
+			current = header[index + length];
+		}
+
+		// Get the value of the cookie
+		value = header.substr(index, length);
+
+		// Set the current cookie
+		cookies[name] = decodeURIComponent(value);
+
+		// Prepare for the next cookie
+		index += length + 1;
+		length = 0;
+		name = '';
+		value = '';
+		current = header[index];
+	}
+
+	return cookies;
+};
+
+// Get the languages accepted by the client
+utils.parseLangs = function (header) {
+
+	var current = header[0],
+		index = 0,
+		langs = [],
+		length = 0,
+		name = '',
+		quality = '';
+
+	// Populate langs
+	while (current) {
+
+		// Skip whitespace
+		while (current === ' ') {
+			index++;
+			current = header[index];
+		}
+
+		// Get the length of the name of the language
+		while (current && current !== ',' && current !== ';') {
+			length++;
+			current = header[index + length];
+		}
+
+		// Get the name of the language
+		name = header.substr(index, length);
+
+		// Set the new index and reset length
+		index += length;
+		length = 0;
+
+		// Set the quality factor to 1 if none found or continue to get it
+		if (!current || current === ',') {
+			quality = '1';
+		} else if (current === ';') {
+			index++;
+			current = header[index];
+		}
+
+		// Check for quality factor
+		if (!quality && header.substr(index, 2) === 'q=') {
+			index += 2;
+			current = header[index];
+		}
+
+		// Get the length of the quality factor of the language
+		while (!quality && current && current !== ',') {
+			length++;
+			current = header[index + length];
+		}
+
+		// Get the quality factor of the language
+		if (!quality) {
+			quality = header.substr(index, length);
+		}
+
+		// Add the current language to the set
+		langs.push({
+			name: name,
+			quality: Number(quality)
+		});
+
+		// Prepare for the next language
+		index += length + 1;
+		length = 0;
+		name = '';
+		quality = '';
+		current = header[index];
+	}
+
+	// Sort the languages in the order of their importance and return them
+	return langs.sort(function (first, second) {
+		return second.quality - first.quality;
+	}).map(function (lang) {
+		return lang.name;
+	});
+};
+
+// Prepare the options for the HTTPS server
+utils.prepareSecuredServer = function (server, options, callback) {
+
+	var count = 0,
+		result = {};
+
+	// Process options members and prepare the SSL certificates
+	Object.keys(options).filter(function (element) {
+
+		// Copy options members
+		result[element] = options[element];
+
+		return /^(?:cert|key|pfx)$/.test(element);
+	}).forEach(function (element) {
+
+		// Increase the number of files to read
+		count++;
+
+		// Read the current file
+		fs.readFile(options[element], function (error, content) {
+			if (error) {
+				server.emit('error', new Error('Can not read SSL certificate'));
+			} else {
+
+				// Decrease the number of files to read
+				count--;
+
+				// Add the content of the file to the result
+				result[element] = content;
+
+				// Check if all files are read
+				if (count === 0) {
+					callback(result);
+				}
+			}
+		});
+	});
+};
+
+// Prepare the internal server instances
+utils.prepareServer = function (server, port, callback) {
+
+	// Returns the host object depending on the request
+	function getHost(request) {
+
+		var headers = request.headers,
+			host = server.hosts.main,
+			hostname = '';
+
+		// Check if host is provided by the host header
+		if (headers.host) {
+
+			// Get the host name
+			hostname = headers.host.split(':')[0];
+
+			// Check for existing HTTP host
+			if (server.hosts[hostname]) {
+				host = server.hosts[hostname];
+			}
+		}
+
+		// Check for WebSocket host
+		if (headers.upgrade) {
+			hostname = url.parse(request.url).pathname;
+			host = host.routes.ws[hostname];
+		}
+
+		return host;
+	}
+
+	// Listener for fatal errors
+	function onError(error) {
+		server.busy = false;
+		server.started = false;
+		server.emit('error', error);
+	}
+
+	// Listener for HTTP requests
+	function onRequest(request, response) {
+
+		var host = getHost(request);
+
+		// Process the received request
+		utils.http.connectionListener(host, request, response);
+	}
+
+	// Listener for WebSocket requests
+	function onUpgrade(request, socket) {
+
+		var host = getHost(request);
+
+		// Check for a defined WebSocket host
+		if (host) {
+			utils.ws.connectionListener(host, request);
+		} else {
+			socket.destroy();
+		}
+	}
+
+	// Add listeners for HTTP and WebSocket requests
+	function setRequestListeners(instance) {
+		instance.on('request', onRequest).on('upgrade', onUpgrade);
+	}
+
+	// Attach the listeners for the primary HTTP(S) server instance
+	server.instance.on('release', function (callback) {
+
+		// Remove busy flag
+		server.busy = false;
+
+		// Call the callback function if it is defined
+		if (callback) {
+			callback();
+		}
+	}).on('error', onError);
+
+	// Set the request listeners for the main internal instance
+	setRequestListeners(server.instance);
+
+	// Check for secondary HTTP server
+	if (server.secondary) {
+
+		// Manage the HTTP server depending on HTTPS server events
+		server.instance.on('open', function () {
+			server.secondary.listen(80);
+		}).on('close', function () {
+			server.secondary.close();
+		});
+
+		// Attach the listeners for the secondary HTTP server instance
+		server.secondary.on('error', function (error) {
+			server.instance.emit('error', error);
+		});
+
+		// Set the request listeners for the secondary internal instance
+		setRequestListeners(server.instance);
+	}
+
+	// Start the server
+	server.start(port, callback);
 };
 
 // Write the session to the host storage

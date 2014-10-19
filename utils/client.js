@@ -49,8 +49,8 @@ var ajax = simples.ajax = function (url, data, method) {
 	'use strict';
 
 	var hash = url.indexOf('#'),
-		listeners = {},
 		json = false,
+		that = this,
 		xhr = new XMLHttpRequest();
 
 	// Ignore new keyword
@@ -61,7 +61,7 @@ var ajax = simples.ajax = function (url, data, method) {
 	// Define private properties for simples.ajax
 	Object.defineProperties(this, {
 		listeners: {
-			value: listeners
+			value: {}
 		},
 		xhr: {
 			value: xhr
@@ -69,13 +69,13 @@ var ajax = simples.ajax = function (url, data, method) {
 	});
 
 	// Default error listener
-	listeners.error = function () {
-		throw new Error('simpleS: Error listener not implemented');
+	this.listeners.error = function () {
+		throw new Error('simpleS: Error listener not defined');
 	};
 
 	// Default success listener
-	listeners.success = function () {
-		throw new Error('simpleS: Success listener not implemented');
+	this.listeners.success = function () {
+		throw new Error('simpleS: Success listener not defined');
 	};
 
 	// Set method to lower case for comparison
@@ -84,7 +84,7 @@ var ajax = simples.ajax = function (url, data, method) {
 	}
 
 	// Accept only DELETE, GET, HEAD, POST and PUT methods, defaults to get
-	if (['delete', 'head', 'post', 'put'].indexOf(method) < 0) {
+	if (!/^delete|get|head|post|put$/.test(method)) {
 		method = 'get';
 	}
 
@@ -111,6 +111,7 @@ var ajax = simples.ajax = function (url, data, method) {
 	// Open the XMLHttpRequest
 	xhr.open(method.toUpperCase(), url);
 
+	// Prepare data to be sent
 	if (data instanceof HTMLFormElement) {
 		data = new FormData(data);
 	} else if (data && typeof data === 'object') {
@@ -134,10 +135,10 @@ var ajax = simples.ajax = function (url, data, method) {
 
 	// Listen for changes in the state of the XMLHttpRequest
 	xhr.onreadystatechange = function () {
-		if (xhr.readyState === 4 && Math.trunc(xhr.status / 100) === 2) {
-			listeners.success(xhr.responseText);
+		if (xhr.readyState === 4 && xhr.status < 400) {
+			that.listeners.success(xhr.responseText, xhr.status);
 		} else if (xhr.readyState === 4) {
-			listeners.error(xhr.status, xhr.statusText);
+			that.listeners.error(xhr.status, xhr.statusText);
 		}
 	};
 };
@@ -253,11 +254,13 @@ ee.prototype.on = simples.ee.prototype.addListener;
 ee.prototype.once = function (event, listener) {
 	'use strict';
 
+	var that = this;
+
 	// Prepare the one time listener
 	function onceListener() {
-		listener.apply(this, arguments);
-		this.removeListener(event, onceListener);
-	};
+		listener.apply(that, arguments);
+		that.removeListener(event, onceListener);
+	}
 
 	// Append the listener
 	this.on(event, onceListener);
@@ -283,7 +286,6 @@ ee.prototype.removeAllListeners = function (event) {
 ee.prototype.removeListener = function (event, listener) {
 	'use strict';
 
-	// Shortcut for listeners
 	var index;
 
 	// Check if the event has listeners and remove the needed one
@@ -491,6 +493,8 @@ ws.prototype.open = function (url, protocols) {
 			that.socket.send(that.queue.shift());
 		}
 	};
+
+	return this;
 };
 
 // Send data via the WebSocket in raw or advanced mode

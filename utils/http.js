@@ -4,7 +4,8 @@ var cache = require('simples/lib/cache'),
 	domain = require('domain'),
 	path = require('path'),
 	url = require('url'),
-	utils = require('simples/utils/utils');
+	utils = require('simples/utils/utils'),
+	zlib = require('zlib');
 
 // HTTP namespace
 var http = exports;
@@ -24,6 +25,7 @@ http.verbs = {
 	'PUT': 'put'
 };
 
+// Manage the behavior of the route
 http.applyRoute = function (connection, route) {
 	if (typeof route === 'function') {
 		route.call(connection.parent, connection);
@@ -92,12 +94,98 @@ http.connectionListener = function (host, request, response) {
 
 	var connection = new http.connection(host, request, response);
 
+	// Prepare the connection before writing the first data chunk
+	connection.on('start', function () {
+
+		var compression = host.conf.compression,
+			cors = {},
+			deflate = false,
+			encoding = this.headers['accept-encoding'],
+			gzip = false,
+			type = this.type(),
+			wstream = response;
+
+		// Set the default content type if it is not defined
+		if (!type) {
+			this.type('html');
+			type = this.type();
+		}
+
+		// Check for CORS requests
+		if (this.headers.origin) {
+
+			// Check if the origin is accepted
+			if (utils.accepts(host, this)) {
+				cors.origin = this.headers.origin;
+
+				// Prepare CORS specific response headers
+				cors.headers = this.headers['access-control-request-headers'];
+				cors.methods = this.headers['access-control-request-method'];
+
+				// Always allow credentials
+				this.header('Access-Control-Allow-Credentials', 'True');
+
+				// Response with the requested headers
+				if (cors.headers) {
+					this.header('Access-Control-Allow-Headers', cors.headers);
+				}
+
+				// Response with the requested methods
+				if (cors.methods) {
+					this.header('Access-Control-Allow-Methods', cors.methods);
+				}
+			} else {
+				cors.origin = this.protocol + '://' + this.host;
+				this.enabled = false;
+			}
+
+			// Set the accepted origin
+			this.header('Access-Control-Allow-Origin', cors.origin);
+		}
+
+		// Check for supported content encodings of the client
+		if (encoding && compression.enabled && compression.filter.test(type)) {
+
+			// Get accepted encodings
+			deflate = /deflate/i.test(encoding);
+			gzip = /gzip/i.test(encoding);
+
+			// Check for supported compression
+			if (deflate && (compression.preferred === 'deflate' || !gzip)) {
+				encoding = 'deflate';
+				wstream = new zlib.Deflate(compression.options);
+			} else if (gzip && (compression.preferred === 'gzip' || !deflate)) {
+				encoding = 'gzip';
+				wstream = new zlib.Gzip(compression.options);
+			}
+
+			// Check for successful compression selection
+			if (wstream !== response) {
+				this.header('Content-Encoding', encoding);
+				wstream.pipe(response);
+			}
+		}
+
+		// Set the started flag
+		this.started = true;
+
+		// Pipe the connection to the compress stream or the response stream
+		this.pipe(wstream);
+	});
+
 	// Prepare connection for routing
 	if (connection.method === 'OPTIONS') {
 		connection.end();
 	} else {
 		http.routing(connection);
 	}
+};
+
+// Create a render listener as a shortcut
+http.createRenderListener = function (view, importer) {
+	return function (connection) {
+		connection.render(view, importer);
+	};
 };
 
 // Returns the advanced route if found
@@ -107,22 +195,22 @@ http.getDynamicRoute = function (connection, routes, verb) {
 		index = 0,
 		keys = Object.keys(routes[verb]),
 		length = keys.length,
-		result = null,
+		listener = null,
 		route = null;
 
 	// Search for a valid route
-	while (!result && index < length) {
+	while (!listener && index < length) {
 
 		// Select the current route
 		route = routes[verb][keys[index]];
 
 		// Check if the location matches the route pattern
 		if (route.pattern.test(location)) {
-			result = route.callback;
+			listener = route.listener;
 		}
 
-		// Switch to "all" verb if no result found
-		if (index === length - 1 && verb !== 'all' && !result) {
+		// Switch to "all" verb if no listener found
+		if (index === length - 1 && verb !== 'all' && !listener) {
 			index = 0;
 			keys = Object.keys(routes.all);
 			length = keys.length;
@@ -133,13 +221,13 @@ http.getDynamicRoute = function (connection, routes, verb) {
 	}
 
 	// Populate connection parameters if the route is found
-	if (result) {
+	if (listener) {
 		location.match(route.pattern).slice(1).forEach(function (param, key) {
 			connection.params[route.keys[key]] = param;
 		});
 	}
 
-	return result;
+	return listener;
 };
 
 // Check if the referer header is accepted by the host
