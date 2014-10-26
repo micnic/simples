@@ -1,3 +1,7 @@
+## 0.6.3
+- Fixed HTTPS content serving
+- Implement a better synchronisation between HTTP and HTTPS servers
+
 ## 0.6.2
 - Fixed routes which rendered views
 - Added importer functional for `connection.render()`

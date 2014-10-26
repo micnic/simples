@@ -306,7 +306,7 @@ http.routing = function (connection) {
 		route = routes.error[404];
 	}
 
-	// Wrap the connection inside a domain
+	// Process the connection inside a domain
 	domain.create().on('error', function (error) {
 
 		// Emit safely the error to the host
@@ -350,6 +350,7 @@ http.setSession = function (connection, callback) {
 			utils.setSession(host, connection, session);
 		});
 
+		// End the session apply
 		callback();
 	});
 };

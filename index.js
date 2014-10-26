@@ -82,14 +82,15 @@ simples.prototype.start = function (port, callback) {
 		that.port = port;
 		that.started = true;
 
-		// Emit open event if secondary server exists
-		if (that.secondary) {
-			that.instance.emit('open');
-		}
-
-		// On server instance port listening emit release event
+		// Trigger server release when internal instances are ready
 		that.instance.listen(port, function () {
-			this.emit('release', callback);
+			if (that.secured) {
+				that.secondary.listen(80, function () {
+					that.emit('release', callback);
+				});
+			} else {
+				that.emit('release', callback);
+			}
 		});
 	}
 
@@ -103,26 +104,18 @@ simples.prototype.start = function (port, callback) {
 	}
 
 	// Optional cases for port and callback
-	if (typeof port === 'number') {
-		if (typeof callback !== 'function') {
-			callback = null;
-		}
-	} else if (typeof port === 'function') {
+	if (typeof port === 'function') {
 		callback = port;
 		port = this.port;
-	} else {
-		callback = null;
-		port = this.port;
-	}
-
-	// Always set port 443 for HTTPS
-	if (this.secured) {
+	} else if (this.secured) {
 		port = 443;
+	} else if (typeof port !== 'number') {
+		port = this.port;
 	}
 
 	// If the server is busy wait for release
 	if (this.busy) {
-		this.instance.once('release', start);
+		this.once('release', start);
 	} else {
 		start();
 	}
@@ -142,21 +135,22 @@ simples.prototype.stop = function (callback) {
 		that.busy = true;
 		that.started = false;
 
-		// On server instance close emit release event
+		// Trigger server release when internal instances are ready
 		that.instance.close(function () {
-			this.emit('release', callback);
+			if (that.secured) {
+				that.secondary.close(function () {
+					that.emit('release', callback);
+				});
+			} else {
+				that.emit('release', callback);
+			}
 		});
-	}
-
-	// Check if callback is a function
-	if (typeof callback !== 'function') {
-		callback = null;
 	}
 
 	// Stop the server only if it is running
 	if (this.started) {
 		if (this.busy) {
-			this.instance.once('release', stop);
+			this.once('release', stop);
 		} else {
 			stop();
 		}
@@ -172,34 +166,22 @@ module.exports = function (port, options, callback) {
 
 	// Optional cases for port, options and callback
 	if (typeof port === 'number') {
-		if (utils.isObject(options) && typeof callback === 'function') {
+		if (utils.isObject(options)) {
 			port = 443;
-		} else if (utils.isObject(options)) {
-			port = 443;
-			callback = null;
 		} else if (typeof options === 'function') {
 			callback = options;
-			options = null;
-		} else {
-			options = null;
-			callback = null;
 		}
 	} else if (utils.isObject(port)) {
 		if (typeof options === 'function') {
 			callback = options;
-		} else {
-			callback = null;
 		}
 		options = port;
 		port = 443;
 	} else if (typeof port === 'function') {
 		callback = port;
 		port = 80;
-		options = null;
 	} else {
 		port = 80;
-		options = null;
-		callback = null;
 	}
 
 	// Create the internal server instance

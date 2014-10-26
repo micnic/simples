@@ -399,37 +399,30 @@ utils.prepareServer = function (server, port, callback) {
 	}
 
 	// Attach the listeners for the primary HTTP(S) server instance
-	server.instance.on('release', function (callback) {
+	server.on('release', function (callback) {console.log('!');
 
 		// Remove busy flag
-		server.busy = false;
+		this.busy = false;
 
 		// Call the callback function if it is defined
-		if (callback) {
+		if (typeof callback === 'function') {
 			callback();
 		}
-	}).on('error', onError);
+	});
+
+	server.instance.on('error', onError);
 
 	// Set the request listeners for the main internal instance
 	setRequestListeners(server.instance);
 
 	// Check for secondary HTTP server
-	if (server.secondary) {
-
-		// Manage the HTTP server depending on HTTPS server events
-		server.instance.on('open', function () {
-			server.secondary.listen(80);
-		}).on('close', function () {
-			server.secondary.close();
-		});
+	if (server.secured) {
 
 		// Attach the listeners for the secondary HTTP server instance
-		server.secondary.on('error', function (error) {
-			server.instance.emit('error', error);
-		});
+		server.secondary.on('error', onError);
 
 		// Set the request listeners for the secondary internal instance
-		setRequestListeners(server.instance);
+		setRequestListeners(server.secondary);
 	}
 
 	// Start the server

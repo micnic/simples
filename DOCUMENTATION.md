@@ -603,11 +603,11 @@ The object that contains parsed query string from the url.
 
 #### <a name="http-connection-request"/> .request
 
-The Node.JS server request object instance, may be used for compatibility with some third party modules, not recommended to be used because of possible side effects.
+The Node.JS server request object instance, may be used for compatibility with some third party modules, not recommended to be used because of some possible side effects.
 
 #### <a name="http-connection-response"/> .response
 
-The Node.JS server response object instance, may be used for compatibility with some third party modules, not recommended to be used because of possible side effects.
+The Node.JS server response object instance, may be used for compatibility with some third party modules, not recommended to be used because of some possible side effects.
 
 #### <a name="http-connection-session"/> .session
 
