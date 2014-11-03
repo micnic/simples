@@ -4,8 +4,7 @@ var cache = require('simples/lib/cache'),
 	domain = require('domain'),
 	path = require('path'),
 	url = require('url'),
-	utils = require('simples/utils/utils'),
-	zlib = require('zlib');
+	utils = require('simples/utils/utils');
 
 // HTTP namespace
 var http = exports;
@@ -94,85 +93,6 @@ http.connectionListener = function (host, request, response) {
 
 	var connection = new http.connection(host, request, response);
 
-	// Prepare the connection before writing the first data chunk
-	connection.on('start', function () {
-
-		var compression = host.conf.compression,
-			cors = {},
-			deflate = false,
-			encoding = this.headers['accept-encoding'],
-			gzip = false,
-			type = this.type(),
-			wstream = response;
-
-		// Set the default content type if it is not defined
-		if (!type) {
-			this.type('html');
-			type = this.type();
-		}
-
-		// Check for CORS requests
-		if (this.headers.origin) {
-
-			// Check if the origin is accepted
-			if (utils.accepts(host, this)) {
-				cors.origin = this.headers.origin;
-
-				// Prepare CORS specific response headers
-				cors.headers = this.headers['access-control-request-headers'];
-				cors.methods = this.headers['access-control-request-method'];
-
-				// Always allow credentials
-				this.header('Access-Control-Allow-Credentials', 'True');
-
-				// Response with the requested headers
-				if (cors.headers) {
-					this.header('Access-Control-Allow-Headers', cors.headers);
-				}
-
-				// Response with the requested methods
-				if (cors.methods) {
-					this.header('Access-Control-Allow-Methods', cors.methods);
-				}
-			} else {
-				cors.origin = this.protocol + '://' + this.host;
-				this.enabled = false;
-			}
-
-			// Set the accepted origin
-			this.header('Access-Control-Allow-Origin', cors.origin);
-		}
-
-		// Check for supported content encodings of the client
-		if (encoding && compression.enabled && compression.filter.test(type)) {
-
-			// Get accepted encodings
-			deflate = /deflate/i.test(encoding);
-			gzip = /gzip/i.test(encoding);
-
-			// Check for supported compression
-			if (deflate && (compression.preferred === 'deflate' || !gzip)) {
-				encoding = 'deflate';
-				wstream = new zlib.Deflate(compression.options);
-			} else if (gzip && (compression.preferred === 'gzip' || !deflate)) {
-				encoding = 'gzip';
-				wstream = new zlib.Gzip(compression.options);
-			}
-
-			// Check for successful compression selection
-			if (wstream !== response) {
-				this.header('Content-Encoding', encoding);
-				wstream.pipe(response);
-			}
-		}
-
-		// Set the started flag
-		this.started = true;
-
-		// Pipe the connection to the compress stream or the response stream
-		this.pipe(wstream);
-	});
-
 	// Prepare connection for routing
 	if (connection.method === 'OPTIONS') {
 		connection.end();
@@ -228,6 +148,14 @@ http.getDynamicRoute = function (connection, routes, verb) {
 	}
 
 	return listener;
+};
+
+// Get an existent HTTP host or the main HTTP host
+http.getHost = function (server, request) {
+
+	var hostname = (request.headers.host || '').replace(/:\d+$/, '');
+
+	return server.hosts[hostname] || server.hosts.main;
 };
 
 // Check if the referer header is accepted by the host
@@ -294,6 +222,11 @@ http.routing = function (connection) {
 			route = cache.client;
 		} else {
 			route = host.cache.read(location);
+		}
+
+		// Do not use routes to directories if no serve route is defined
+		if (route && route.stats.isDirectory() && !routes.serve) {
+			route = null;
 		}
 	}
 

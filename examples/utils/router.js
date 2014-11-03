@@ -1,5 +1,12 @@
 module.exports = function (server) {
-	server.serve(__dirname + '/../static').get('/', function (connection) {
+	server.serve(__dirname + '/../static').get('/param/:user', function (connection) {
+		connection.write(connection.params.user + '<br>');
+		connection.write(connection.query);
+		connection.parse(function (form) {
+			f
+		})
+		connection.end();
+	}).get('/', function (connection) {
 		connection.header('Test-Header', 'Test-Value');
 		connection.lang('en');
 		connection.write('<!doctype html>');

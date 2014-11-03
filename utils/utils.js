@@ -1,7 +1,6 @@
 'use strict';
 
 var crypto = require('crypto'),
-	fs = require('fs'),
 	url = require('url');
 
 // Utils namespace
@@ -80,7 +79,7 @@ utils.generateHash = function (data, encoding, callback) {
 	// Hash received data
 	crypto.Hash('sha1').on('readable', function () {
 
-		var chunk = this.read() || new Buffer(0);
+		var chunk = this.read();
 
 		// Append data to the hash
 		hash = Buffer.concat([hash, chunk], hash.length + chunk.length);
@@ -92,39 +91,29 @@ utils.generateHash = function (data, encoding, callback) {
 // Generate session id and hash
 utils.generateSession = function (host, connection, callback) {
 
-	var config = host.conf.session;
-
-	// Process the buffer of random bytes and prepare hashes for the session
-	function prepareSessionHashes(buffer) {
-
-		var id = buffer.toString('hex'),
-			secret = Array.apply(Array, buffer);
-
-		// Sort randomly the bytes of the generated id
-		secret.sort(function () {
-			return 0.5 - Math.random();
-		});
-
-		// Set the id as a hex string
-		secret = new Buffer(secret).toString('hex');
-
-		// Generate the session hash
-		utils.generateHash(id + secret, 'hex', function (hash) {
-			callback(connection, {
-				id: id,
-				hash: hash,
-				expires: config.timeout + Date.now(),
-				container: {}
-			});
-		});
-	}
+	var config = host.conf.session,
+		secret,
+		source;
 
 	// Generate a random session id of 16 bytes
 	crypto.randomBytes(16, function (error, buffer) {
 		if (error) {
 			utils.emitError(host, error, true);
 		} else {
-			prepareSessionHashes(buffer);
+
+			// Create the source from which to generate the hash
+			secret = new Buffer(buffer.toJSON().sort(utils.shuffle));
+			source = Buffer.concat([buffer, secret], 32);
+
+			// Generate the session hash
+			utils.generateHash(source, 'hex', function (hash) {
+				callback(connection, {
+					id: buffer.toString('hex'),
+					hash: hash,
+					expires: config.timeout + Date.now(),
+					container: {}
+				});
+			});
 		}
 	});
 };
@@ -294,139 +283,11 @@ utils.parseLangs = function (header) {
 	});
 };
 
-// Prepare the options for the HTTPS server
-utils.prepareSecuredServer = function (server, options, callback) {
-
-	var count = 0,
-		result = {};
-
-	// Process options members and prepare the SSL certificates
-	Object.keys(options).filter(function (element) {
-
-		// Copy options members
-		result[element] = options[element];
-
-		return /^(?:cert|key|pfx)$/.test(element);
-	}).forEach(function (element) {
-
-		// Increase the number of files to read
-		count++;
-
-		// Read the current file
-		fs.readFile(options[element], function (error, content) {
-			if (error) {
-				server.emit('error', new Error('Can not read SSL certificate'));
-			} else {
-
-				// Decrease the number of files to read
-				count--;
-
-				// Add the content of the file to the result
-				result[element] = content;
-
-				// Check if all files are read
-				if (count === 0) {
-					callback(result);
-				}
-			}
-		});
-	});
-};
-
-// Prepare the internal server instances
-utils.prepareServer = function (server, port, callback) {
-
-	// Returns the host object depending on the request
-	function getHost(request) {
-
-		var headers = request.headers,
-			host = server.hosts.main,
-			hostname = '';
-
-		// Check if host is provided by the host header
-		if (headers.host) {
-
-			// Get the host name
-			hostname = headers.host.split(':')[0];
-
-			// Check for existing HTTP host
-			if (server.hosts[hostname]) {
-				host = server.hosts[hostname];
-			}
-		}
-
-		// Check for WebSocket host
-		if (headers.upgrade) {
-			hostname = url.parse(request.url).pathname;
-			host = host.routes.ws[hostname];
-		}
-
-		return host;
+// Run the callback if it is a function
+utils.runFunction = function (callback) {
+	if (typeof callback === 'function') {
+		callback();
 	}
-
-	// Listener for fatal errors
-	function onError(error) {
-		server.busy = false;
-		server.started = false;
-		server.emit('error', error);
-	}
-
-	// Listener for HTTP requests
-	function onRequest(request, response) {
-
-		var host = getHost(request);
-
-		// Process the received request
-		utils.http.connectionListener(host, request, response);
-	}
-
-	// Listener for WebSocket requests
-	function onUpgrade(request, socket) {
-
-		var host = getHost(request);
-
-		// Check for a defined WebSocket host
-		if (host) {
-			utils.ws.connectionListener(host, request);
-		} else {
-			socket.destroy();
-		}
-	}
-
-	// Add listeners for HTTP and WebSocket requests
-	function setRequestListeners(instance) {
-		instance.on('request', onRequest).on('upgrade', onUpgrade);
-	}
-
-	// Attach the listeners for the primary HTTP(S) server instance
-	server.on('release', function (callback) {console.log('!');
-
-		// Remove busy flag
-		this.busy = false;
-
-		// Call the callback function if it is defined
-		if (typeof callback === 'function') {
-			callback();
-		}
-	});
-
-	server.instance.on('error', onError);
-
-	// Set the request listeners for the main internal instance
-	setRequestListeners(server.instance);
-
-	// Check for secondary HTTP server
-	if (server.secured) {
-
-		// Attach the listeners for the secondary HTTP server instance
-		server.secondary.on('error', onError);
-
-		// Set the request listeners for the secondary internal instance
-		setRequestListeners(server.secondary);
-	}
-
-	// Start the server
-	server.start(port, callback);
 };
 
 // Write the session to the host storage
@@ -443,6 +304,11 @@ utils.setSession = function (host, connection, session) {
 	}, function () {
 		connection.session = null;
 	});
+};
+
+// Returns a random value from -0.5 to 0.5
+utils.shuffle = function () {
+	return 0.5 - Math.random();
 };
 
 // Generate UTC string for a numeric time value

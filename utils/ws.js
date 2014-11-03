@@ -1,6 +1,7 @@
 'use strict';
 
 var domain = require('domain'),
+	url = require('url'),
 	utils = require('simples/utils/utils');
 
 // WS namespace
@@ -61,18 +62,18 @@ ws.defaultConfig = function () {
 	};
 };
 
+// Get the WS host if it exists from the HTTP host
+ws.getHost = function (server, request) {
+
+	var hostname = url.parse(request.url).pathname;
+
+	return utils.http.getHost(server, request).routes.ws[hostname];
+};
+
 // Parse received WS data
-ws.parse = function (connection, frame, data) {
+ws.parse = function (connection, frame) {
 
-	var error = '',
-		length = 0;
-
-	// Prepare data for concatenation
-	data = data || new Buffer(0);
-	length = frame.data.length + data.length;
-
-	// Concatenate frame data with the received data
-	frame.data = Buffer.concat([frame.data, data], length);
+	var error = '';
 
 	// Wait for header
 	if (frame.state === 0 && frame.data.length >= 2) {
@@ -160,13 +161,12 @@ ws.parse = function (connection, frame, data) {
 // Parse received WS messages
 ws.parseMessage = function (connection, frame) {
 
-	var type = 'text';
+	var type = 'binary';
 
-	// Stringify text messages or set binary type
+	// Stringify text messages and set the text type
 	if (frame.opcode === 1) {
+		type = 'text';
 		frame.message = frame.message.toString();
-	} else {
-		type = 'binary';
 	}
 
 	// Prepare messages depending on their type
@@ -244,8 +244,14 @@ ws.connectionProcess = function (connection) {
 	// Process readable and close events and write connection HTTP head
 	connection.socket.on('readable', function () {
 
+		var data = this.read(),
+			length = frame.data.length + data.length;
+
+		// Concatenate frame data with the received data
+		frame.data = Buffer.concat([frame.data, data], length);
+
 		// Parse the received data
-		ws.parse(connection, frame, this.read());
+		ws.parse(connection, frame);
 
 		// Clear the previous timer and create a new timeout for ping frames
 		clearTimeout(connection.timer);

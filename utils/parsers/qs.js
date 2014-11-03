@@ -91,15 +91,10 @@ qsParser.prototype.write = function (data) {
 	// Loop throught all received bytes
 	while (current !== undefined) {
 
-		// Stop parsing if the request is invalid
-		if (this.state === -1) {
-			break;
-		}
-
 		// Parse data
 		if (this.state === 0) {
 			this.getKey(current);
-		} else if (this.state === 1) {
+		} else {
 			this.getValue(current);
 		}
 
@@ -115,7 +110,7 @@ qsParser.prototype.end = function () {
 	// Stringify buffer
 	if (this.state === 0) {
 		this.key = String.fromCharCode.apply(String, this.buffer);
-	} else if (this.state === 1) {
+	} else {
 		this.value = String.fromCharCode.apply(String, this.buffer);
 	}
 

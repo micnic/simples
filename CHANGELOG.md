@@ -1,9 +1,17 @@
+## 0.6.4
+- Improved server's commands execution
+- Improved some internal functional related to websockets
+- Improved connection preparation
+- Fixed server crash because of possible incorect request body
+- Fixed incorrect cache reading
+
 ## 0.6.3
 - Fixed HTTPS content serving
 - Implement a better synchronisation between HTTP and HTTPS servers
 
 ## 0.6.2
 - Fixed routes which rendered views
+- Fixed cache root reading
 - Added importer functional for `connection.render()`
 - Fixed channels container structure
 - Improved internal structure

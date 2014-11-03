@@ -1,10 +1,11 @@
 'use strict';
 
-var host = require('simples/lib/http/host'),
+var domain = require('domain'),
+	fs = require('fs'),
+	host = require('simples/lib/http/host'),
 	http = require('http'),
 	https = require('https'),
 	store = require('simples/lib/store'),
-	url = require('url'),
 	utils = require('simples/utils/utils');
 
 // SimpleS prototype constructor
@@ -19,11 +20,18 @@ var simples = function () {
 			value: false,
 			writable: true
 		},
+		domain: {
+			value: domain.create()
+		},
 		hosts: {
 			value: {}
 		},
 		port: {
 			value: 80,
+			writable: true
+		},
+		ready: {
+			value: false,
 			writable: true
 		},
 		secured: {
@@ -75,7 +83,7 @@ simples.prototype.start = function (port, callback) {
 	var that = this;
 
 	// Set the server to listen the port
-	function listen() {
+	function start() {
 
 		// Set status flags and port
 		that.busy = true;
@@ -83,24 +91,19 @@ simples.prototype.start = function (port, callback) {
 		that.started = true;
 
 		// Trigger server release when internal instances are ready
-		that.instance.listen(port, function () {
+		that.primary.listen(port, function () {
 			if (that.secured) {
 				that.secondary.listen(80, function () {
-					that.emit('release', callback);
+					that.busy = false;
+					utils.runFunction(callback);
+					that.emit('release');
 				});
 			} else {
-				that.emit('release', callback);
+				that.busy = false;
+				utils.runFunction(callback);
+				that.emit('release');
 			}
 		});
-	}
-
-	// Start or restart the server
-	function start() {
-		if (that.started) {
-			that.stop(listen);
-		} else {
-			listen();
-		}
 	}
 
 	// Optional cases for port and callback
@@ -114,8 +117,12 @@ simples.prototype.start = function (port, callback) {
 	}
 
 	// If the server is busy wait for release
-	if (this.busy) {
-		this.once('release', start);
+	if (this.busy || !this.ready) {
+		this.once('release', function () {
+			that.start(port, callback);
+		});
+	} else if (this.started) {
+		this.stop(start);
 	} else {
 		start();
 	}
@@ -136,24 +143,30 @@ simples.prototype.stop = function (callback) {
 		that.started = false;
 
 		// Trigger server release when internal instances are ready
-		that.instance.close(function () {
+		that.primary.close(function () {
 			if (that.secured) {
 				that.secondary.close(function () {
-					that.emit('release', callback);
+					that.busy = false;
+					utils.runFunction(callback);
+					that.emit('release');
 				});
 			} else {
-				that.emit('release', callback);
+				that.busy = false;
+				utils.runFunction(callback);
+				that.emit('release');
 			}
 		});
 	}
 
 	// Stop the server only if it is running
-	if (this.started) {
-		if (this.busy) {
-			this.once('release', stop);
-		} else {
-			stop();
-		}
+	if (this.busy || !this.ready) {
+		this.once('release', function () {
+			that.stop(callback);
+		});
+	} else if (this.started) {
+		stop();
+	} else {
+		utils.runFunction(callback);
 	}
 
 	return this;
@@ -162,13 +175,45 @@ simples.prototype.stop = function (callback) {
 // Export a new simpleS instance
 module.exports = function (port, options, callback) {
 
-	var server = new simples();
+	var files = 0,
+		result = {},
+		server = new simples();
+
+	// Listener for HTTP requests
+	function onRequest(request, response) {
+
+		var host = utils.http.getHost(server, request);
+
+		// Process the received request
+		utils.http.connectionListener(host, request, response);
+	}
+
+	// Listener for WebSocket requests
+	function onUpgrade(request, socket) {
+
+		var host = utils.ws.getHost(server, request);
+
+		// Check for a defined WebSocket host
+		if (host) {
+			utils.ws.connectionListener(host, request);
+		} else {
+			socket.destroy();
+		}
+	}
+
+	// Prepare an internal server instance
+	function prepareInstance(instance) {
+
+		// Add the internal instance to the server domain to catch errors
+		server.domain.add(instance);
+
+		// Set the request listeners for the internal instance
+		instance.on('request', onRequest).on('upgrade', onUpgrade);
+	}
 
 	// Optional cases for port, options and callback
 	if (typeof port === 'number') {
-		if (utils.isObject(options)) {
-			port = 443;
-		} else if (typeof options === 'function') {
+		if (typeof options === 'function') {
 			callback = options;
 		}
 	} else if (utils.isObject(port)) {
@@ -176,7 +221,6 @@ module.exports = function (port, options, callback) {
 			callback = options;
 		}
 		options = port;
-		port = 443;
 	} else if (typeof port === 'function') {
 		callback = port;
 		port = 80;
@@ -184,20 +228,90 @@ module.exports = function (port, options, callback) {
 		port = 80;
 	}
 
-	// Create the internal server instance
+	// Check for secured server
 	if (utils.isObject(options)) {
-		utils.prepareSecuredServer(server, options, function (result) {
-			server.secured = true;
-			server.instance = https.Server(result);
-			server.secondary = http.Server();
-			utils.prepareServer(server, port, callback);
-		});
+		server.secured = true;
 	} else {
-		server.instance = http.Server();
-		utils.prepareServer(server, port, callback);
+		options = {};
 	}
 
-	return server;
+	// Process options members and prepare the SSL certificates
+	Object.keys(options).filter(function (element) {
+
+		// Copy options members
+		result[element] = options[element];
+
+		return /^(?:cert|key|pfx)$/.test(element);
+	}).forEach(function (element) {
+
+		// Increase the number of files to read
+		files++;
+
+		// Read the current file
+		fs.readFile(options[element], function (error, content) {
+			if (error) {
+				server.emit('error', new Error('Can not read SSL certificate'));
+			} else {
+
+				// Decrease the number of files to read
+				files--;
+
+				// Add the content of the file to the result
+				result[element] = content;
+
+				// Check if all files are read
+				if (files === 0) {
+
+					// Release the server
+					server.emit('release');
+				}
+			}
+		});
+	});
+
+	// Emit the errors from the internal instances
+	server.domain.on('error', function (error) {
+
+		// Remove server flags
+		server.busy = false;
+		server.started = false;
+
+		// Emit the error further or just throw it
+		if (server.listeners('error').length) {
+			server.emit('error', error);
+		} else {
+			throw error;
+		}
+	});
+
+	// Check for secured server
+	if (server.secured) {
+		server.once('release', function () {
+
+			// Create two internal instances for the HTTPS server
+			server.primary = https.Server(result);
+			server.secondary = http.Server();
+
+			// Prepare the two internal instances
+			prepareInstance(server.primary);
+			prepareInstance(server.secondary);
+
+			// Set ready flag for the server
+			server.ready = true;
+		});
+	} else {
+
+		// Create only one internal instance for the HTTP server
+		server.primary = http.Server();
+
+		// Prepare the internal instance
+		prepareInstance(server.primary);
+
+		// Set ready flag for the server
+		server.ready = true;
+	}
+
+	return server.start(port, callback);
 };
 
 // Create a new session store instance
