@@ -2,7 +2,7 @@
 
 var events = require('events');
 
-// Parse data with content-type x-www-form-urlencoded
+// qsParser prototype constructor
 var qsParser = function () {
 
 	// Call events.EventEmitter in this context

@@ -194,13 +194,17 @@ var ee = simples.ee = function () {
 ee.prototype.addListener = function (event, listener) {
 	'use strict';
 
+	var listeners = this.listeners[event];
+
 	// Check if more listeners exist for this event
-	if (!this.listeners[event]) {
-		this.listeners[event] = [];
+	if (!listeners) {
+		listeners = this.listeners[event] = [];
 	}
 
 	// Push the listener to the event listeners array
-	this.listeners[event].push(listener);
+	if (typeof listener === 'function' && listeners.indexOf(listener) < 0) {
+		listeners.push(listener);
+	}
 
 	return this;
 };
@@ -209,7 +213,7 @@ ee.prototype.addListener = function (event, listener) {
 ee.prototype.emit = function (event) {
 	'use strict';
 
-	var args = Array.apply(null, arguments).slice(1),
+	var args = Array.apply(Array, arguments).slice(1),
 		that = this;
 
 	// Throw the error if there are no listeners for error event
@@ -371,7 +375,7 @@ var ws = simples.ws = function (url, config) {
 	this.open();
 };
 
-// Inherit from host
+// Inherit from simples.ee
 ws.prototype = Object.create(simples.ee.prototype, {
 	constructor: {
 		value: simples.ws
@@ -465,19 +469,17 @@ ws.prototype.open = function (url, protocols) {
 
 		var message;
 
-		// Emit raw data
+		// Parse and emit raw and complex data
 		if (that.mode === 'raw') {
 			that.emit('message', event.data);
-			return;
-		}
-
-		// Parse and emit complex data
-		try {
-			message = simples.utils.parseMessage(event.data);
-			that.emit(message.event, message.data);
-		} catch (error) {
-			that.emit('error', 'simpleS: Can not parse incoming message');
-			that.emit('message', event.data);
+		} else {
+			try {
+				message = simples.utils.parseMessage(event.data);
+				that.emit(message.event, message.data);
+			} catch (error) {
+				that.emit('error', 'simpleS: Can not parse incoming message');
+				that.emit('message', event.data);
+			}
 		}
 	};
 

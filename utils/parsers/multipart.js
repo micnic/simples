@@ -3,6 +3,7 @@
 var events = require('events'),
 	stream = require('stream');
 
+// multipartParser prototype constructor
 var multipartParser = function(type) {
 
 	var boundary = '',

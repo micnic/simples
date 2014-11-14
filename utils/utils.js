@@ -57,7 +57,11 @@ utils.copyConfig = function (destination, config, stop) {
 		if (object && valid && !stop) {
 			utils.copyConfig(destination[property], config[property], true);
 		} else if (destination[property] === null || !object && valid) {
-			destination[property] = config[property];
+			if (typeof destination[property] === 'string') {
+				destination[property] = config[property].toLowerCase();
+			} else {
+				destination[property] = config[property];
+			}
 		}
 	});
 };
@@ -79,7 +83,7 @@ utils.generateHash = function (data, encoding, callback) {
 	// Hash received data
 	crypto.Hash('sha1').on('readable', function () {
 
-		var chunk = this.read();
+		var chunk = this.read() || new Buffer(0);
 
 		// Append data to the hash
 		hash = Buffer.concat([hash, chunk], hash.length + chunk.length);

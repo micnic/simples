@@ -1,3 +1,9 @@
+## 0.6.5
+- Fixed documentation about routes with render and importer
+- Improved requests routing
+- Fixed crash because of cache.destroy()
+- Fixed crash because of ws socket receiving null data
+
 ## 0.6.4
 - Improved server's commands execution
 - Improved some internal functional related to websockets

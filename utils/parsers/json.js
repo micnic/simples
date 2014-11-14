@@ -2,7 +2,7 @@
 
 var events = require('events');
 
-// Parse data with content-type application/json
+// jsonParser prototype constructor
 var jsonParser = function () {
 
 	// Call events.EventEmitter in this context

@@ -244,7 +244,7 @@ ws.connectionProcess = function (connection) {
 	// Process readable and close events and write connection HTTP head
 	connection.socket.on('readable', function () {
 
-		var data = this.read(),
+		var data = this.read() || new Buffer(0),
 			length = frame.data.length + data.length;
 
 		// Concatenate frame data with the received data

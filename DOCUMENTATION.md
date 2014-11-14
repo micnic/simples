@@ -375,64 +375,74 @@ All the methods described below are applicable on each host independently (see [
 
 ### <a name="host-all"/> All Requests
 
-`.all(route, result)`
+`.all(route, listener[, importer])`
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`), this is useful for defining general behavior for all types of requests. This method has less priority then the other methods described below to allow specific behavior for routes. Returns current instance, so calls can be chained.
+importer: function(callback) or object
+
+Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. This method is useful for defining general behavior for all types of requests. This method has less priority than the other methods described below to allow specific behavior for routes. Returns current instance, so calls can be chained.
 
 ### <a name="host-del"/> DELETE Requests
 
-`.del(route, result)`
+`.del(route, listener[, importer])`
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
+importer: function(callback) or object
+
+Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
 ### <a name="host-get"/> GET Requests
 
-`.get(route, result)`
+`.get(route, listener[, importer])`
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for `GET` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
+importer: function(callback) or object
+
+Listen for `GET` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
 ### <a name="host-post"/> POST Requests
 
-`.post(route, result)`
+`.post(route, listener[, importer])`
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for `POST` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
+importer: function(callback) or object
+
+Listen for `POST` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
 ### <a name="host-put"/> PUT Requests
 
-`.put(route, result)`
+`.put(route, listener[, importer])`
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for `PUT` requests and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Returns current instance, so calls can be chained.
+importer: function(callback) or object
+
+Listen for `PUT` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
 ### <a name="host-route"/> General routing
-`.route(verb, route, result)`
+`.route(verb, route, listener)`
 
 verb: 'all', 'del', 'get', 'put' or 'post'
 
 route: array[strings] or string
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Can add listeners for all types of routes. The methods described below are just shortcuts to this method. For better legibility use shortcuts. Returns current instance, so calls can be chained.
+Add listeners for all types of routes. The methods described above are just shortcuts to this method. For better readability use shortcuts. Returns current instance, so calls can be chained.
 
 ### <a name="host-error"/> Error Routes
 
@@ -459,6 +469,21 @@ host.get([
 });
 
 host.error(404, 'not_found.ejs');
+
+host.put('/update', 'update.ejs', {
+    title: 'Update the page',
+    message: 'The page was updated successfully'
+});
+
+host.del('/delete', 'delete.ejs', function (callback) {
+    db.getModel('delete', function (error, data) {
+        if (error) {
+            throw error;
+        } else {
+            callback(data);
+        }
+    })
+});
 
 host.post([
     '/',
