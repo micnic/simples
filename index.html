@@ -31,7 +31,7 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a name="064" class="anchor" href="#064"><span class="octicon octicon-link"></span></a>0.6.4</h1>
+<a id="065" class="anchor" href="#065" aria-hidden="true"><span class="octicon octicon-link"></span></a>0.6.5</h1>
 
 <p><a href="https://gitter.im/micnic/simpleS"><img src="https://badges.gitter.im/Join%20Chat.svg" alt="Gitter"></a></p>
 
@@ -53,13 +53,13 @@
 </ul>
 
 <h4>
-<a name="works-in-nodejs-010" class="anchor" href="#works-in-nodejs-010"><span class="octicon octicon-link"></span></a>Works in Node.JS 0.10+</h4>
+<a id="works-in-nodejs-010" class="anchor" href="#works-in-nodejs-010" aria-hidden="true"><span class="octicon octicon-link"></span></a>Works in Node.JS 0.10+</h4>
 
 <h4>
-<a name="any-feedback-is-welcome" class="anchor" href="#any-feedback-is-welcome"><span class="octicon octicon-link"></span></a>Any feedback is welcome!</h4>
+<a id="any-feedback-is-welcome" class="anchor" href="#any-feedback-is-welcome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Any feedback is welcome!</h4>
 
 <h4>
-<a name="more-simple-modules" class="anchor" href="#more-simple-modules"><span class="octicon octicon-link"></span></a>More simple modules:</h4>
+<a id="more-simple-modules" class="anchor" href="#more-simple-modules" aria-hidden="true"><span class="octicon octicon-link"></span></a>More simple modules:</h4>
 
 <ul>
 <li><a href="http://micnic.github.com/simpleR/">simpleR</a></li>
@@ -67,114 +67,108 @@
 </ul>
 
 <h3>
-<a name="changelog" class="anchor" href="#changelog"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Changelog">Changelog</a>
+<a id="changelog" class="anchor" href="#changelog" aria-hidden="true"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Changelog">Changelog</a>
 </h3>
 
 <h3>
-<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Documentation">Documentation</a>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Documentation">Documentation</a>
 </h3>
 
 <h2>
-<a name="instalation" class="anchor" href="#instalation"><span class="octicon octicon-link"></span></a>Instalation</h2>
+<a id="instalation" class="anchor" href="#instalation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Instalation</h2>
 
 <pre><code>npm install simples
 </code></pre>
 
 <h2>
-<a name="examples" class="anchor" href="#examples"><span class="octicon octicon-link"></span></a>Examples</h2>
+<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span class="octicon octicon-link"></span></a>Examples</h2>
 
 <p>See the folder <code>examples/</code> in the module directory, it contains examples that cover most simpleS features.</p>
 
 <h2>
-<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
 
-<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">simples</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'simples'</span><span class="p">);</span>
+<div class="highlight highlight-javascript"><pre><span class="pl-s">var</span> simples <span class="pl-ko">=</span> <span class="pl-sf">require</span>(<span class="pl-s1"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
 
-<span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span> <span class="c1">// Your server is set up on port 12345</span>
-</pre></div>
-
-<h2>
-<a name="routing" class="anchor" href="#routing"><span class="octicon octicon-link"></span></a>Routing</h2>
-
-<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Simples Works'</span><span class="p">);</span>
-<span class="p">});</span>
-
-<span class="nx">server</span><span class="p">.</span><span class="nx">serve</span><span class="p">(</span><span class="s1">'static_files'</span><span class="p">);</span> <span class="c1">// Route for static files located in the folder "static_files"</span>
-
-<span class="nx">server</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="mi">404</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Error 404 caught'</span><span class="p">);</span>
-<span class="p">});</span>
-</pre></div>
+<span class="pl-s">var</span> server <span class="pl-ko">=</span> simples(<span class="pl-cn">12345</span>); <span class="pl-c"><span class="pl-pdc">//</span> Your server is set up on port 12345</span></pre></div>
 
 <h2>
-<a name="virtual-hosting" class="anchor" href="#virtual-hosting"><span class="octicon octicon-link"></span></a>Virtual Hosting</h2>
+<a id="routing" class="anchor" href="#routing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Routing</h2>
 
-<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">mainHost</span> <span class="o">=</span> <span class="nx">server</span><span class="p">;</span> <span class="c1">// Main host</span>
-<span class="kd">var</span> <span class="nx">host1</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example.com'</span><span class="p">);</span> <span class="c1">// Other hosts</span>
-<span class="kd">var</span> <span class="nx">host2</span> <span class="o">=</span> <span class="nx">server</span><span class="p">.</span><span class="nx">host</span><span class="p">(</span><span class="s1">'example2.com'</span><span class="p">);</span>
+<div class="highlight highlight-javascript"><pre>server.get(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    connection.end(<span class="pl-s1"><span class="pl-pds">'</span>Simples Works<span class="pl-pds">'</span></span>);
+});
 
-<span class="c1">// Now for each host you can apply individual routing</span>
-<span class="nx">mainHost</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Main Host'</span><span class="p">);</span>
-<span class="p">});</span>
+server.serve(<span class="pl-s1"><span class="pl-pds">'</span>static_files<span class="pl-pds">'</span></span>); <span class="pl-c"><span class="pl-pdc">//</span> Route for static files located in the folder "static_files"</span>
 
-<span class="nx">host1</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host1'</span><span class="p">);</span>
-<span class="p">});</span>
-
-<span class="nx">host2</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">end</span><span class="p">(</span><span class="s1">'Host2'</span><span class="p">);</span>
-<span class="p">});</span>
-</pre></div>
+server<span class="pl-sf">.error</span>(<span class="pl-cn">404</span>, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    connection.end(<span class="pl-s1"><span class="pl-pds">'</span>Error 404 caught<span class="pl-pds">'</span></span>);
+});</pre></div>
 
 <h2>
-<a name="websocket" class="anchor" href="#websocket"><span class="octicon octicon-link"></span></a>WebSocket</h2>
+<a id="virtual-hosting" class="anchor" href="#virtual-hosting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Virtual Hosting</h2>
 
-<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">{</span>
-    <span class="nx">limit</span><span class="o">:</span> <span class="mi">1024</span><span class="p">,</span> <span class="c1">// The maximum size of a message</span>
-    <span class="nx">mode</span><span class="o">:</span> <span class="s1">'raw'</span><span class="p">,</span> <span class="c1">// Set connection mode, see docs for more info</span>
-    <span class="nx">type</span><span class="o">:</span> <span class="s1">'text'</span> <span class="c1">// Set the type of the content of the data</span>
-<span class="p">},</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">connection</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'New connection'</span><span class="p">);</span>
+<div class="highlight highlight-javascript"><pre><span class="pl-s">var</span> mainHost <span class="pl-ko">=</span> server; <span class="pl-c"><span class="pl-pdc">//</span> Main host</span>
+<span class="pl-s">var</span> host1 <span class="pl-ko">=</span> server.host(<span class="pl-s1"><span class="pl-pds">'</span>example.com<span class="pl-pds">'</span></span>); <span class="pl-c"><span class="pl-pdc">//</span> Other hosts</span>
+<span class="pl-s">var</span> host2 <span class="pl-ko">=</span> server.host(<span class="pl-s1"><span class="pl-pds">'</span>example2.com<span class="pl-pds">'</span></span>);
 
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Message: '</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
-        <span class="nx">connection</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
-    <span class="p">});</span>
+<span class="pl-c"><span class="pl-pdc">//</span> Now for each host you can apply individual routing</span>
+mainHost.get(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    connection.end(<span class="pl-s1"><span class="pl-pds">'</span>Main Host<span class="pl-pds">'</span></span>);
+});
 
-    <span class="nx">connection</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'close'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'Connection closed'</span><span class="p">);</span>
-    <span class="p">});</span>
-<span class="p">});</span>
-</pre></div>
+host1.get(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    connection.end(<span class="pl-s1"><span class="pl-pds">'</span>Host1<span class="pl-pds">'</span></span>);
+});
+
+host2.get(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    connection.end(<span class="pl-s1"><span class="pl-pds">'</span>Host2<span class="pl-pds">'</span></span>);
+});</pre></div>
+
+<h2>
+<a id="websocket" class="anchor" href="#websocket" aria-hidden="true"><span class="octicon octicon-link"></span></a>WebSocket</h2>
+
+<div class="highlight highlight-javascript"><pre>server.ws(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, {
+    limit<span class="pl-ko">:</span> <span class="pl-cn">1024</span>, <span class="pl-c"><span class="pl-pdc">//</span> The maximum size of a message</span>
+    mode<span class="pl-ko">:</span> <span class="pl-s1"><span class="pl-pds">'</span>raw<span class="pl-pds">'</span></span>, <span class="pl-c"><span class="pl-pdc">//</span> Set connection mode, see docs for more info</span>
+    type<span class="pl-ko">:</span> <span class="pl-s1"><span class="pl-pds">'</span>text<span class="pl-pds">'</span></span> <span class="pl-c"><span class="pl-pdc">//</span> Set the type of the content of the data</span>
+}, <span class="pl-s">function</span> (<span class="pl-vpf">connection</span>) {
+    console<span class="pl-sf">.log</span>(<span class="pl-s1"><span class="pl-pds">'</span>New connection<span class="pl-pds">'</span></span>);
+
+    connection.on(<span class="pl-s1"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">message</span>) {
+        console<span class="pl-sf">.log</span>(<span class="pl-s1"><span class="pl-pds">'</span>Message: <span class="pl-pds">'</span></span> <span class="pl-ko">+</span> message.data);
+        connection.<span class="pl-sf">send</span>(message.data);
+    });
+
+    connection.on(<span class="pl-s1"><span class="pl-pds">'</span>close<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> () {
+        console<span class="pl-sf">.log</span>(<span class="pl-s1"><span class="pl-pds">'</span>Connection closed<span class="pl-pds">'</span></span>);
+    });
+});</pre></div>
 
 <p>On client:</p>
 
-<div class="highlight highlight-javascript"><pre><span class="c1">// Use browser built-in API</span>
-<span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">'ws://localhost:12345/'</span><span class="p">,</span> <span class="s1">'echo'</span><span class="p">);</span> <span class="c1">// Enjoy the real-time connection</span>
+<div class="highlight highlight-javascript"><pre><span class="pl-c"><span class="pl-pdc">//</span> Use browser built-in API</span>
+<span class="pl-s">var</span> socket <span class="pl-ko">=</span> <span class="pl-ko">new</span> <span class="pl-enti">WebSocket</span>(<span class="pl-s1"><span class="pl-pds">'</span>ws://localhost:12345/<span class="pl-pds">'</span></span>, <span class="pl-s1"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>); <span class="pl-c"><span class="pl-pdc">//</span> Enjoy the real-time connection</span>
 
-<span class="nx">socket</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
-<span class="p">};</span>
+<span class="pl-sc">socket</span>.<span class="pl-enf">onmessage</span> <span class="pl-ko">=</span> <span class="pl-s">function</span> (<span class="pl-vpf">event</span>) {
+    console<span class="pl-sf">.log</span>(<span class="pl-sc">event</span>.data);
+};
 
-<span class="nx">socket</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="s1">'ECHO'</span><span class="p">);</span>
+socket.<span class="pl-sf">send</span>(<span class="pl-s1"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);
 
-<span class="c1">// or simpleS client-side simple API</span>
-<span class="kd">var</span> <span class="nx">socket</span> <span class="o">=</span> <span class="nx">simples</span><span class="p">.</span><span class="nx">ws</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span> <span class="p">[</span><span class="s1">'echo'</span><span class="p">]);</span>
+<span class="pl-c"><span class="pl-pdc">//</span> or simpleS client-side simple API</span>
+<span class="pl-s">var</span> socket <span class="pl-ko">=</span> simples.ws(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, [<span class="pl-s1"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>]);
 
-<span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
-<span class="p">});</span>
+socket.on(<span class="pl-s1"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-s">function</span> (<span class="pl-vpf">message</span>) {
+    console<span class="pl-sf">.log</span>(message.data);
+});
 
-<span class="nx">socket</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="s1">'ECHO'</span><span class="p">);</span>
-</pre></div>
+socket.<span class="pl-sf">send</span>(<span class="pl-s1"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
 
 <h2>
-<a name="template-engine-connection" class="anchor" href="#template-engine-connection"><span class="octicon octicon-link"></span></a>Template engine connection</h2>
+<a id="template-engine-connection" class="anchor" href="#template-engine-connection" aria-hidden="true"><span class="octicon octicon-link"></span></a>Template engine connection</h2>
 
-<div class="highlight highlight-javascript"><pre><span class="nx">server</span><span class="p">.</span><span class="nx">engine</span><span class="p">(</span><span class="nx">bestTemplateEngine</span><span class="p">);</span>
-</pre></div>
+<div class="highlight highlight-javascript"><pre>server.engine(bestTemplateEngine);</pre></div>
         </section>
 
         <aside id="sidebar">
