@@ -166,7 +166,7 @@ http.createRenderListener = function (view, importer) {
 	};
 };
 
-// Returns the advanced route if found
+// Returns the dynamic route if found
 http.getDynamicRoute = function (connection, routes, verb) {
 
 	var location = connection.path.substr(1),
@@ -176,7 +176,7 @@ http.getDynamicRoute = function (connection, routes, verb) {
 		listener = null,
 		route = null;
 
-	// Search for a valid route
+	// Search for the dynamic route in the verb's routes
 	while (!listener && index < length) {
 
 		// Select the current route
@@ -187,13 +187,30 @@ http.getDynamicRoute = function (connection, routes, verb) {
 			listener = route.listener;
 		}
 
-		// Switch to "all" verb if no listener found
-		if (index === length - 1 && verb !== 'all' && !listener) {
-			index = 0;
-			keys = Object.keys(routes.all);
-			length = keys.length;
-			verb = 'all';
-		} else {
+		// Get the next index
+		index++;
+	}
+
+	// Check if the listener was not found to switch to "all" verb
+	if (!listener) {
+
+		// Reset index, keys and the length
+		index = 0;
+		keys = Object.keys(routes.all);
+		length = keys.length;
+
+		// Search for the dynamic route in "all" verb's routes
+		while (!listener && index < length) {
+
+			// Select the current route
+			route = routes.all[keys[index]];
+
+			// Check if the location matches the route pattern
+			if (route.pattern.test(location)) {
+				listener = route.listener;
+			}
+
+			// Get the next index
 			index++;
 		}
 	}
@@ -216,6 +233,7 @@ http.getHost = function (server, request) {
 	return server.hosts[hostname] || server.hosts.main;
 };
 
+/*0.7 move this function to a middleware or remove*/
 // Check if the referer header is accepted by the host
 http.refers = function (host, connection) {
 

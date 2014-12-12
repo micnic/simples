@@ -217,12 +217,7 @@ multipartParser.prototype.write = function(data) {
 		index = 0;
 
 	// Loop throught all received bytes
-	while (current !== undefined) {
-
-		// Stop parsing if the request is invalid
-		if (this.state === -1) {
-			break;
-		}
+	while (this.state !== -1 && current !== undefined) {
 
 		// Parse data
 		if (this.state === 0) {

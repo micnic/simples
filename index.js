@@ -276,12 +276,8 @@ module.exports = function (port, options, callback) {
 		server.busy = false;
 		server.started = false;
 
-		// Emit the error further or just throw it
-		if (server.listeners('error').length) {
-			server.emit('error', error);
-		} else {
-			throw error;
-		}
+		// Emit the error in the context of the server
+		server.emit('error', error);
 	});
 
 	// Check for secured server

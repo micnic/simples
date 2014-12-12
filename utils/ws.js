@@ -54,7 +54,11 @@ ws.connectionListener = function (host, request) {
 
 // Generate default config for hosts
 ws.defaultConfig = function () {
-
+/*0.7 changes
+modes: 'text', 'binary', 'object'
+origins: []
+*remove* type
+*/
 	return {
 		limit: 1048576, // bytes, by default 1 MB
 		mode: 'advanced', // can be 'advanced' or 'raw'

@@ -1,3 +1,9 @@
+## 0.6.6
+- Fixed and improved documentation to be up-to-date with the code
+- Rewritten the client-side to wrap the code inside a closure
+- Improved the client-side code
+- Improved the search of the dynamic routes
+
 ## 0.6.5
 - Fixed documentation about routes with render and importer
 - Improved requests routing

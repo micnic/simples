@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.6.5
+# 0.6.6
 
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
 
@@ -47,12 +47,15 @@ var server = simples(12345); // Your server is set up on port 12345
 ## Routing
 
 ```javascript
+// Route for the server root
 server.get('/', function (connection) {
     connection.end('Simples Works');
 });
 
-server.serve('static_files'); // Route for static files located in the folder "static_files"
+// Route for static files located in the folder "static_files"
+server.serve('static_files');
 
+// Route for HTTP 404 error
 server.error(404, function (connection) {
     connection.end('Error 404 caught');
 });
@@ -104,7 +107,7 @@ On client:
 
 ```javascript
 // Use browser built-in API
-var socket = new WebSocket('ws://localhost:12345/', 'echo'); // Enjoy the real-time connection
+var socket = new WebSocket('ws://localhost:12345/', 'echo');
 
 socket.onmessage = function (event) {
     console.log(event.data);

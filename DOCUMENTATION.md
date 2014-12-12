@@ -286,7 +286,7 @@ callback: function(connection, next)
 
 remove: boolean
 
-Each host accepts middlewares to be implemented, which allow to add some additional implementations with a global behavior which are not available out of the box. The middlewares can manipulate the connection object and to call the next middleware or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value. Returns current instance, so calls can be chained.
+Each host accepts middlewares to be implemented, which allow to add some additional functional with a global behavior which is not available out of the box. The middlewares can manipulate the connection object and to call the next middleware in the chain or the internal simpleS functional. The order in which middlewares are defined has importance because they will be executed in the same way. simpleS will prevent the same middleware to be attached. To remove a middleware from the list its reference should be provided as the first parameter and the second parameter should be a `true` value. Returns current instance, so calls can be chained.
 
 ```js
 host.middleware(function (connection, next) {
@@ -446,13 +446,13 @@ Add listeners for all types of routes. The methods described above are just shor
 
 ### <a name="host-error"/> Error Routes
 
-`.error(code, result)`
+`.error(code, listener, importer)`
 
 code: 404, 405 or 500
 
-result: function(connection) or string
+listener: function(connection) or string
 
-Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Returns current instance, so calls can be chained.
+Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Inside the listeners there is no need to specify the connection status code, it is assigned automatically depending on the raised error. Returns current instance, so calls can be chained.
 
 #### <a name="example-routes"/> Examples for routing methods:
 
@@ -482,7 +482,7 @@ host.del('/delete', 'delete.ejs', function (callback) {
         } else {
             callback(data);
         }
-    })
+    });
 });
 
 host.post([
@@ -737,7 +737,7 @@ value: string
 
 attributes: object
 
-Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To make a cookie to be removed on the client the expiration time should be set in `0`. Can be used multiple times, but before writing any data to the connection. Returns current instance, so calls can be chained.
+Sets the cookies sent to the client, providing a name, a value and an object to configure the expiration time, to limit the domain and the path and to specify if the cookie is http only. To remove a cookie on the client the expiration time should be set to `0`. Can be used multiple times, but before writing any data to the connection. Returns current instance, so calls can be chained.
 
 ```js
 connection.cookie('user', 'me', {
@@ -745,7 +745,7 @@ connection.cookie('user', 'me', {
     path: '/path/',         // Path of the cookie, should be defined only if it is different from the root, the root slash may be omitted, it will be added
     domain: 'localhost',    // Domain of the cookie, should be defined only if it is different from the current host
     secure: false,          // Set if the cookie is secured and should be used only with HTTPS
-    httpOnly: false,        // Set if the cookie should not be modfied from client-side
+    httpOnly: false,        // Set if the cookie can not be modfied from client-side
 });
 ```
 
@@ -816,6 +816,14 @@ code: number
 
 Sets or gets the status code of the response. If the `code` parameter is not defined then the current status code is returned. Returns current instance, so calls can be chained.
 
+```js
+connection.status(); // => 200
+
+connection.status(201); // Set the response HTTP status code to 201 (Created)
+
+connection.status(); // => 201
+```
+
 #### <a name="http-connection-type"/> .type([type, override])
 
 type: string
@@ -829,7 +837,7 @@ connection.type('txt'); // Set the 'Content-Type' header as 'text/plain;charset=
 
 connection.type(); // => 'text/plain;charset=utf-8'
 
-connection.type('text/plain', true);
+connection.type('text/plain', true); // Set the exact defined value to the 'Content-Type' header
 
 connection.type(); // => 'text/plain'
 ```
@@ -947,6 +955,10 @@ Time related tokens:
 `%minute` - insert the current minute of the hour
 
 `%second` - insert the current second of the minute
+
+```js
+connection.log('%short-date %time %method %req[url]'); // Writes to the log stream something like "01.01.1970 00:00:00 GET /index"
+```
 
 #### <a name="http-connection-close"/> .close([callback])
 
@@ -1197,13 +1209,15 @@ request.stop();
 
 `simples.ee()`
 
-`simples.ee()` is a simplified implementation of Node.JS event emitter in the browser, which would be useful to create new objects or to inherit in object constructors. See [`events`](http://nodejs.org/api/events.html) core module for more details. Implemented methods:
+`simples.ee()` is a simplified and a slightly modified implementation of Node.JS event emitter in the browser, which would be useful to create new objects or to inherit in object constructors. See [`events`](http://nodejs.org/api/events.html) core module for more details. Implemented methods:
 
 `.emit(event[, data, ...])` - triggers an event with some specific data.
 
 `.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener.
 
-`.removeAllListeners([event])`, `.removeListener(event listener)` - remove the listeners for events or all listeners for a specific event.
+`.removeListener(event, listener)` - remove a specific listener for an event, emit `removeListener` event.
+
+`.removeAllListeners([event])` - remove all the listeners for a specific event or remove all the listeners for all the events.
 
 ### <a name="client-side-ws"/> WS (WebSocket)
 
@@ -1229,7 +1243,7 @@ var socket = simples.ws('/', {
 
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
-`.open([url, protocols])` - starts or restarts the WebSocket connection when needed, `url` must be a string, `protocols` - an array of strings, can be used for recycling the WebSocket connection and to connect to another host, this method is automatically called with `simples.ws()` or when the connection is lost.
+`.open()` - opens the WebSocket connection when needed, this method is automatically called with `simples.ws()` or when the connection is lost.
 
 `.close()` - closes the WebSocket connection.
 
@@ -1250,14 +1264,16 @@ Based on the third parameter in `simples.ws()` the communication with the server
 ```js
 socket.on('message', function (message) {
     // Application logic
+    // use message.data
 });
 ```
 
 ##### Receiving Data in Advanced Mode
 
 ```js
-socket.on(event, function (data) {
+socket.on('event', function (data) {
     // Application logic
+    // use data
 });
 ```
 
