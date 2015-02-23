@@ -40,6 +40,8 @@
 ### [Connection Interface](#http-connection)
 >##### [.cookies](#http-connection-cookies)
 
+>##### [.data](#http-connection-data)
+
 >##### [.headers](#http-connection-headers)
 
 >##### [.host](#http-connection-host)
@@ -107,12 +109,17 @@
 
 >##### [WebSocket Channel](#ws-channel)
 
-### [Client-Side Simple API](#client-side)
->##### [AJAX (Asynchronous JavaScript and XML)](#client-side-ajax)
+### [Client Simple API](#client-api)
+>##### [HTTP Request](#client-api-http)
 
->##### [Event Emitter](#client-side-ee)
+>##### [WS Connection](#client-api-ws)
 
->##### [WS (WebSocket)](#client-side-ws)
+### [Browser Simple API](#browser-api)
+>##### [AJAX (Asynchronous JavaScript and XML)](#browser-api-ajax)
+
+>##### [Event Emitter](#browser-api-ee)
+
+>##### [WS (WebSocket)](#browser-api-ws)
 
 ```js
 var simples = require('simples');
@@ -128,7 +135,7 @@ options: object
 
 callback: function
 
-simpleS needs only the port number and it sets up a HTTP server on this port.
+simpleS needs only the port number and it sets up a HTTP or HTTPS server on this port. Note that a HTTP server can be set on port `80` or `>= 1024` while a HTTPS server can be set on port `443` or `>= 1024`.
 
 ```js
 var server = simples(80);
@@ -138,7 +145,7 @@ var server = simples(80);
 var server = simples(); // the server will be set on the port 80
 ```
 
-To set up an HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `.pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. The requests on HTTPS are always listen on port 443. Automatically, with the HTTPS server an HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
+To set up an HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `.pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. Automatically, with the HTTPS server an HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
 
 ```js
 var server = simples(443, {
@@ -218,11 +225,11 @@ host.on('error', function (error) {
 
 ### <a name="server-host"/> Virtual Hosting
 
-`.host(name[, config])`
+`.host(name[, options])`
 
 name: string
 
-config: object
+options: object
 
 simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration. Returns current instance, so calls can be chained.
 
@@ -232,40 +239,43 @@ var host = server.host('example.com');
 
 #### <a name="server-host-config"/> Host Configuration
 
-`.config(config)`
+`.config(options)`
 
-config: object
+options: object
 
 Change the configuration of the host. Returns current instance, so calls can be chained. Possible attributes for the configuration:
 
-Compression configuration:
+##### Compression configuration:
 ```js
 compression: {
-    enabled: true, // Activate the compression, by default the compression is enabled
-    filter: /^.+$/i, // Filter content types that will be compressed, by default all kinds of file types are compressed
-    options: null, // Compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
-    preferred: 'deflate' // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
+    enabled: false,         // Activate the compression, by default the compression is disabled
+    filter: /^.+$/i,        // Filter content types that will be compressed, by default all kinds of file types are compressed
+    options: null,          // Compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+    preferred: 'deflate'    // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
 
-`origins: array of strings // []` - Set the origins accepted by the host. By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will work for `HTTP` `GET` and `POST` request and even for `WebSocket` requests. The current host should not be added in the list, it is accepted anyway.
+##### Cross-Origin Resource Sharing configuration (CORS):
 ```js
-['null', 'localhost', 'example.com'] // Will accept requests only from these 3 hosts
-
-['*', 'example.com'] // Will accept requests from all hosts except 'example.com'
+cors: {
+    credentials: false,                                 // Allow HTTP credentials, by default false
+    headers: [],                                        // Set of accepted headers
+    methods: ['DELETE', 'GET', 'HEAD', 'POST', 'PUT'],  // Set of accepted methods
+    origins: []                                         // Set the origins accepted by the host, note the description below
+}
 ```
 
-`referers: array of strings // []` - Set the referers that can use the static resources of the host. By default, the server will response to all referers. To accept all referers except some specific the first parameter should be `*`. The current host should not be added in the list, it is served anyway. The server will respond with error 404 to unacceptable referers.
+By default, the server will accept requests only from the current host. To accept requests from any origin use `'*'`, if this parameter is used as the first parameter then all next origins are rejected. `'null'` is used for local file system origin. These limitations will be applied on all requests unsing CORS. The current host should not be added in the list, it is accepted anyway. Examples of use:
 ```js
-['*', 'example.com'] // will respond to all referers except 'example.com'
+['null', 'localhost', 'example.com']    // Will accept requests only from these 3 hosts
 
-['example.com', 'test.com'] // Will respond only to these 2 referers
+['*', 'example.com']                    // Will accept requests from all hosts except 'example.com'
 ```
 
-Session configuration:
+##### Session configuration:
 ```js
 session: {
-    enabled: false, // Activate the session, by default sessions are disabled
+    enabled: false,             // Activate the session, by default sessions are disabled
     store: simples.store(3600), // Session store, the default is simples memcached store with 1 hour timeout
 }
 ```
@@ -276,7 +286,7 @@ Sessions are stored by default inside an memcached container, to define another 
 
 `.set(id, session, callback)` - should add the session container defined by the first two paramters and execute the callback function when the session container is saved to the sessions storage.
 
-Note: The third party session store also have to implement its own technique for cleaning up expired sessions.
+Note: The third party session stores have to implement their own technique for cleaning up expired sessions, if needed.
 
 ### <a name="server-host-middleware"/> Middlewares
 
@@ -294,7 +304,7 @@ host.middleware(function (connection, next) {
         connection.end('You do not have right to be here');
         next(true); // Will stop the middleware chain and connection routing
     } else {
-        next(); // Will continue to the next middleware if it exists or will continue to connection routing
+        next();     // Will continue to the next middleware if it exists or will continue to connection routing
     }
 });
 
@@ -446,7 +456,7 @@ Add listeners for all types of routes. The methods described above are just shor
 
 ### <a name="host-error"/> Error Routes
 
-`.error(code, listener, importer)`
+`.error(code, listener[, importer])`
 
 code: 404, 405 or 500
 
@@ -497,9 +507,9 @@ host.post([
 
 directory: string
 
-callback: function(connection, files)
+callback: function(connection)
 
-`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` and `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files and get and aditional parameter `files`, which is an array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` or `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, the `connection.data.files` is populated with array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
 
 ```js
 host.serve('root', function (connection, files) {
@@ -518,20 +528,20 @@ route: 404, 405 or 500 with type 'error' and array[strings] or string with other
 Removes a specific route, a set of routes, a specific type of routes or all routes. If the type and the route is specified, then the route or the set of routes of this type are removed. If only the type is specified, then all routes of this type will be removed. If no parameters are specified, then the routes will be set in their default values. Routes should be specified in the same way that these were added. Returns current instance, so calls can be chained.
 
 ```js
-host.leave('post'); // All POST routes are removed
+host.leave('post');             // All POST routes are removed
 
-host.leave('get', '/nothing'); // One, selected, GET route is removed
+host.leave('get', '/nothing');  // One, selected, GET route is removed
 
-host.leave('serve'); // Only one parameter needed, removes the cached static files
+host.leave('serve');            // Only one parameter needed, removes the cached static files
 
-host.leave('all', [ // Removes the selected routes for routes with general behavior defined
+host.leave('all', [             // Removes the selected routes for routes with general behavior defined
     '/home',
     '/index'
 ]);
 
-host.leave(404); // Removes the route for '404' error code and set the default route for it
+host.leave(404);                // Removes the route for '404' error code and set the default route for it
 
-host.leave(); // Removes all routes and set default error routes
+host.leave();                   // Removes all routes and set default error routes
 ```
 
 ### <a name="http-connection"/> Connection Interface
@@ -544,6 +554,7 @@ The parameter provided in callbacks for routing requests is an object that conta
         user: 'me',
         pass: 'password'
     },
+    data: {},
     headers: {
         host: 'localhost:12345',
         'user-agent': 'myBrowser',
@@ -553,7 +564,11 @@ The parameter provided in callbacks for routing requests is an object that conta
         cookie: 'user=me; pass=password'
     },
     host: 'localhost',
-    ip: '127.0.0.1',
+    ip: {
+        address: '127.0.0.1',
+        family: 'IPv4',
+        port: 80
+    },
     langs: [
         'ro',
         'en'
@@ -590,6 +605,10 @@ The parameter provided in callbacks for routing requests is an object that conta
 
 An object that contains the cookies provided by the client.
 
+#### <a name="http-connection-data"/> .data
+
+A container for the data related to the connection but which may not be inside the session.
+
 #### <a name="http-connection-headers"/> .headers
 
 An object that contains the HTTP headers of the request.
@@ -600,7 +619,7 @@ The hostname from the `Host` header.
 
 #### <a name="http-connection-ip"/> .ip
 
-The remote ip address of the request.
+An object that describes the remote ip address of the request, it is equivalent to [`net.socket.address()`](http://nodejs.org/api/net.html#net_socket_address).
 
 #### <a name="http-connection-langs"/> .langs
 
@@ -646,7 +665,7 @@ The url of the request split in components, see [`url`](http://nodejs.org/api/ur
 
 config: object
 
-Receive and parse data that comes from the client. Is designed to process `JSON`, `urlencoded` and `multipart/form-data`. The raw data can be received using `plain` callback function, the `form` object will behave as a readable stream. It is possible to limit the length of the request data by specifying the `limit` attribute in bytes. It is recommended to always handle errors that may raise while parsing the requests by attaching `error` event listener. The structure of the config object:
+Receive and parse data that comes from the client. Is designed to process `JSON`, `urlencoded` and `multipart/form-data`. The raw data can be received using `plain` callback function, the `form` object will behave as a readable stream. It is possible to limit the length of the request data by specifying the `limit` attribute in bytes. For `JSON` and `urlencoded` requests the callback function is simplified to handle only the errors and the final result as an object. It is recommended to always handle errors that may raise while parsing the requests by attaching `error` event listener. The structure of the `config` object:
 
 ```js
 connection.parse({
@@ -657,27 +676,22 @@ connection.parse({
         form.on('readable', function () {
             this.read();
         }).on('end', function () {
-            // do something
+            // Do something
         });
 
-        // or form.pipe(wstream);
+        // Or form.pipe(anystream);
 
         // Form error handling
         form.on('error', function (error) {
             error;
         });
     },
-    json: function (form) {
-
-        // Get form result
-        form.on('end', function () {
-            form.result;
-        });
-
-        // Form error handling
-        form.on('error', function (error) {
-            error;
-        });
+    json: function (error, result) {
+        if (error) {
+            // Handle errors
+        } else {
+            // Get the result data
+        }
     },
     multipart: function (form) {
 
@@ -685,18 +699,18 @@ connection.parse({
         form.on('field', function (field) {
             field.name;
 
-            if (field.filename) { // file received
+            if (field.filename) {   // File received
                 field.filename;
-                field.type; // Content-Type of the file
+                field.type;         // Content-Type of the file
             }
 
             field.on('readable', function () {
                 this.read();
             }).on('end', function () {
-                // do something
+                // Do something
             });
 
-            // or field.pipe(wstream);
+            // Or field.pipe(anystream);
 
             // Field error handling
             field.on('error', function (error) {
@@ -714,17 +728,12 @@ connection.parse({
             error;
         });
     },
-    urlencoded: function (form) {
-
-        // Get form result
-        form.on('end', function () {
-            form.result;
-        });
-
-        // Form error handling
-        form.on('error', function (error) {
-            error;
-        });
+    urlencoded: function (error, result) {
+        if (error) {
+            // Handle errors
+        } else {
+            // Get the result data
+        }
     }
 });
 ```
@@ -758,13 +767,13 @@ value: array[strings], boolean, number, string or null
 Sets, gets or removes a header of the response. Usually simpleS manages the headers of the response by itself setting the cookies, the languages, the content type or when redirecting the client, in these cases the method `.header()` should not be used. If the header already exists in the list then its value will be replaced. To send multiple headers with the same name the value should be an array of strings. If the `value` parameter is not defined then the value of the previously set header defined by the `name` parameter is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the header defined by the `name` parameter is removed from the response. Bolean and numeric values are stringified before being applied.
 
 ```js
-connection.header('ETag', '0123456789'); // Set the 'ETag' header as '0123456789'
+connection.header('ETag', '0123456789');    // Set the 'ETag' header as '0123456789'
 
-connection.header('ETag'); // => '0123456789'
+connection.header('ETag');                  // => '0123456789'
 
-connection.header('ETag', null); // The 'ETag' header is being removed
+connection.header('ETag', null);            // The 'ETag' header is being removed
 
-connection.header('ETag'); // => undefined
+connection.header('ETag');                  // => undefined
 ```
 
 #### <a name="http-connection-lang"/> .lang([value])
@@ -774,13 +783,13 @@ value: null or string
 Sets, gets or removes the language of the response. Should be used only once before writing any data to the connection. If the `value` parameter is not defined then the value of the previously set language is returned, in other cases the current instance is returned, so calls can be chained. If the `value` parameter is `null` then the `Content-Language` header is is removed from the response.
 
 ```js
-connection.lang('ro'); // Set the 'Content-Language' header as 'ro'
+connection.lang('ro');  // Set the 'Content-Language' header as 'ro'
 
-connection.lang(); // => 'ro'
+connection.lang();      // => 'ro'
 
-connection.lang(null); // The 'Content-Language' header is being removed
+connection.lang(null);  // The 'Content-Language' header is being removed
 
-connection.lang(); // => undefined
+connection.lang();      // => undefined
 ```
 
 #### <a name="http-connection-link"/> .link(links)
@@ -817,11 +826,11 @@ code: number
 Sets or gets the status code of the response. If the `code` parameter is not defined then the current status code is returned. Returns current instance, so calls can be chained.
 
 ```js
-connection.status(); // => 200
+connection.status();    // => 200
 
 connection.status(201); // Set the response HTTP status code to 201 (Created)
 
-connection.status(); // => 201
+connection.status();    // => 201
 ```
 
 #### <a name="http-connection-type"/> .type([type, override])
@@ -833,13 +842,13 @@ override: boolean
 Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once before writing any data to the connection. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```js
-connection.type('txt'); // Set the 'Content-Type' header as 'text/plain;charset=utf-8'
+connection.type('txt');                 // Set the 'Content-Type' header as 'text/plain;charset=utf-8'
 
-connection.type(); // => 'text/plain;charset=utf-8'
+connection.type();                      // => 'text/plain;charset=utf-8'
 
-connection.type('text/plain', true); // Set the exact defined value to the 'Content-Type' header
+connection.type('text/plain', true);    // Set the exact defined value to the 'Content-Type' header
 
-connection.type(); // => 'text/plain'
+connection.type();                      // => 'text/plain'
 ```
 
 #### <a name="http-connection-keep"/> .keep([timeout])
@@ -849,7 +858,7 @@ timeout: number
 Each connection has a 5 seconds timeout for inactivity on the socket to prevent too many connections in the same time. To change the value of this timeout the `.keep()` method is called with the a new value in miliseconds, `0` for removing the timeout. Returns current instance, so calls can be chained.
 
 ```js
-connection.keep(); // or connection.keep(0); removes the timeout
+connection.keep();      // or connection.keep(0); removes the timeout
 
 connection.keep(10000); // sets the timeout for 10 seconds
 ```
@@ -884,7 +893,7 @@ type: string
 
 override: boolean
 
-Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should be used only once and should not be used with `.write()` or `.end()` methods.
+Get the content of the file located on the specified location and write it to the connection stream. Will set the content type of the file, can have the parameters from the `.type()` method. Should be used only once and should not be used with `.write()` or `.end()` methods. Is equivalent to `fs.ReadStream(location).pipe(connection.type(type, override))` so the response content is not cached and this method should not be used for static content.
 
 ```js
 connection.drain('path/to/index.html', 'text/html', true);
@@ -957,7 +966,7 @@ Time related tokens:
 `%second` - insert the current second of the minute
 
 ```js
-connection.log('%short-date %time %method %req[url]'); // Writes to the log stream something like "01.01.1970 00:00:00 GET /index"
+connection.log('%short-date %time %method %host%path'); // Writes to the log stream something like "01.01.1970 00:00:00 GET localhost/index"
 ```
 
 #### <a name="http-connection-close"/> .close([callback])
@@ -982,36 +991,36 @@ The WebSocket host is linked to the current or the main HTTP host (see Virtual H
 
 ### <a name="ws-host"/> WebSocket Host
 
-`.ws(location[, config], listener)`
+`.ws(location[, options], listener)`
 
 location: string
 
-config: object
+options: object
 
 listener: function(connection)
 
-Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `config` parameter in bytes, default is 1048576 (1 MiB). The host can work in two modes, `advanced` and `raw`, in the `raw` mode only one type of messages can be send, it works faster but does not suppose any semantics for the messages, `advanced` mode allows multiple types of messages differenciated by different events, it is more flexible but involves more resources. To specify the type of the content which will be sent via the WebSocket connection the `type` parameter should be defined as `binary` or `text`, by default is `text`.
+Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `options` parameter in bytes, default is 1048576 (1 MiB). The host can work in three modes, `binary`, `text` and `object`, in the `binary` and `text` mode only one type of messages can be send, with binary or text data, in these modes the host works in plain WebSocket protocol, it works faster but does not suppose any semantics for the messages. `object` mode allows multiple types of messages differenciated by different events, it is more flexible, because it adds an abstraction layer of JSON-based messages, but involves a bit more computing resources. By default, only connections from the current host are allowed, but it's possible to define any other host including the localhost as `null` in the `origins` member in configuration object, it's the same approach used for the http host CORS configuration.
 
 ```js
 var echo = server.ws('/', {
     limit: 1024,
-    mode: 'raw',
-    type: 'binary'
+    mode: 'text',
+    origins: []
 }, function (connection) {
     // Application logic
 });
 ```
 
-#### <a name="ws-host-config"/> .config([config, callback])
+#### <a name="ws-host-config"/> .config([options, callback])
 
-config: object
+options: object
 
 callback: function(connection)
 
 Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. Returns current instance, so calls can be chained.
 
 ```js
-echo.open({
+echo.config({
     limit: 512,
 }, function (connection) {
     // Application logic
@@ -1055,6 +1064,10 @@ The object that represents the current WebSocket connection. The WebSocket conne
 `.cookies`
 
 See Connection Interface `.cookies`.
+
+`.data`
+
+See Connection Interface `.data`.
 
 `.headers`
 
@@ -1105,7 +1118,7 @@ event: string
 
 data: any value
 
-Sends a message to the client. In advanced mode the event parameter is needed for sending data. If `data` is a buffer then the sent message will be of binary type, else - text type, arrays, booleans, numbers and objects are stringified.
+Sends a message to the client. In `object` mode the event parameter is needed for sending data. All non-string data is stringified.
 
 `.render([event, ]source[, imports])`
 event: string
@@ -1131,11 +1144,11 @@ As the WebSocket connection is a writable stream it emits all the events which a
 
 `error`
 
-Emitted when the client breaks the WebSocket protocol, the length of the message it too big or the structure of a received message has an invalid json structure.
+Emitted when the client breaks the WebSocket protocol, the length of the message it too big or the structure of a received message has an invalid json structure when the host is set in `object` mode.
 
 `message`
 
-Emitted when the WebSocket host receives a message from the client, this event is emitted only if the WebSocket host is configured in `raw` mode. The callback function has an object as a parameter with 2 attributes `data`, the content of the message, and `type`, the type of the message which can be `binary` or `text`.
+Emitted when the WebSocket host receives a message from the client and the host is set in `text` or `binary` mode. The callback function has an object as a parameter with 2 attributes `data`, the content of the message, and `type`, the type of the message which can be `binary` or `text`.
 
 ### <a name="ws-channel"/> WebSocket Channel
 
@@ -1167,7 +1180,85 @@ filter: function(element, index, array)
 
 Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
-## <a name="client-side"/> Client-Side Simple API
+## <a name="client-api"/> Client Simple API
+
+simpleS provide a simple API for creating HTTP and WS clients:
+
+```js
+var client = simples.client();
+```
+
+Now (version 0.7.0), it's quite primitive and provide only some methods to create HTTP requests and WS connections, but in the near future it will contain something more and will become a real rich-featured HTTP client with the current phylosophy of simplicity. Read more below about the how to make and handle HTTP requests and WS connections.
+
+### <a name="client-api-http"/> HTTP Request
+
+`client.request(method, location[, options])`
+method: 'del', 'get', 'head', 'post' or 'put'
+
+location: string
+
+options: object
+
+To create a HTTP request provide the method, the location and optionally some options. The options are an object which can contain HTTP or HTTPS specific request configuration, which is the same as the options provided for [`http.request`](http://nodejs.org/api/http.html#http_http_request_options_callback) or [`https.request`](http://nodejs.org/api/https.html#https_https_request_options_callback). To add more options the request has `.config(options)` method, note that this method must be called synchronously when the request is created, the options can not be set when the request is already sent. All requests are writable streams so the data is written with the streams API, but also has `.send(data[, replacer, space])` which is the same as the method used in the Connection Interface. The requests emit two events:
+
+`response` - when the server response is received and response headers are ready (one argument, the response),
+
+`body` - when the full response body is received (two arguments, the response and the body)
+
+```js
+var request = client.request('get', 'http://localhost/');
+
+request.config({
+    headers: {
+        'X-Requested-With': 'simpleS'
+    }
+}):
+
+request.on('response', function (response) {
+    // Application logic
+}).on('body', function (response, body) {
+    // Application logic
+});
+```
+
+For convenience, there are shortcut methods to make different types of requests:
+
+`client.del(location[, options])`
+
+`client.get(location[, options])`
+
+`client.head(location[, options])`
+
+`client.post(location[, options])`
+
+`client.put(location[, options])`
+
+### <a name="client-api-ws"/> WS Connection
+
+`client.ws(location[, mode, options])`
+location: string
+
+mode: 'binary', 'object' or 'text'
+
+options: object
+
+To create a WS connection provide the location, communication mode or some additional options. The location may be prefixed with `http://` or `ws://` protocols (or with their secure versions `https://` and `wss://`), both methods will be processed in the same way. The communication mode may have the following values: `text`, `binary` or `object`, by default is `text`, to ensure a correct communication it should match with the mode in which the server is set.
+
+```js
+var connection = client.ws('ws://localhost/echo', {
+    headers: {
+        'X-Requested-With': 'simpleS'
+    }
+});
+
+connection.on('open', function () {
+    // Application logic
+}).on('message', function (message) {
+    // Application logic
+});
+```
+
+## <a name="browser-api"/> Browser Simple API
 
 To have access to the simpleS client-side API it is necessary to add
 
@@ -1175,9 +1266,9 @@ To have access to the simpleS client-side API it is necessary to add
 <script src="simples.js"></script>
 ```
 
-in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, also a simplified implementation of Node.JS event emitter.
+in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, also a simplified implementation of Node.JS event emitter, which is used mostly internally but is also available to use in the result applications.
 
-### <a name="client-side-ajax"/> AJAX (Asynchronous JavaScript and XML)
+### <a name="browser-api-ajax"/> AJAX (Asynchronous JavaScript and XML)
 
 `simples.ajax(url, params[, method])`
 
@@ -1205,7 +1296,7 @@ var request = simples.ajax('/', {
 request.stop();
 ```
 
-### <a name="client-side-ee"/> Event Emitter
+### <a name="browser-api-ee"/> EE (Event Emitter)
 
 `simples.ee()`
 
@@ -1213,13 +1304,13 @@ request.stop();
 
 `.emit(event[, data, ...])` - triggers an event with some specific data.
 
-`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener.
+`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener, emit `newListener` event.
 
 `.removeListener(event, listener)` - remove a specific listener for an event, emit `removeListener` event.
 
 `.removeAllListeners([event])` - remove all the listeners for a specific event or remove all the listeners for all the events.
 
-### <a name="client-side-ws"/> WS (WebSocket)
+### <a name="browser-api-ws"/> WS (WebSocket)
 
 `simples.ws(url[, config])`
 
@@ -1227,19 +1318,18 @@ url: string
 
 config: object
 
-`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be set the communication mode, the protocols and the type of the data which is sent, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
+`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be set the communication mode and the used protocols, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
 ```js
 var socket = simples.ws('/', {
-    mode: 'raw',
+    mode: 'text',
     protocols: ['echo'],
-    type: 'text'
 }).on('message', function (message) {
     this.send('Hello World');
 });
 ```
 
-#### <a name="client-side-ws-management"/> Socket Management
+#### <a name="browser-api-ws-management"/> Socket Management
 
 `simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
 
@@ -1247,28 +1337,30 @@ var socket = simples.ws('/', {
 
 `.close()` - closes the WebSocket connection.
 
-##### <a name="client-side-ws-events"/> Events
+##### <a name="browser-api-ws-events"/> Events
 
-`message` - default event received in raw mode or in advanced mode if the incoming message could not be parsed, the callback function has one parameter, the received data.
+`message` - default event received in `binary` and `text` mode or in `object` mode if the incoming message could not be parsed, the callback function has one parameter, the received data.
 
 `error` - triggered when an error appears, the callback function has one parameter, the message of the error.
 
+`open` - triggered when the WebSocket connection is opened, the callback function has no parameters. All data which will be sent before this event will be stashed and sent when the connection is ready.
+
 `close` - triggered when the WebSocket connection is closed, the callback function has no parameters.
 
-#### <a name="client-side-ws-modes"/> Data Management
+#### <a name="browser-api-ws-modes"/> Data Management
 
-Based on the third parameter in `simples.ws()` the communication with the server can be made in advanced or raw mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
+Based on the third parameter in `simples.ws()` the communication with the server can be made in `binary`, `text` or `object` mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
 
-##### Receiving Data in Raw Mode
+##### Receiving data in `binary` or `text` mode
 
 ```js
 socket.on('message', function (message) {
     // Application logic
-    // use message.data
+    // use message.data and message.type
 });
 ```
 
-##### Receiving Data in Advanced Mode
+##### Receiving data in `object` mode
 
 ```js
 socket.on('event', function (data) {
@@ -1277,13 +1369,13 @@ socket.on('event', function (data) {
 });
 ```
 
-##### Sending Data in Raw Mode
+##### Sending data in `binary` or `text` mode
 
 ```js
 socket.send(data);
 ```
 
-##### Sending Data in Advanced Mode
+##### Sending data in `object` mode
 
 ```js
 socket.send(event, data);

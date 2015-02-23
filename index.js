@@ -1,6 +1,7 @@
 'use strict';
 
-var domain = require('domain'),
+var client = require('simples/lib/client/client'),
+	domain = require('domain'),
 	fs = require('fs'),
 	host = require('simples/lib/http/host'),
 	http = require('http'),
@@ -20,18 +21,11 @@ var simples = function () {
 			value: false,
 			writable: true
 		},
-		domain: {
-			value: domain.create()
-		},
 		hosts: {
 			value: {}
 		},
 		port: {
 			value: 80,
-			writable: true
-		},
-		ready: {
-			value: false,
 			writable: true
 		},
 		secured: {
@@ -106,18 +100,25 @@ simples.prototype.start = function (port, callback) {
 		});
 	}
 
-	// Optional cases for port and callback
+	// Make parameters optional
 	if (typeof port === 'function') {
 		callback = port;
 		port = this.port;
-	} else if (this.secured) {
-		port = 443;
 	} else if (typeof port !== 'number') {
 		port = this.port;
 	}
 
+	// Check if the port is not reserved
+	if (port < 1024) {
+		if (this.secured) {
+			port = 443;
+		} else {
+			port = 80;
+		}
+	}
+
 	// If the server is busy wait for release
-	if (this.busy || !this.ready) {
+	if (this.busy) {
 		this.once('release', function () {
 			that.start(port, callback);
 		});
@@ -159,7 +160,7 @@ simples.prototype.stop = function (callback) {
 	}
 
 	// Stop the server only if it is running
-	if (this.busy || !this.ready) {
+	if (this.busy) {
 		this.once('release', function () {
 			that.stop(callback);
 		});
@@ -175,8 +176,7 @@ simples.prototype.stop = function (callback) {
 // Export a new simpleS instance
 module.exports = function (port, options, callback) {
 
-	var files = 0,
-		result = {},
+	var result = {},
 		server = new simples();
 
 	// Listener for HTTP requests
@@ -201,17 +201,7 @@ module.exports = function (port, options, callback) {
 		}
 	}
 
-	// Prepare an internal server instance
-	function prepareInstance(instance) {
-
-		// Add the internal instance to the server domain to catch errors
-		server.domain.add(instance);
-
-		// Set the request listeners for the internal instance
-		instance.on('request', onRequest).on('upgrade', onUpgrade);
-	}
-
-	// Optional cases for port, options and callback
+	// Make parameters optional
 	if (typeof port === 'number') {
 		if (typeof options === 'function') {
 			callback = options;
@@ -235,42 +225,8 @@ module.exports = function (port, options, callback) {
 		options = {};
 	}
 
-	// Process options members and prepare the SSL certificates
-	Object.keys(options).filter(function (element) {
-
-		// Copy options members
-		result[element] = options[element];
-
-		return /^(?:cert|key|pfx)$/.test(element);
-	}).forEach(function (element) {
-
-		// Increase the number of files to read
-		files++;
-
-		// Read the current file
-		fs.readFile(options[element], function (error, content) {
-			if (error) {
-				server.emit('error', new Error('Can not read SSL certificate'));
-			} else {
-
-				// Decrease the number of files to read
-				files--;
-
-				// Add the content of the file to the result
-				result[element] = content;
-
-				// Check if all files are read
-				if (files === 0) {
-
-					// Release the server
-					server.emit('release');
-				}
-			}
-		});
-	});
-
-	// Emit the errors from the internal instances
-	server.domain.on('error', function (error) {
+	// Run vulnerable code inside a domain
+	domain.create().on('error', function (error) {
 
 		// Remove server flags
 		server.busy = false;
@@ -278,39 +234,46 @@ module.exports = function (port, options, callback) {
 
 		// Emit the error in the context of the server
 		server.emit('error', error);
-	});
+	}).run(function () {
 
-	// Check for secured server
-	if (server.secured) {
-		server.once('release', function () {
+		// Check for secured server
+		if (server.secured) {
+
+			// Process options members and prepare the SSL certificates
+			Object.keys(options).forEach(function (element) {
+				if (/^(?:cert|key|pfx)$/.test(element)) {
+					result[element] = fs.readFileSync(options[element]);
+				} else {
+					result[element] = options[element];
+				}
+			});
 
 			// Create two internal instances for the HTTPS server
 			server.primary = https.Server(result);
 			server.secondary = http.Server();
 
 			// Prepare the two internal instances
-			prepareInstance(server.primary);
-			prepareInstance(server.secondary);
+			server.primary.on('request', onRequest).on('upgrade', onUpgrade);
+			server.secondary.on('request', onRequest).on('upgrade', onUpgrade);
+		} else {
 
-			// Set ready flag for the server
-			server.ready = true;
-		});
-	} else {
+			// Create only one internal instance for the HTTP server
+			server.primary = http.Server();
 
-		// Create only one internal instance for the HTTP server
-		server.primary = http.Server();
-
-		// Prepare the internal instance
-		prepareInstance(server.primary);
-
-		// Set ready flag for the server
-		server.ready = true;
-	}
+			// Prepare the internal instance
+			server.primary.on('request', onRequest).on('upgrade', onUpgrade);
+		}
+	});
 
 	return server.start(port, callback);
 };
 
+// Create a new client
+module.exports.client = function () {
+	return new client();
+};
+
 // Create a new session store instance
-exports.store = function (timeout) {
+module.exports.store = function (timeout) {
 	return new store(timeout);
 };

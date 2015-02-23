@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+	<head>
+		<title>simpleS</title>
+		<script src="simples.js"></script>
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				var socket = simples.ws('/echo');
+
+				socket.on('message', function (message) {
+					document.getElementById('result').innerHTML = message.data + '<br/>' + document.getElementById('result').innerHTML;
+				});
+
+				document.getElementById('sender').addEventListener('click', function () {
+					socket.send(document.getElementById('message').value);
+					document.getElementById('message').value = '';
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<input id="message" placeholder="message" type="text"/>
+		<input id="sender" type="button" value="send"/>
+		<div id="result"></div>
+	</body>
+</html>

@@ -1,13 +1,26 @@
 'use strict';
 
-var cache = require('simples/lib/cache'),
-	domain = require('domain'),
+var domain = require('domain'),
+	fs = require('fs'),
 	path = require('path'),
-	url = require('url'),
+	store = require('simples/lib/store'),
 	utils = require('simples/utils/utils');
 
 // HTTP namespace
 var http = exports;
+
+// Client file object
+http.client = {};
+
+// Prepare client file data
+try {
+	http.client.location = path.join(__dirname, './client.js');
+	http.client.stats = fs.statSync(http.client.location);
+	http.client.content = fs.readFileSync(http.client.location);
+} catch (error) {
+	console.error('\nCan not prepare simpleS client file');
+	console.error(error.stack + '\n');
+}
 
 // Link to the HTTP connection prototype constructor
 http.connection = require('simples/lib/http/connection');
@@ -17,11 +30,11 @@ http.form = require('simples/lib/http/form');
 
 // Relations between HTTP methods and used REST verbs
 http.verbs = {
-	'DELETE': 'del',
-	'GET': 'get',
-	'HEAD': 'get',
-	'POST': 'post',
-	'PUT': 'put'
+	DELETE: 'del',
+	GET: 'get',
+	HEAD: 'get',
+	POST: 'post',
+	PUT: 'put'
 };
 
 // Manage the behavior of the route
@@ -33,45 +46,10 @@ http.applyRoute = function (connection, route) {
 	}
 };
 
-// Apply the routes for static files and directories
-http.applyStaticRoute = function (connection, route) {
-
-	var directory = null,
-		extension = '',
-		host = connection.parent,
-		routes = host.routes,
-		stats = route.stats,
-		time = stats.mtime.toUTCString();
-
-	// Set the last modified time
-	connection.header('Last-Modified', time);
-
-	// Check if the resources were modified after last access
-	if (connection.headers['if-modified-since'] === time) {
-		connection.status(304).end();
-	} else if (stats.isDirectory()) {
-
-		// Prepare directory items
-		directory = Object.keys(route.files).map(function (name) {
-			return route.files[name];
-		});
-
-		// Apply the route for the directory
-		routes.serve.call(host, connection, directory);
-	} else {
-
-		// Prepare file extension
-		extension = path.extname(route.location).slice(1);
-
-		// Set the content type of the response
-		connection.type(extension).end(route.content);
-	}
-};
-
 // Listener for HTTP requests
 http.connectionListener = function (host, request, response) {
 
-	var config = host.conf,
+	var config = host.options,
 		connection = new http.connection(host, request, response),
 		failed = false,
 		index = 0,
@@ -81,20 +59,15 @@ http.connectionListener = function (host, request, response) {
 		routes = host.routes,
 		verb = http.verbs[connection.method];
 
-	// Get middlewares one by one and execute them
-	function nextMiddleware(stop) {
+	// Apply middlewares one by one and then apply the route
+	function applyMiddlewares(stop) {
 		if (index < length && !stop) {
-			setImmediate(host.middlewares[index], connection, nextMiddleware);
+			setImmediate(host.middlewares[index], connection, applyMiddlewares);
 			index++;
+		} else if (connection.method === 'OPTIONS') {
+			connection.status(204).end();
 		} else if (!stop) {
-
-			// Set the default keep alive timeout to 5 seconds
-			connection.keep(5000);
-
-			// Apply the route
-			if (utils.isObject(route)) {
-				http.applyStaticRoute(connection, route);
-			} else if (config.session.enabled) {
+			if (config.session.enabled) {
 				http.setSession(connection, function () {
 					http.applyRoute(connection, route);
 				});
@@ -113,34 +86,24 @@ http.connectionListener = function (host, request, response) {
 		} else {
 			route = http.getDynamicRoute(connection, routes.dynamic, verb);
 		}
+	} else {
+		connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
+		route = routes.error[405];
 	}
 
 	// Get static content if found
-	if (!route && verb === 'get' && http.refers(host, connection)) {
-
-		// Check for client side API file serve
-		if (location === 'simples.js') {
-			route = cache.client;
-		} else {
-			route = host.cache.read(location);
-		}
-
-		// Do not use routes to directories if no serve route is defined
-		if (route && route.stats.isDirectory() && !routes.serve) {
-			route = null;
-		}
+	if (!route && verb === 'get') {
+		route = http.getStaticRoute(host, connection, location);
 	}
 
-	// Check for errors 404 and 405
-	if (connection.method === 'OPTIONS') {
-		connection.status(204).end();
-	} else if (!verb) {
-		connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
-		route = routes.error[405];
-	} else if (!route) {
+	// Check for error 404
+	if (!route) {
 		connection.status(404);
 		route = routes.error[404];
 	}
+
+	// Set the default keep alive timeout to 5 seconds
+	connection.keep(5000);
 
 	// Process the connection inside a domain
 	domain.create().on('error', function (error) {
@@ -156,13 +119,79 @@ http.connectionListener = function (host, request, response) {
 		} else {
 			connection.destroy();
 		}
-	}).run(nextMiddleware);
+	}).run(applyMiddlewares);
 };
 
 // Create a render listener as a shortcut
 http.createRenderListener = function (view, importer) {
 	return function (connection) {
 		connection.render(view, importer);
+	};
+};
+
+// Generate default config for HTTP hosts
+http.defaultConfig = function () {
+
+	return {
+		compression: {
+			enabled: false,
+			filter: /^.+$/i,
+			options: null, // http://nodejs.org/api/zlib.html#zlib_options
+			preferred: 'deflate' // can be 'deflate' or 'gzip'
+		},
+		cors: {
+			credentials: false,
+			headers: [],
+			methods: ['DELETE', 'GET', 'HEAD', 'POST', 'PUT'],
+			origins: []
+		},
+		session: {
+			enabled: false,
+			store: new store()
+		}
+	};
+};
+
+// Generate empty containers for routes
+http.defaultRoutes = function () {
+
+	// Default callback for "Not Found"
+	function notFound(connection) {
+		connection.end('"' + connection.url.path + '" Not Found');
+	}
+
+	// Default callback for "Method Not Allowed"
+	function methodNotAllowed(connection) {
+		connection.end('"' + connection.method + '" Method Not Allowed');
+	}
+
+	// Default callback for "Internal Server Error"
+	function internalServerError(connection) {
+		connection.end('"' + connection.url.path + '" Internal Server Error');
+	}
+
+	return {
+		dynamic: {
+			all: {},
+			del: {},
+			get: {},
+			post: {},
+			put: {}
+		},
+		error: {
+			404: notFound,
+			405: methodNotAllowed,
+			500: internalServerError
+		},
+		fixed: {
+			all: {},
+			del: {},
+			get: {},
+			post: {},
+			put: {}
+		},
+		serve: null,
+		ws: {}
 	};
 };
 
@@ -233,24 +262,60 @@ http.getHost = function (server, request) {
 	return server.hosts[hostname] || server.hosts.main;
 };
 
-/*0.7 move this function to a middleware or remove*/
-// Check if the referer header is accepted by the host
-http.refers = function (host, connection) {
+// Returns the route to the static files and directories
+http.getStaticRoute = function (host, connection, location) {
 
-	var hostname = url.parse(connection.headers.referer || '').hostname,
-		referers = host.conf.referers,
-		valid = true;
+	var extension = '',
+		element = null,
+		route = null,
+		stats = null,
+		timestamp = '';
 
-	// Check if referer is found in the accepted referers list
-	if (referers.length && hostname !== connection.host) {
-		if (referers.indexOf(hostname) < 0) {
-			valid = referers[0] === '*';
-		} else {
-			valid = referers[0] !== '*';
+	// Get the static element
+	if (location === 'simples.js') {
+		element = http.client;
+	} else if (host.cache) {
+		element = host.cache.read(location);
+	}
+
+	// Check if an element is found
+	if (element) {
+
+		// Prepare element data
+		extension = path.extname(location).slice(1);
+		stats = element.stats;
+		timestamp = stats.mtime.toUTCString();
+
+		// Set the last modified time stamp
+		connection.header('Last-Modified', timestamp);
+
+		// Set the content type for files
+		if (extension) {
+			connection.type(extension);
+		}
+
+		// Creating the static route for all possible cases
+		if (connection.headers['if-modified-since'] === timestamp) {
+			route = function (connection) {
+				connection.status(304).end();
+			};
+		} else if (!stats.isDirectory()) {
+			route = function (connection) {
+				connection.end(element.content);
+			};
+		} else if (host.routes.serve) {
+
+			// Prepare directory files objects
+			connection.data.files = utils.map(element.files, function (name) {
+				return element.files[name];
+			});
+
+			// Get the route for the static directories
+			route = host.routes.serve;
 		}
 	}
 
-	return valid;
+	return route;
 };
 
 // Set the session cookies for HTTP connections
@@ -261,7 +326,7 @@ http.setSession = function (connection, callback) {
 	// Prepare session object
 	utils.getSession(host, connection, function (connection, session) {
 
-		var config = host.conf,
+		var config = host.options,
 			options = {};
 
 		// Prepare cookies options

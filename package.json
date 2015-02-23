@@ -1,8 +1,9 @@
 {
 	"name": "simples",
-	"version": "0.6.6",
+	"version": "0.7.0",
 	"description": "Simple HTTP(S) Server",
 	"keywords": [
+		"client",
 		"cors",
 		"framework",
 		"http",
@@ -35,11 +36,11 @@
 		"test": "taster ./test"
 	},
 	"devDependencies": {
-		"raw-body": "latest",
-		"request": "latest",
+		"jscs": "latest",
 		"taster": "latest"
 	},
 	"engines": {
+		"iojs": ">=1.0",
 		"node": ">=0.10"
 	}
 }

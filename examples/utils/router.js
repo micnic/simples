@@ -38,7 +38,7 @@ module.exports = function (server) {
 	}).get('/ws', function (connection) {
 		connection.drain(__dirname + '/../static/ws.html');
 	}).ws('/echo', {
-		mode: 'raw'
+		mode: 'text'
 	}, function (connection) {
 		connection.on('message', function (message) {
 			connection.send(message.data);

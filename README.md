@@ -1,24 +1,24 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.6.6
+# 0.7.0
 
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
 
-simpleS is a simple HTTP(S) server for Node.JS that has some special features:
+simpleS is a simple framework for Node.JS designed to create HTTP(S) servers and clients that has some special features:
 
 - Simple structure with minimum configuration
 - No dependencies and high performance
 - Advanced routing for http requests, static files and errors
 - Restful verbs
 - Unique interface for requests and responses (named as connection)
-- Response compression (deflate and gzip, enabled by default)
+- Response compression (deflate and gzip, disabled by default)
 - Virtual Hosting
 - CORS support and Referer blocking
 - Sessions (disabled by default)
-- Template engine connection
+- Template engine support
 - WebSocket implementation (version 13, RFC 6455)
 - Client-side simple API for AJAX and WebSocket
 
-#### Works in Node.JS 0.10+
+#### Works with node.js 0.10+ and io.js 1.0+ !
 #### Any feedback is welcome!
 
 #### More simple modules:
@@ -87,8 +87,8 @@ host2.get('/', function (connection) {
 ```javascript
 server.ws('/', {
     limit: 1024, // The maximum size of a message
-    mode: 'raw', // Set connection mode, see docs for more info
-    type: 'text' // Set the type of the content of the data
+    mode: 'text', // Set connection mode, see docs for more info
+    origins: ['null'] // Set accepted origins
 }, function (connection) {
     console.log('New connection');
 

@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+	<head>
+		<title>simpleS</title>
+		<script src="simples.js"></script>
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				var $messages = document.getElementById('messages');
+				var $users = document.getElementById('users');
+
+				var socket = simples.ws('/chat', {
+					mode: 'object'
+				});
+
+				socket.send('get users');
+
+				socket.on('users', function (users) {
+
+				});
+
+				socket.on('new user', function (user) {
+
+				});
+
+				socket.on('message', function (message) {
+					$messages.getElementsByClassName('content').appendChild();
+					document.getElementById('result').innerHTML = message.data + '<br/>' + document.getElementById('result').innerHTML;
+				});
+
+				document.getElementById('sender').addEventListener('click', function () {
+					socket.send('message', document.getElementById('message').value);
+					document.getElementById('message').value = '';
+				});
+			});
+		</script>
+		<style>
+			body {
+				font-family: sans-serif;
+				font-size: 12px;
+				margin: 0;
+			}
+
+			#username {
+				background: #EFEFEF;
+				border: 1px #DFDFDF solid;
+				margin: 3px;
+				padding: 3px;
+				text-align: center;
+				width: 514px;
+			}
+
+			#messages {
+				background: #EFEFEF;
+				border: 1px #DFDFDF solid;
+				float: left;
+				height: 300px;
+				margin: 3px;
+				overflow: auto;
+				padding: 3px;
+				width: 300px;
+			}
+
+			#users {
+				background: #EFEFEF;
+				border: 1px #DFDFDF solid;
+				float: left;
+				height: 300px;
+				margin: 3px;
+				padding: 3px;
+				width: 200px;
+			}
+
+			#message {
+				background: #EFEFEF;
+				border: 1px #DFDFDF solid;
+				clear: both;
+				float: left;
+				margin: 3px;
+				min-height: 50px;
+				outline: none;
+				padding: 3px;
+				resize: none;
+				width: 300px;
+			}
+
+			#message:focus {
+				border-color: #AFAFAF;
+			}
+
+			#sender {
+				background: #DFDFDF;
+				border: 1px #CFCFCF solid;
+				box-sizing: content-box;
+				cursor: pointer;
+				float: left;
+				height: 50px;
+				margin: 3px;
+				outline: none;
+				padding: 3px;
+				width: 200px;
+			}
+
+			#sender:hover {
+				background: #CFCFCF;
+				border-color: #BFBFBF;
+				text-decoration: none;
+			}
+
+			.title {
+				background: #DFDFDF;
+				border: 1px #CFCFCF solid;
+				text-align: center;
+			}
+
+			.content {
+				overflow: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="username">
+			<div class="title">micnic</div>
+		</div>
+		<div id="messages">
+			<div class="title">Messages</div>
+			<div class="content"></div>
+		</div>
+		<div id="users">
+			<div class="title">Users</div>
+			<div class="content"></div>
+		</div>
+		<textarea id="message" placeholder="message"></textarea>
+		<input id="sender" type="button" value="send"/>
+	</body>
+</html>

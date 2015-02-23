@@ -26,11 +26,6 @@ var simples = (function () {
 			that = this,
 			xhr = new XMLHttpRequest();
 
-		// Ignore new keyword
-		if (!(this instanceof ajax)) {
-			return new ajax(url, data, method);
-		}
-
 		// Define private properties for simples.ajax
 		Object.defineProperties(this, {
 			listeners: {
@@ -146,11 +141,6 @@ var simples = (function () {
 	// Client-side simplified Node.JS event emitter implementation
 	var ee = function () {
 
-		// Ignore new keyword
-		if (!this instanceof ee) {
-			return new ee();
-		}
-
 		// Define listeners object
 		Object.defineProperty(this, 'listeners', {
 			value: {},
@@ -241,7 +231,7 @@ var simples = (function () {
 
 			// Remove the event listener container for the current event
 			delete this.listeners[event];
-		} else if (arguments.length === 0) {
+		} else if (!arguments.length) {
 
 			// Remove all listeners for all events
 			Object.keys(this.listeners).forEach(function (event) {
@@ -285,14 +275,9 @@ var simples = (function () {
 	// WebSocket microframework
 	var ws = function (location, config) {
 
-		var mode = 'advanced',
+		var mode = 'text',
 			protocol = 'ws',
 			protocols = [];
-
-		// Ignore new keyword
-		if (!(this instanceof ws)) {
-			return new ws(location, config);
-		}
 
 		// Call event emitter in this context
 		ee.call(this);
@@ -317,14 +302,13 @@ var simples = (function () {
 		if (!config || typeof config !== 'object') {
 			config = {
 				mode: mode,
-				protocols: protocols,
-				type: type
+				protocols: protocols
 			};
 		} else {
 
-			// Set the raw mode
-			if (typeof config.mode === 'string' && config.mode === 'raw') {
-				mode = 'raw';
+			// Set the binary or object mode
+			if (/^binary|object$/.test(config.mode)) {
+				mode = config.mode;
 			}
 
 			// Get the WebSocket subprotocols
@@ -402,16 +386,16 @@ var simples = (function () {
 		// Initialize the WebSocket
 		this.socket = new WebSocket(this.location, this.protocols);
 
-		// Catch connection close
+		// Listen for socket close
 		this.socket.onclose = function () {
 			that.started = false;
 			that.emit('close');
 		};
 
-		// Catch connection errors
+		// Catch socket errors
 		this.socket.onerror = function () {
 			that.started = false;
-			that.emit('error', new Error('Can not connect to ' + this.location));
+			that.emit('error', new Error('Disconnected from ' + this.location));
 		};
 
 		// Listen for incoming messages
@@ -419,17 +403,17 @@ var simples = (function () {
 
 			var message;
 
-			// Parse and emit raw and complex data
-			if (that.mode === 'raw') {
-				that.emit('message', event);
-			} else {
+			// Parse and emit the received data
+			if (that.mode === 'object') {
 				try {
 					message = JSON.parse(event.data);
 					that.emit(message.event, message.data);
 				} catch (error) {
-					that.emit('error', new Error('Can not parse incoming message'));
+					that.emit('error', new Error('Can not parse message'));
 					that.emit('message', event);
 				}
+			} else {
+				that.emit('message', event);
 			}
 		};
 
@@ -440,6 +424,9 @@ var simples = (function () {
 			that.started = true;
 			that.opening = false;
 
+			// Emit the open event of the socket
+			that.emit('open');
+
 			// send the messages from the queue
 			while (that.queue.length) {
 				that.socket.send(that.queue.shift());
@@ -449,17 +436,17 @@ var simples = (function () {
 		return this;
 	};
 
-	// Send data via the WebSocket in raw or advanced mode
+	// Send data via the WebSocket connection
 	ws.prototype.send = function (event, data) {
 
 		// Prepare the data
-		if (this.mode === 'raw') {
-			data = event;
-		} else {
+		if (this.mode === 'object') {
 			data = JSON.stringify({
 				event: event,
 				data: data
 			});
+		} else {
+			data = event;
 		}
 
 		// Check for open socket and send data
@@ -485,8 +472,14 @@ var simples = (function () {
 	};
 
 	return {
-		ajax: ajax,
-		ee: ee,
-		ws: ws
+		ajax: function (url, data, method) {
+			return new ajax(url, data, method);
+		},
+		ee: function () {
+			return new ee();
+		},
+		ws: function (location, config) {
+			return new ws(location, config);
+		}
 	};
 })();

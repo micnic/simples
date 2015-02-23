@@ -1,3 +1,21 @@
+## 0.7.0
+- Add support for node.js 0.12 and io.js 1.x
+- Implemented `simples.client`
+- Disabled response compression by default
+- Modified `connection.ip` to be `net.socket.address()` content
+- Added `connection.data`
+- Removed `referers` from HTTP host configuration as it's not so useful
+- Added more options for CORS in host configuration
+- Use plain parser when no other parser is valid for request parsing
+- Simplified parsing API for `json` and `urlencoded` data
+- Improved internal request routing and static file caching
+- Replaced `type` option, `raw` and `advanced` modes from WebSocket configuration with `binary`, `text` and `object` modes
+- Added separated accepted origins for WebSocket configuration
+- Improved client-side code
+- Improved examples
+- Fixed documention errors
+- Bug fixes
+
 ## 0.6.6
 - Fixed and improved documentation to be up-to-date with the code
 - Rewritten the client-side to wrap the code inside a closure

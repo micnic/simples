@@ -4,7 +4,7 @@
 		<script src="/simples.js"></script>
 		<script>
 			var echoSocket = simples.ws('/echo', {
-				mode: 'raw'
+				mode: 'text'
 			}).on('message', function (message) {
 				document.getElementById('result').innerHTML = message + '<br>' + document.getElementById('result').innerHTML;
 			});

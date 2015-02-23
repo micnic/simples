@@ -12,25 +12,17 @@ utils.connection = require('simples/lib/connection');
 // Export http utils
 utils.http = require('simples/utils/http');
 
-// Export the parsers
-utils.parsers = {
-	json: require('simples/utils/parsers/json'),
-	multipart: require('simples/utils/parsers/multipart'),
-	qs: require('simples/utils/parsers/qs')
-};
-
 // Export ws utils
 utils.ws = require('simples/utils/ws');
 
 // Check if the origin header is accepted by the host (CORS)
-utils.accepts = function (host, connection) {
+utils.accepts = function (connection, origins) {
 
 	var accepted = true,
-		origin = connection.headers.origin,
-		origins = host.conf.origins;
+		origin = connection.headers.origin;
 
 	// Get the hostname from the origin
-	origin = url.parse(origin).hostname || origin;
+	origin = url.parse(origin || '').hostname || origin;
 
 	// Check if the origin is accepted
 	if (origin && origin !== connection.host) {
@@ -42,6 +34,19 @@ utils.accepts = function (host, connection) {
 	}
 
 	return accepted;
+};
+
+// Partial polyfill for ES6 Object.assign
+utils.assign = function (target, source) {
+
+	// Check if the source is an object and copy its properties
+	if (utils.isObject(source)) {
+		Object.keys(source).forEach(function (key) {
+			target[key] = source[key];
+		});
+	}
+
+	return target;
 };
 
 // Copy configuration from one object to another
@@ -95,9 +100,9 @@ utils.generateHash = function (data, encoding, callback) {
 // Generate session id and hash
 utils.generateSession = function (host, connection, callback) {
 
-	var config = host.conf.session,
+	var config = host.options.session,
 		secret,
-		source;
+		source = new Buffer(32);
 
 	// Generate a random session id of 16 bytes
 	crypto.randomBytes(16, function (error, buffer) {
@@ -106,8 +111,9 @@ utils.generateSession = function (host, connection, callback) {
 		} else {
 
 			// Create the source from which to generate the hash
-			secret = new Buffer(buffer.toJSON().sort(utils.shuffle));
-			source = Buffer.concat([buffer, secret], 32);
+			secret = new Buffer(utils.toArray(buffer).sort(utils.shuffle));
+			buffer.copy(source);
+			secret.copy(source, 16);
 
 			// Generate the session hash
 			utils.generateHash(source, 'hex', function (hash) {
@@ -125,7 +131,7 @@ utils.generateSession = function (host, connection, callback) {
 // Get an existing stored session or generate a new one
 utils.getSession = function (host, connection, callback) {
 
-	var config = host.conf.session,
+	var config = host.options.session,
 		cookies = connection.cookies;
 
 	// Validate session cookies and get the session container
@@ -145,6 +151,11 @@ utils.getSession = function (host, connection, callback) {
 // Check for an object value
 utils.isObject = function (value) {
 	return Object.prototype.toString.call(value) === '[object Object]';
+};
+
+// Apply a map operation on an object
+utils.map = function (object, callback) {
+	return Object.keys(object).map(callback);
 };
 
 // Get the cookies of the request
@@ -173,7 +184,7 @@ utils.parseCookies = function (header) {
 		}
 
 		// Get the name of the cookie
-		name = header.substr(index, length);
+		name = header.substr(index, length).trim();
 
 		// Set the new index and reset length
 		index += length;
@@ -192,10 +203,10 @@ utils.parseCookies = function (header) {
 		}
 
 		// Get the value of the cookie
-		value = header.substr(index, length);
+		value = decodeURIComponent(header.substr(index, length).trim());
 
 		// Set the current cookie
-		cookies[name] = decodeURIComponent(value);
+		cookies[name] = value;
 
 		// Prepare for the next cookie
 		index += length + 1;
@@ -287,6 +298,26 @@ utils.parseLangs = function (header) {
 	});
 };
 
+// Generate non-cryptographically strong pseudo-random data
+utils.randomBytes = function (count, encoding) {
+
+	var value = new Buffer(randomBytesArray());
+
+	// Generate an array with random 0-255 values
+	function randomBytesArray() {
+		return Array.apply(Array, new Array(count)).map(function () {
+			return Math.round(Math.random() * 255);
+		});
+	}
+
+	// Check if the encoding is defined and apply it
+	if (encoding) {
+		value = value.toString(encoding);
+	}
+
+	return value;
+};
+
 // Run the callback if it is a function
 utils.runFunction = function (callback) {
 	if (typeof callback === 'function') {
@@ -294,10 +325,36 @@ utils.runFunction = function (callback) {
 	}
 };
 
+// Set options for client request instances
+utils.setOptions = function (instance, options) {
+
+	// Change an option with a defined value
+	function setOption(name, value) {
+		if (value !== undefined) {
+			instance.options[name] = value;
+		}
+	}
+
+	// Set options only from an object container
+	if (typeof options === 'object') {
+		setOption('agent', options.agent);
+		setOption('auth', options.auth);
+		setOption('ca', options.ca);
+		setOption('cert', options.cert);
+		setOption('ciphers', options.ciphers);
+		setOption('headers', options.headers);
+		setOption('key', options.key);
+		setOption('passphrase', options.passphrase);
+		setOption('pfx', options.pfx);
+		setOption('rejectUnauthorized', options.rejectUnauthorized);
+		setOption('secureProtocol', options.secureProtocol);
+	}
+};
+
 // Write the session to the host storage
 utils.setSession = function (host, connection, session) {
 
-	var config = host.conf.session;
+	var config = host.options.session;
 
 	// Write the session object and remove its reference inside the connection
 	config.store.set(session.id, {
@@ -315,7 +372,24 @@ utils.shuffle = function () {
 	return 0.5 - Math.random();
 };
 
+// Transform an object to an array
+utils.toArray = function (object) {
+	return Array.prototype.slice.call(object, 0);
+};
+
 // Generate UTC string for a numeric time value
 utils.utc = function (time) {
 	return new Date(Date.now() + time).toUTCString();
+};
+
+// Apply a xor mask on a buffer
+utils.xor = function (buffer, mask) {
+
+	var index = buffer.length,
+		length = mask.length;
+
+	// Loop through the buffer and apply xor
+	while (index--) {
+		buffer[index] ^= mask[index % length];
+	}
 };
