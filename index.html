@@ -31,11 +31,11 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a id="066" class="anchor" href="#066" aria-hidden="true"><span class="octicon octicon-link"></span></a>0.6.6</h1>
+<a id="070" class="anchor" href="#070" aria-hidden="true"><span class="octicon octicon-link"></span></a>0.7.0</h1>
 
 <p><a href="https://gitter.im/micnic/simpleS"><img src="https://badges.gitter.im/Join%20Chat.svg" alt="Gitter"></a></p>
 
-<p>simpleS is a simple HTTP(S) server for Node.JS that has some special features:</p>
+<p>simpleS is a simple framework for Node.JS designed to create HTTP(S) servers and clients that has some special features:</p>
 
 <ul>
 <li>Simple structure with minimum configuration</li>
@@ -43,17 +43,17 @@
 <li>Advanced routing for http requests, static files and errors</li>
 <li>Restful verbs</li>
 <li>Unique interface for requests and responses (named as connection)</li>
-<li>Response compression (deflate and gzip, enabled by default)</li>
+<li>Response compression (deflate and gzip, disabled by default)</li>
 <li>Virtual Hosting</li>
 <li>CORS support and Referer blocking</li>
 <li>Sessions (disabled by default)</li>
-<li>Template engine connection</li>
+<li>Template engine support</li>
 <li>WebSocket implementation (version 13, RFC 6455)</li>
 <li>Client-side simple API for AJAX and WebSocket</li>
 </ul>
 
 <h4>
-<a id="works-in-nodejs-010" class="anchor" href="#works-in-nodejs-010" aria-hidden="true"><span class="octicon octicon-link"></span></a>Works in Node.JS 0.10+</h4>
+<a id="works-with-nodejs-010-and-iojs-10-" class="anchor" href="#works-with-nodejs-010-and-iojs-10-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Works with node.js 0.10+ and io.js 1.0+ !</h4>
 
 <h4>
 <a id="any-feedback-is-welcome" class="anchor" href="#any-feedback-is-welcome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Any feedback is welcome!</h4>
@@ -133,8 +133,8 @@ host2.get(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds"
 
 <div class="highlight highlight-javascript"><pre>server.ws(<span class="pl-s1"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, {
     limit<span class="pl-k">:</span> <span class="pl-c1">1024</span>, <span class="pl-c">// The maximum size of a message</span>
-    mode<span class="pl-k">:</span> <span class="pl-s1"><span class="pl-pds">'</span>raw<span class="pl-pds">'</span></span>, <span class="pl-c">// Set connection mode, see docs for more info</span>
-    type<span class="pl-k">:</span> <span class="pl-s1"><span class="pl-pds">'</span>text<span class="pl-pds">'</span></span> <span class="pl-c">// Set the type of the content of the data</span>
+    mode<span class="pl-k">:</span> <span class="pl-s1"><span class="pl-pds">'</span>text<span class="pl-pds">'</span></span>, <span class="pl-c">// Set connection mode, see docs for more info</span>
+    origins<span class="pl-k">:</span> [<span class="pl-s1"><span class="pl-pds">'</span>null<span class="pl-pds">'</span></span>] <span class="pl-c">// Set accepted origins</span>
 }, <span class="pl-st">function</span> (<span class="pl-vpf">connection</span>) {
     <span class="pl-en">console</span><span class="pl-s3">.log</span>(<span class="pl-s1"><span class="pl-pds">'</span>New connection<span class="pl-pds">'</span></span>);
 
