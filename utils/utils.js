@@ -72,10 +72,10 @@ utils.copyConfig = function (destination, config, stop) {
 };
 
 // Emit safely errors to avoid fatal errors
-utils.emitError = function (emitter, error, log) {
+utils.emitError = function (emitter, error) {
 	if (emitter.listeners('error').length) {
 		emitter.emit('error', error);
-	} else if (log) {
+	} else if (process.stdout.isTTY) {
 		console.error('\n' + error.stack + '\n');
 	}
 };
@@ -107,7 +107,7 @@ utils.generateSession = function (host, connection, callback) {
 	// Generate a random session id of 16 bytes
 	crypto.randomBytes(16, function (error, buffer) {
 		if (error) {
-			utils.emitError(host, error, true);
+			utils.emitError(host, error);
 		} else {
 
 			// Create the source from which to generate the hash

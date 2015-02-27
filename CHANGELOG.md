@@ -1,3 +1,11 @@
+## 0.7.1
+- Improved ws pong frame creation
+- Improved performance for broadcasting data in websocket host and channel with filter
+- Changed the way errors are emitted in non-TTY environment
+- Improved routing process by removing an unnecessary checking step
+- Moved routing process to be after all middlewares are executed
+- Fixed some bugs related to CORS and websocket channel closing
+
 ## 0.7.0
 - Add support for node.js 0.12 and io.js 1.x
 - Implemented `simples.client`

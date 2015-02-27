@@ -33,73 +33,40 @@ http.verbs = {
 	DELETE: 'del',
 	GET: 'get',
 	HEAD: 'get',
+	OPTIONS: 'options',
 	POST: 'post',
 	PUT: 'put'
-};
-
-// Manage the behavior of the route
-http.applyRoute = function (connection, route) {
-	if (typeof route === 'function') {
-		route.call(connection.parent, connection);
-	} else if (typeof route === 'string') {
-		connection.render(route);
-	}
 };
 
 // Listener for HTTP requests
 http.connectionListener = function (host, request, response) {
 
-	var config = host.options,
-		connection = new http.connection(host, request, response),
+	var connection = new http.connection(host, request, response),
 		failed = false,
 		index = 0,
 		length = host.middlewares.length,
-		location = connection.path.substr(1),
 		route = null,
-		routes = host.routes,
-		verb = http.verbs[connection.method];
+		session = host.options.session;
 
 	// Apply middlewares one by one and then apply the route
 	function applyMiddlewares(stop) {
 		if (index < length && !stop) {
 			setImmediate(host.middlewares[index], connection, applyMiddlewares);
 			index++;
-		} else if (connection.method === 'OPTIONS') {
-			connection.status(204).end();
 		} else if (!stop) {
-			if (config.session.enabled) {
+
+			// Get the route
+			route = http.getRoute(connection);
+
+			// Check if the session should be applied
+			if (session.enabled) {
 				http.setSession(connection, function () {
-					http.applyRoute(connection, route);
+					route.call(host, connection);
 				});
-			} else if (route) {
-				http.applyRoute(connection, route);
+			} else {
+				route.call(host, connection);
 			}
 		}
-	}
-
-	// Find the fixed and dynamic route
-	if (verb) {
-		if (routes.fixed[verb][location]) {
-			route = routes.fixed[verb][location];
-		} else if (routes.fixed.all[location]) {
-			route = routes.fixed.all[location];
-		} else {
-			route = http.getDynamicRoute(connection, routes.dynamic, verb);
-		}
-	} else {
-		connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
-		route = routes.error[405];
-	}
-
-	// Get static content if found
-	if (!route && verb === 'get') {
-		route = http.getStaticRoute(host, connection, location);
-	}
-
-	// Check for error 404
-	if (!route) {
-		connection.status(404);
-		route = routes.error[404];
 	}
 
 	// Set the default keep alive timeout to 5 seconds
@@ -109,13 +76,13 @@ http.connectionListener = function (host, request, response) {
 	domain.create().on('error', function (error) {
 
 		// Emit safely the error to the host
-		utils.emitError(host, error, true);
+		utils.emitError(host, error);
 
 		// Try to apply the route for error 500 or destroy the connection
 		if (!connection.started && !failed) {
 			failed = true;
 			connection.status(500);
-			this.bind(routes.error[500]).call(host, connection);
+			this.bind(host.routes.error[500]).call(host, connection);
 		} else {
 			connection.destroy();
 		}
@@ -193,6 +160,47 @@ http.defaultRoutes = function () {
 		serve: null,
 		ws: {}
 	};
+};
+
+// Returns the route which will be applied on the connection
+http.getRoute = function (connection) {
+
+	var host = connection.parent,
+		location = connection.path.substr(1),
+		route = null,
+		routes = host.routes,
+		verb = http.verbs[connection.method];
+
+	// Check for a valid HTTP method
+	if (!verb) {
+		connection.status(405).header('Allow', 'DELETE,GET,HEAD,POST,PUT');
+		route = routes.error[405];
+	} else if (verb === 'options') {
+		route = http.noContent;
+	} else {
+
+		// Try to get the fixed or the dynamic route
+		if (routes.fixed[verb][location]) {
+			route = routes.fixed[verb][location];
+		} else if (routes.fixed.all[location]) {
+			route = routes.fixed.all[location];
+		} else {
+			route = http.getDynamicRoute(connection, routes.dynamic, verb);
+		}
+
+		// Try to get the static route
+		if (!route && verb === 'get') {
+			route = http.getStaticRoute(host, connection, location);
+		}
+
+		// Apply the route for HTTP error 404 if no route is defined
+		if (!route) {
+			connection.status(404);
+			route = routes.error[404];
+		}
+	}
+
+	return route;
 };
 
 // Returns the dynamic route if found
@@ -296,9 +304,7 @@ http.getStaticRoute = function (host, connection, location) {
 
 		// Creating the static route for all possible cases
 		if (connection.headers['if-modified-since'] === timestamp) {
-			route = function (connection) {
-				connection.status(304).end();
-			};
+			route = http.notModified;
 		} else if (!stats.isDirectory()) {
 			route = function (connection) {
 				connection.end(element.content);
@@ -316,6 +322,16 @@ http.getStaticRoute = function (host, connection, location) {
 	}
 
 	return route;
+};
+
+// Route to set HTTP status code to 204 and close the connection
+http.noContent = function (connection) {
+	connection.status(204).end();
+};
+
+// Route to set HTTP status code to 304 and close the connection
+http.notModified = function (connection) {
+	connection.status(304).end();
 };
 
 // Set the session cookies for HTTP connections

@@ -156,14 +156,14 @@ ws.prepareHandshake = function (connection) {
 		connection.head += 'Upgrade: WebSocket\r\n';
 		connection.head += 'Sec-WebSocket-Accept: ' + handshake + '\r\n';
 
-		// Check if the origin was provided
-		if (connection.headers.origin) {
-			connection.head += 'Origin: ' + connection.headers.origin + '\r\n';
-		}
-
 		// Add the connection subprotocols to the connection head
 		if (protocols) {
 			connection.head += 'Sec-Websocket-Protocol: ' + protocols + '\r\n';
+		}
+
+		// Check if the origin was provided
+		if (connection.headers.origin) {
+			connection.head += 'Origin: ' + connection.headers.origin + '\r\n';
 		}
 
 		// Prepare session
@@ -211,7 +211,7 @@ ws.connectionProcess = function (connection) {
 	domain.create().on('error', function (error) {
 
 		// Emit safely the error to the host
-		utils.emitError(host, error, true);
+		utils.emitError(host, error);
 
 		// Destroy the connection
 		connection.destroy();
@@ -226,7 +226,8 @@ ws.connectionProcess = function (connection) {
 // Merge frames to messages and emit them to the connection
 ws.processFrames = function (connection, parser) {
 
-	var message = null;
+	var message = null,
+		pong = ws.frameWrap(ws.pong, new Buffer(0), true);
 
 	// Add payload data to the message for long messages
 	function concatenatePayload(data) {
@@ -281,7 +282,7 @@ ws.processFrames = function (connection, parser) {
 		if (frame.opcode === 8) {
 			connection.end();
 		} else if (frame.opcode === 9) {
-			connection.socket.write(ws.frameWrap(ws.pong, new Buffer(0), true));
+			connection.socket.write(pong);
 		} else if (frame.opcode !== 10) {
 
 			// Prepare the message for emitting

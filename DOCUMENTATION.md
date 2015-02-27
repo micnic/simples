@@ -539,7 +539,7 @@ host.leave('all', [             // Removes the selected routes for routes with g
     '/index'
 ]);
 
-host.leave(404);                // Removes the route for '404' error code and set the default route for it
+host.leave('error', 404);       // Removes the route for '404' error code and set the default route for it
 
 host.leave();                   // Removes all routes and set default error routes
 ```
@@ -1035,7 +1035,7 @@ data: string or buffer
 
 filter: function(element, index, array)
 
-Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`. Returns current instance, so calls can be chained.
+Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`. `filter` use should be minimized for high performance. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
 ```js
 echo.broadcast('HelloWorld', function (element, index, array) {
@@ -1091,7 +1091,7 @@ The array of protocols of the WebSocket connection.
 
 `.query`
 
-The object that contains the queries from the handshake HTTP request.
+See Connection Interface `.query`.
 
 `.session`
 
@@ -1178,7 +1178,7 @@ data: string or buffer
 
 filter: function(element, index, array)
 
-Same as the WebSocket host `.broadcast()` method, but is applied to the connections of this channel. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
+Same as the WebSocket host `.broadcast()` method, but is applied to the connections of the channel. `filter` use should be minimized for high performance. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
 ## <a name="client-api"/> Client Simple API
 
