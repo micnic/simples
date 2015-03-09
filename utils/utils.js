@@ -75,7 +75,7 @@ utils.copyConfig = function (destination, config, stop) {
 utils.emitError = function (emitter, error) {
 	if (emitter.listeners('error').length) {
 		emitter.emit('error', error);
-	} else if (process.stdout.isTTY) {
+	} else if (process.stderr.isTTY) {
 		console.error('\n' + error.stack + '\n');
 	}
 };
@@ -101,7 +101,6 @@ utils.generateHash = function (data, encoding, callback) {
 utils.generateSession = function (host, connection, callback) {
 
 	var config = host.options.session,
-		secret,
 		source = new Buffer(32);
 
 	// Generate a random session id of 16 bytes
@@ -111,9 +110,8 @@ utils.generateSession = function (host, connection, callback) {
 		} else {
 
 			// Create the source from which to generate the hash
-			secret = new Buffer(utils.toArray(buffer).sort(utils.shuffle));
 			buffer.copy(source);
-			secret.copy(source, 16);
+			utils.shuffle(buffer).copy(source, 16);
 
 			// Generate the session hash
 			utils.generateHash(source, 'hex', function (hash) {
@@ -299,23 +297,22 @@ utils.parseLangs = function (header) {
 };
 
 // Generate non-cryptographically strong pseudo-random data
-utils.randomBytes = function (count, encoding) {
+utils.randomBytes = function (length, encoding) {
 
-	var value = new Buffer(randomBytesArray());
+	var result = new Buffer(length);
 
-	// Generate an array with random 0-255 values
-	function randomBytesArray() {
-		return Array.apply(Array, new Array(count)).map(function () {
-			return Math.round(Math.random() * 255);
-		});
+	// Fill the result with random 0-255 values
+	while (length) {
+		result[length] = Math.round(Math.random() * 255);
+		length--;
 	}
 
 	// Check if the encoding is defined and apply it
 	if (encoding) {
-		value = value.toString(encoding);
+		result = result.toString(encoding);
 	}
 
-	return value;
+	return result;
 };
 
 // Run the callback if it is a function
@@ -336,7 +333,7 @@ utils.setOptions = function (instance, options) {
 	}
 
 	// Set options only from an object container
-	if (typeof options === 'object') {
+	if (utils.isObject(options)) {
 		setOption('agent', options.agent);
 		setOption('auth', options.auth);
 		setOption('ca', options.ca);
@@ -367,14 +364,11 @@ utils.setSession = function (host, connection, session) {
 	});
 };
 
-// Returns a random value from -0.5 to 0.5
-utils.shuffle = function () {
-	return 0.5 - Math.random();
-};
-
-// Transform an object to an array
-utils.toArray = function (object) {
-	return Array.prototype.slice.call(object, 0);
+// Shuffle the data in a buffer and return that buffer
+utils.shuffle = function (buffer) {
+	return Array.prototype.sort.call(buffer, function () {
+		return 0.5 - Math.random();
+	});
 };
 
 // Generate UTC string for a numeric time value

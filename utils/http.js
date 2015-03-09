@@ -90,10 +90,24 @@ http.connectionListener = function (host, request, response) {
 };
 
 // Create a render listener as a shortcut
-http.createRenderListener = function (view, importer) {
-	return function (connection) {
-		connection.render(view, importer);
-	};
+http.createRenderListener = function (connection, view, importer) {
+
+	var listener = null;
+
+	// Check the type of the importer and prepare the listener
+	if (typeof importer === 'function') {
+		listener = function () {
+			importer(connection, function (data) {
+				connection.render(view, data);
+			});
+		};
+	} else if (utils.isObject(importer)) {
+		listener = function (connection) {
+			connection.render(view, importer);
+		};
+	}
+
+	return listener;
 };
 
 // Generate default config for HTTP hosts

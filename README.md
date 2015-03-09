@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.7.1
+# 0.7.2
 
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
 

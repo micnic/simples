@@ -1,3 +1,7 @@
+## 0.7.2
+- Fixed implementation of routes with functions as importer parameter
+- Improved performance for session keys generation
+
 ## 0.7.1
 - Improved ws pong frame creation
 - Improved performance for broadcasting data in websocket host and channel with filter

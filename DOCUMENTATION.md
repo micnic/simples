@@ -391,7 +391,7 @@ route: array[strings] or string
 
 listener: function(connection) or string
 
-importer: function(callback) or object
+importer: function(connection, callback) or object
 
 Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. This method is useful for defining general behavior for all types of requests. This method has less priority than the other methods described below to allow specific behavior for routes. Returns current instance, so calls can be chained.
 
@@ -403,7 +403,7 @@ route: array[strings] or string
 
 listener: function(connection) or string
 
-importer: function(callback) or object
+importer: function(connection, callback) or object
 
 Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -415,7 +415,7 @@ route: array[strings] or string
 
 listener: function(connection) or string
 
-importer: function(callback) or object
+importer: function(connection, callback) or object
 
 Listen for `GET` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -427,7 +427,7 @@ route: array[strings] or string
 
 listener: function(connection) or string
 
-importer: function(callback) or object
+importer: function(connection, callback) or object
 
 Listen for `POST` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -439,7 +439,7 @@ route: array[strings] or string
 
 listener: function(connection) or string
 
-importer: function(callback) or object
+importer: function(connection, callback) or object
 
 Listen for `PUT` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -461,6 +461,8 @@ Add listeners for all types of routes. The methods described above are just shor
 code: 404, 405 or 500
 
 listener: function(connection) or string
+
+importer: function(connection, callback) or object
 
 Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Inside the listeners there is no need to specify the connection status code, it is assigned automatically depending on the raised error. Returns current instance, so calls can be chained.
 
