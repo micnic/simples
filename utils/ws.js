@@ -179,54 +179,8 @@ ws.prepareHandshake = function (connection) {
 ws.connectionProcess = function (connection) {
 
 	var host = connection.parent,
-		parser = new ws.parser(0, false);
-
-	ws.processFrames(connection, parser);
-	connection.pipe(connection.socket).pipe(parser);
-
-	// Listen for connection socket events
-	connection.socket.on('readable', function () {
-
-		// Clear the previous timer and create a new timeout for ping frames
-		clearTimeout(connection.timer);
-		connection.timer = setTimeout(function () {
-			connection.socket.write(ws.ping);
-		}, 25000);
-	}).on('close', function () {
-
-		var index = host.connections.indexOf(connection);
-
-		// Unbind the connection from its channels
-		connection.channels.forEach(function (channel) {
-			channel.unbind(connection);
-		});
-
-		// Remove the connection and its timer
-		host.connections.splice(index, 1);
-		clearTimeout(connection.timer);
-		connection.emit('close');
-	});
-
-	// Execute user defined code for the WS host
-	domain.create().on('error', function (error) {
-
-		// Emit safely the error to the host
-		utils.emitError(host, error);
-
-		// Destroy the connection
-		connection.destroy();
-	}).run(function () {
-		connection.socket.write(connection.head + '\r\n');
-		connection.socket.write(ws.ping);
-		connection.socket.setTimeout(30000);
-		host.listener(connection);
-	});
-};
-
-// Merge frames to messages and emit them to the connection
-ws.processFrames = function (connection, parser) {
-
-	var message = null,
+		message = null,
+		parser = new ws.parser(host.options.limit, false),
 		pong = ws.frameWrap(ws.pong, new Buffer(0), true);
 
 	// Add payload data to the message for long messages
@@ -268,16 +222,19 @@ ws.processFrames = function (connection, parser) {
 				message = JSON.parse(message.data);
 				connection.emit(message.event, message.data);
 			} catch (error) {
-				connection.emit('error', error);
+				utils.emitError(connection, error);
 			}
 		} else {
 			connection.emit('message', message);
 		}
 	}
 
+	// Pipe the connection to the net socket and the parser
+	connection.pipe(connection.socket).pipe(parser);
+
 	// Listen for parser events
 	parser.on('error', function (error) {
-		connection.emit('error', error);
+		utils.emitError(connection, error);
 	}).on('frame', function (frame) {
 		if (frame.opcode === 8) {
 			connection.end();
@@ -297,6 +254,44 @@ ws.processFrames = function (connection, parser) {
 				emitMessage();
 			}
 		}
+	});
+
+	// Listen for connection socket events
+	connection.socket.on('readable', function () {
+
+		// Clear the previous timer and create a new timeout for ping frames
+		clearTimeout(connection.timer);
+		connection.timer = setTimeout(function () {
+			connection.socket.write(ws.ping);
+		}, 25000);
+	}).on('close', function () {
+
+		var index = host.connections.indexOf(connection);
+
+		// Unbind the connection from its channels
+		connection.channels.forEach(function (channel) {
+			channel.unbind(connection);
+		});
+
+		// Remove the connection and its timer
+		host.connections.splice(index, 1);
+		clearTimeout(connection.timer);
+		connection.emit('close');
+	});
+
+	// Execute user defined code for the WS host
+	domain.create().on('error', function (error) {
+
+		// Emit safely the error to the host
+		utils.emitError(host, error);
+
+		// Destroy the connection
+		connection.destroy();
+	}).run(function () {
+		connection.socket.write(connection.head + '\r\n');
+		connection.socket.write(ws.ping);
+		connection.socket.setTimeout(30000);
+		host.listener(connection);
 	});
 };
 

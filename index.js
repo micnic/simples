@@ -50,7 +50,7 @@ simples.prototype = Object.create(host.prototype, {
 });
 
 // Create a new host or return an existing one
-simples.prototype.host = function (name, config) {
+simples.prototype.host = function (name, options) {
 
 	// Select the main host or use another one
 	if (typeof name === 'string') {
@@ -61,8 +61,8 @@ simples.prototype.host = function (name, config) {
 		}
 
 		// Set the host configuration
-		if (utils.isObject(config)) {
-			this.hosts[name].config(config);
+		if (utils.isObject(options)) {
+			this.hosts[name].config(options);
 		}
 	} else {
 		name = 'main';
@@ -76,6 +76,13 @@ simples.prototype.start = function (port, callback) {
 
 	var that = this;
 
+	// Release the server
+	function release() {
+		that.busy = false;
+		utils.runFunction(callback);
+		that.emit('release');
+	}
+
 	// Set the server to listen the port
 	function start() {
 
@@ -87,15 +94,9 @@ simples.prototype.start = function (port, callback) {
 		// Trigger server release when internal instances are ready
 		that.primary.listen(port, function () {
 			if (that.secured) {
-				that.secondary.listen(80, function () {
-					that.busy = false;
-					utils.runFunction(callback);
-					that.emit('release');
-				});
+				that.secondary.listen(80, release);
 			} else {
-				that.busy = false;
-				utils.runFunction(callback);
-				that.emit('release');
+				release();
 			}
 		});
 	}
@@ -103,13 +104,10 @@ simples.prototype.start = function (port, callback) {
 	// Make parameters optional
 	if (typeof port === 'function') {
 		callback = port;
-		port = this.port;
-	} else if (typeof port !== 'number') {
-		port = this.port;
 	}
 
-	// Check if the port is not reserved
-	if (port < 1024) {
+	// Get the initial port or check if the port is not reserved
+	if (typeof port !== 'number' || port < 1024) {
 		if (this.secured) {
 			port = 443;
 		} else {
@@ -136,6 +134,13 @@ simples.prototype.stop = function (callback) {
 
 	var that = this;
 
+	// Release the server
+	function release() {
+		that.busy = false;
+		utils.runFunction(callback);
+		that.emit('release');
+	}
+
 	// Stop the server
 	function stop() {
 
@@ -146,15 +151,9 @@ simples.prototype.stop = function (callback) {
 		// Trigger server release when internal instances are ready
 		that.primary.close(function () {
 			if (that.secured) {
-				that.secondary.close(function () {
-					that.busy = false;
-					utils.runFunction(callback);
-					that.emit('release');
-				});
+				that.secondary.close(release);
 			} else {
-				that.busy = false;
-				utils.runFunction(callback);
-				that.emit('release');
+				release();
 			}
 		});
 	}
@@ -211,18 +210,15 @@ module.exports = function (port, options, callback) {
 			callback = options;
 		}
 		options = port;
+		port = 443;
 	} else if (typeof port === 'function') {
 		callback = port;
-		port = 80;
-	} else {
 		port = 80;
 	}
 
 	// Check for secured server
 	if (utils.isObject(options)) {
 		server.secured = true;
-	} else {
-		options = {};
 	}
 
 	// Run vulnerable code inside a domain
@@ -269,8 +265,8 @@ module.exports = function (port, options, callback) {
 };
 
 // Create a new client
-module.exports.client = function () {
-	return new client();
+module.exports.client = function (options) {
+	return new client(options);
 };
 
 // Create a new session store instance

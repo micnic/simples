@@ -124,7 +124,9 @@ module.exports = function (server) {
 	});
 
 	// Set WebSocket host for "/echo"
-	server.ws('/echo', function (connection) {
+	server.ws('/echo', {
+		limit: 10
+	}, function (connection) {
 		connection.on('message', function (message) {
 			connection.send(message.data);
 		});

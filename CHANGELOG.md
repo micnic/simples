@@ -1,3 +1,9 @@
+## 0.7.3
+- Improved template engine capabilities
+- Fixed WebSocket limit for received data
+- Fixed possible crash on WebSocket errors
+- Small docs fixes
+
 ## 0.7.2
 - Fixed implementation of routes with functions as importer parameter
 - Improved performance for session keys generation

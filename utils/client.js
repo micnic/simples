@@ -273,7 +273,7 @@ var simples = (function () {
 	};
 
 	// WebSocket microframework
-	var ws = function (location, config) {
+	var ws = function (location, options) {
 
 		var mode = 'text',
 			protocol = 'ws',
@@ -299,25 +299,25 @@ var simples = (function () {
 		location = location.replace(/^(?:.+:\/\/)?/, protocol + '://');
 
 		// Set the default configuration
-		if (!config || typeof config !== 'object') {
-			config = {
+		if (!options || typeof options !== 'object') {
+			options = {
 				mode: mode,
 				protocols: protocols
 			};
 		} else {
 
 			// Set the binary or object mode
-			if (/^binary|object$/.test(config.mode)) {
-				mode = config.mode;
+			if (/^binary|object$/.test(options.mode)) {
+				mode = options.mode;
 			}
 
 			// Get the WebSocket subprotocols
-			if (Array.isArray(config.protocols)) {
-				protocols = config.protocols.filter(function (element) {
+			if (Array.isArray(options.protocols)) {
+				protocols = options.protocols.filter(function (element) {
 					return typeof element === 'string';
 				});
-			} else if (typeof config.protocols === 'string') {
-				protocols.push(config.protocols);
+			} else if (typeof options.protocols === 'string') {
+				protocols.push(options.protocols);
 			}
 		}
 
@@ -478,8 +478,8 @@ var simples = (function () {
 		ee: function () {
 			return new ee();
 		},
-		ws: function (location, config) {
-			return new ws(location, config);
+		ws: function (location, options) {
+			return new ws(location, options);
 		}
 	};
 })();

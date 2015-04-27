@@ -1,7 +1,7 @@
 {
 	"name": "simples",
-	"version": "0.7.2",
-	"description": "Simple HTTP(S) Server",
+	"version": "0.7.3",
+	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
 		"cors",

@@ -322,10 +322,10 @@ host.middleware(function (connection, next) {
 
 engine: object
 
-To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object should be applied. This method is applicable on each host independently (see Virtual Hosting). Returns current instance, so calls can be chained. Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
+To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object can be applied to make it be compatible. See the examples below to understand how to make any template engine compatible with `simpleS`. The template engine may be used to render HTTP responses and WebSocket messages. This method is applicable on each host independently (see Virtual Hosting). Returns current instance, so calls can be chained. Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
 
 ```js
-
+// Noop template engine example
 var noopEngine = {
     render: function (source) {
         console.log(source);
@@ -335,10 +335,22 @@ var noopEngine = {
 
 host.engine(noopEngine);
 
+// Asynchronous noop template engine example
+var noopAsyncEngine = {
+    render: function (source, imports, callback) {
+        setTimeout(function () {
+            // Do something with the source and the imports
+            callback(source);
+        }, 1000);
+    }
+};
+
+host.engine(noopAsyncEngine);
+
 // Wrapped unsupported template engine example
 var unsupportedEngine = {
     renderFile: function (imports, source) {
-        console.log(source);
+        // Do something with the source and the imports
         return source;
     }
 };
@@ -1195,6 +1207,7 @@ Now (version 0.7.0), it's quite primitive and provide only some methods to creat
 ### <a name="client-api-http"/> HTTP Request
 
 `client.request(method, location[, options])`
+
 method: 'del', 'get', 'head', 'post' or 'put'
 
 location: string
@@ -1238,13 +1251,14 @@ For convenience, there are shortcut methods to make different types of requests:
 ### <a name="client-api-ws"/> WS Connection
 
 `client.ws(location[, mode, options])`
+
 location: string
 
 mode: 'binary', 'object' or 'text'
 
 options: object
 
-To create a WS connection provide the location, communication mode or some additional options. The location may be prefixed with `http://` or `ws://` protocols (or with their secure versions `https://` and `wss://`), both methods will be processed in the same way. The communication mode may have the following values: `text`, `binary` or `object`, by default is `text`, to ensure a correct communication it should match with the mode in which the server is set.
+To create a WS connection provide the location, communication mode or some additional options. The location may be prefixed with `http://` or `ws://` protocols (or with their secure versions `https://` and `wss://`), both methods will be processed in the same way. The communication mode may have the following values: `text`, `binary` or `object`, by default is `text`, to ensure a correct communication it should match with the mode in which the server is set. The options are an object which can contain HTTP or HTTPS specific request configuration, which is the same as the options provided for [`http.request`](http://nodejs.org/api/http.html#http_http_request_options_callback) or [`https.request`](http://nodejs.org/api/https.html#https_https_request_options_callback).
 
 ```js
 var connection = client.ws('ws://localhost/echo', {
@@ -1314,13 +1328,13 @@ request.stop();
 
 ### <a name="browser-api-ws"/> WS (WebSocket)
 
-`simples.ws(url[, config])`
+`simples.ws(url[, options])`
 
 url: string
 
-config: object
+options: object
 
-`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `config` parameter can be set the communication mode and the used protocols, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
+`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `options` parameter can be set the communication mode and the used protocols, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
 
 ```js
 var socket = simples.ws('/', {

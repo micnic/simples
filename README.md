@@ -1,9 +1,9 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.7.2
+# 0.7.3
 
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
 
-simpleS is a simple framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
+simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
 
 - High performance and simple structure with minimum configuration
 - Advanced routing for http requests, static files and errors
@@ -21,6 +21,7 @@ simpleS is a simple framework for Node.JS designed to create HTTP(S) servers and
 #### Any feedback is welcome!
 
 #### More simple modules:
+- [recache](http://micnic.github.com/recache/)
 - [simpleR](http://micnic.github.com/simpleR/)
 - [simpleT](http://micnic.github.com/simpleT/)
 
@@ -37,7 +38,7 @@ See the folder `examples/` in the module directory, it contains examples that co
 
 ## Usage
 
-```javascript
+```js
 var simples = require('simples');
 
 var server = simples(12345); // Your server is set up on port 12345
@@ -45,7 +46,7 @@ var server = simples(12345); // Your server is set up on port 12345
 
 ## Routing
 
-```javascript
+```js
 // Route for the server root
 server.get('/', function (connection) {
     connection.end('Simples Works');
@@ -62,7 +63,7 @@ server.error(404, function (connection) {
 
 ## Virtual Hosting
 
-```javascript
+```js
 var mainHost = server; // Main host
 var host1 = server.host('example.com'); // Other hosts
 var host2 = server.host('example2.com');
@@ -83,7 +84,7 @@ host2.get('/', function (connection) {
 
 ## WebSocket
 
-```javascript
+```js
 server.ws('/', {
     limit: 1024, // The maximum size of a message
     mode: 'text', // Set connection mode, see docs for more info
@@ -104,7 +105,7 @@ server.ws('/', {
 
 On client:
 
-```javascript
+```js
 // Use browser built-in API
 var socket = new WebSocket('ws://localhost:12345/', 'echo');
 
@@ -126,6 +127,6 @@ socket.send('ECHO');
 
 ## Template engine connection
 
-```javascript
+```js
 server.engine(bestTemplateEngine);
 ```
