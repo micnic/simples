@@ -98,7 +98,7 @@ utils.generateHash = function (data, encoding, callback) {
 };
 
 // Generate session id and hash
-utils.generateSession = function (host, connection, callback) {
+utils.generateSession = function (host, callback) {
 
 	var config = host.options.session,
 		source = new Buffer(32);
@@ -115,7 +115,7 @@ utils.generateSession = function (host, connection, callback) {
 
 			// Generate the session hash
 			utils.generateHash(source, 'hex', function (hash) {
-				callback(connection, {
+				callback({
 					id: buffer.toString('hex'),
 					hash: hash,
 					expires: config.timeout + Date.now(),
@@ -136,13 +136,13 @@ utils.getSession = function (host, connection, callback) {
 	if (cookies._session) {
 		config.store.get(cookies._session, function (session) {
 			if (session && session.hash === cookies._hash) {
-				callback(connection, session);
+				callback(session);
 			} else {
-				utils.generateSession(host, connection, callback);
+				utils.generateSession(host, callback);
 			}
 		});
 	} else {
-		utils.generateSession(host, connection, callback);
+		utils.generateSession(host, callback);
 	}
 };
 

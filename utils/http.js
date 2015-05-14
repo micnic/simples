@@ -45,7 +45,6 @@ http.connectionListener = function (host, request, response) {
 		failed = false,
 		index = 0,
 		length = host.middlewares.length,
-		route = null,
 		session = host.options.session;
 
 	// Apply middlewares one by one and then apply the route
@@ -54,18 +53,7 @@ http.connectionListener = function (host, request, response) {
 			setImmediate(host.middlewares[index], connection, applyMiddlewares);
 			index++;
 		} else if (!stop) {
-
-			// Get the route
-			route = http.getRoute(connection);
-
-			// Check if the session should be applied
-			if (session.enabled) {
-				http.setSession(connection, function () {
-					route.call(host, connection);
-				});
-			} else {
-				route.call(host, connection);
-			}
+			http.getRoute(connection).call(host, connection);
 		}
 	}
 
@@ -86,7 +74,13 @@ http.connectionListener = function (host, request, response) {
 		} else {
 			connection.destroy();
 		}
-	}).run(applyMiddlewares);
+	}).run(function () {
+		if (session.enabled) {
+			http.setSession(connection, applyMiddlewares);
+		} else {
+			applyMiddlewares();
+		}
+	});
 };
 
 // Create a render listener as a shortcut
@@ -319,7 +313,7 @@ http.getStaticRoute = function (host, connection, location) {
 		// Creating the static route for all possible cases
 		if (connection.headers['if-modified-since'] === timestamp) {
 			route = http.notModified;
-		} else if (!stats.isDirectory()) {
+		} else if (stats.isFile()) {
 			route = function (connection) {
 				connection.end(element.content);
 			};
@@ -354,7 +348,7 @@ http.setSession = function (connection, callback) {
 	var host = connection.parent;
 
 	// Prepare session object
-	utils.getSession(host, connection, function (connection, session) {
+	utils.getSession(host, connection, function (session) {
 
 		var config = host.options,
 			options = {};

@@ -172,7 +172,7 @@ simples.prototype.stop = function (callback) {
 	return this;
 };
 
-// Export a new simpleS instance
+// simpleS server factory
 module.exports = function (port, options, callback) {
 
 	var result = {},
@@ -264,12 +264,15 @@ module.exports = function (port, options, callback) {
 	return server.start(port, callback);
 };
 
-// Create a new client
+// simpleS client factory
 module.exports.client = function (options) {
 	return new client(options);
 };
 
-// Create a new session store instance
+// Expose simpleS server factory
+module.exports.server = module.exports;
+
+// simpleS session store factory
 module.exports.store = function (timeout) {
 	return new store(timeout);
 };

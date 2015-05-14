@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.7.3",
+	"version": "0.7.4",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -18,7 +18,7 @@
 	],
 	"homepage": "http://micnic.github.io/simpleS",
 	"bugs": {
-		"url": "https://github.com/micnic/simples/issues",
+		"url": "https://github.com/micnic/simpleS/issues",
 		"email": "micnic90@gmail.com"
 	},
 	"license": "GPL-3.0",
@@ -32,12 +32,9 @@
 		"type": "git",
 		"url": "https://github.com/micnic/simpleS"
 	},
-	"scripts": {
-		"test": "taster ./test"
-	},
-	"devDependencies": {
-		"jscs": "latest",
-		"taster": "latest"
+	"dependencies": {
+		"mime.json": "1.0.x",
+		"recache": "0.2.x"
 	},
 	"engines": {
 		"iojs": ">=1.0",

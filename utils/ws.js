@@ -168,15 +168,42 @@ ws.prepareHandshake = function (connection) {
 
 		// Prepare session
 		if (config.enabled) {
-			utils.getSession(parent, connection, ws.setSession);
+			utils.getSession(parent, connection, function (session) {
+
+				var config = null,
+					expires = 0,
+					host = connection.parent,
+					parent = host.parent;
+
+				// Prepare expiration time for the session cookies
+				config = parent.options.session;
+				expires = utils.utc(config.timeout * 1000);
+
+				// Add the session cookies to the connection head
+				connection.head += 'Set-Cookie: _session=' + session.id + ';';
+				connection.head += 'expires=' + expires + ';httponly\r\n';
+				connection.head += 'Set-Cookie: _hash=' + session.hash + ';';
+				connection.head += 'expires=' + expires + ';httponly\r\n';
+
+				// Link the session container to the connection
+				connection.session = session.container;
+
+				// Write the session to the store and remove its reference
+				connection.on('close', function () {
+					utils.setSession(parent, connection, session);
+				});
+
+				// Continue to process the request
+				ws.processConnection(connection);
+			});
 		} else {
-			ws.connectionProcess(connection);
+			ws.processConnection(connection);
 		}
 	});
 };
 
 // Prepare the connection for receiving and sending process
-ws.connectionProcess = function (connection) {
+ws.processConnection = function (connection) {
 
 	var host = connection.parent,
 		message = null,
@@ -213,7 +240,7 @@ ws.connectionProcess = function (connection) {
 
 		// Stringify message data
 		if (message.type === 'text') {
-			message.data = message.data.toString();
+			message.data = String(message.data);
 		}
 
 		// Emit the message based on the connection mode
@@ -293,34 +320,4 @@ ws.connectionProcess = function (connection) {
 		connection.socket.setTimeout(30000);
 		host.listener(connection);
 	});
-};
-
-// Set the session cookies for WS requests
-ws.setSession = function (connection, session) {
-
-	var config = null,
-		expires = 0,
-		host = connection.parent,
-		parent = host.parent;
-
-	// Prepare expiration time for the session cookies
-	config = parent.options.session;
-	expires = utils.utc(config.timeout * 1000);
-
-	// Add the session cookies to the connection head
-	connection.head += 'Set-Cookie: _session=' + session.id + ';';
-	connection.head += 'expires=' + expires + ';httponly\r\n';
-	connection.head += 'Set-Cookie: _hash=' + session.hash + ';';
-	connection.head += 'expires=' + expires + ';httponly\r\n';
-
-	// Link the session container to the connection
-	connection.session = session.container;
-
-	// Write the session to the store and remove its reference
-	connection.on('close', function () {
-		utils.setSession(parent, connection, session);
-	});
-
-	// Continue to process the request
-	ws.connectionProcess(connection);
 };

@@ -127,7 +127,7 @@ var simples = require('simples');
 
 # <a name="server"/> New simpleS Instance
 
-`simples([port, options, callback])`
+`simples([port, options, callback])` or `simples.server([port, options, callback])`
 
 port: number
 
@@ -280,7 +280,7 @@ session: {
 }
 ```
 
-Sessions are stored by default inside an memcached container, to define another container for them it is needed an object instance with the next methods:
+Sessions are stored by default inside a memcached container, to define another container for them it is needed an object instance with the next methods:
 
 `.get(id, callback)` - should return inside the callback function the session container if it is found, if the session defined by the `id` parameter is not found then the callback function should return `null`;
 
@@ -517,16 +517,21 @@ host.post([
 
 ### <a name="host-serve"/> Static Files
 
-`.serve(directory[, callback])`
+`.serve(directory[, options, callback])`
 
 directory: string
 
+options: object
+
 callback: function(connection)
 
-`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` or `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, the `connection.data.files` is populated with array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. Under the hood the [recache](https://github.com/micnic/recache) modules is used for caching the content of the directory, the `options` parameter is optionally used to configure the cache by filtering the cached directories and files with regular expressions (the cache is not persistent). simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` or `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, the `connection.data.files` is populated with array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
 
 ```js
-host.serve('root', function (connection, files) {
+host.serve('static_files', {
+    dirs: /^css|img|js$/i,
+    files: /\.(?:css|png|js)$/i
+}, function (connection, files) {
     // Application logic
 });
 ```
@@ -853,7 +858,7 @@ type: string
 
 override: boolean
 
-Sets, gets or removes the type of the content of the response. Default is 'html'. By default uses one of 100 content types defined in [mime.js](https://github.com/micnic/simpleS/blob/master/utils/mime.js), which can be edited to add more content types. Should be used only once before writing any data to the connection. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
+Sets, gets or removes the type of the content of the response. Uses the content types defined in [mime.json](https://github.com/micnic/mime.json). This method should be used only once before writing any data to the connection. If the content type header is not set correctly or the exact value of the type is known it is possible to override using the second parameter with true value and setting the first parameter as a valid content type. The second parameter is optional. If the required type is unknown `application/octet-stream` will be applied. If the `type` parameter is not defined then the value of the previously set content type is returned, in other cases the current instance is returned, so calls can be chained. If the `type` parameter is `null` then the `Content-Type` header is removed from the response, it is not recommended to remove the `Content-Type` from the response. By default the `text/html;charset=utf-8` type is set.
 
 ```js
 connection.type('txt');                 // Set the 'Content-Type' header as 'text/plain;charset=utf-8'

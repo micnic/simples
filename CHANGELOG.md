@@ -1,3 +1,10 @@
+## 0.7.4
+- Expose connection session to middlewares
+- Added `simples.server()` for consistency
+- `connection.keep()` will always set 0 timeout for invalid timeout value
+- Added options to `host.serve()` for configuring the cache
+- Moved cache and mime to external dependencies
+
 ## 0.7.3
 - Improved template engine capabilities
 - Fixed WebSocket limit for received data
