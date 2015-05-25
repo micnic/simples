@@ -1,3 +1,6 @@
+## 0.7.5
+- Update recache dependency for bug fixing
+
 ## 0.7.4
 - Expose connection session to middlewares
 - Added `simples.server()` for consistency

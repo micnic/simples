@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.7.4",
+	"version": "0.7.5",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -34,7 +34,7 @@
 	},
 	"dependencies": {
 		"mime.json": "1.0.x",
-		"recache": "0.2.x"
+		"recache": "0.3.x"
 	},
 	"engines": {
 		"iojs": ">=1.0",

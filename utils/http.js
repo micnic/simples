@@ -130,21 +130,6 @@ http.defaultConfig = function () {
 // Generate empty containers for routes
 http.defaultRoutes = function () {
 
-	// Default callback for "Not Found"
-	function notFound(connection) {
-		connection.end('"' + connection.url.path + '" Not Found');
-	}
-
-	// Default callback for "Method Not Allowed"
-	function methodNotAllowed(connection) {
-		connection.end('"' + connection.method + '" Method Not Allowed');
-	}
-
-	// Default callback for "Internal Server Error"
-	function internalServerError(connection) {
-		connection.end('"' + connection.url.path + '" Internal Server Error');
-	}
-
 	return {
 		dynamic: {
 			all: {},
@@ -154,9 +139,9 @@ http.defaultRoutes = function () {
 			put: {}
 		},
 		error: {
-			404: notFound,
-			405: methodNotAllowed,
-			500: internalServerError
+			404: http.notFound,
+			405: http.methodNotAllowed,
+			500: http.internalServerError
 		},
 		fixed: {
 			all: {},
@@ -332,9 +317,24 @@ http.getStaticRoute = function (host, connection, location) {
 	return route;
 };
 
+// Default route for "Internal Server Error" (500 error)
+http.internalServerError = function (connection) {
+	connection.end('"' + connection.url.path + '" Internal Server Error');
+};
+
+// Default route for "Method Not Allowed" (405 error)
+http.methodNotAllowed = function (connection) {
+	connection.end('"' + connection.method + '" Method Not Allowed');
+};
+
 // Route to set HTTP status code to 204 and close the connection
 http.noContent = function (connection) {
 	connection.status(204).end();
+};
+
+// Default route for "Not Found" (404 error)
+http.notFound = function (connection) {
+	connection.end('"' + connection.url.path + '" Not Found');
 };
 
 // Route to set HTTP status code to 304 and close the connection
