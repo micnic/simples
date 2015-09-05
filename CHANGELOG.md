@@ -1,3 +1,7 @@
+## 0.7.6
+- Add `connection.cache()` method
+- Fix importer to be optional in host routing when the listener is a string
+
 ## 0.7.5
 - Update recache dependency for bug fixing
 

@@ -757,6 +757,27 @@ connection.parse({
 });
 ```
 
+#### <a name="http-connection-cache"/> .cache([options])
+
+options: null, object or string
+
+Sets, gets or removes the `Cache-Control` header. By providing a string the `Cache-Control` header will be set with this string. `options` argument as an object can have 3 properties: `type` - for the type of the cache, which can be `public` or `private`, by default is `private`, `maxAge` - for the time to live of the cache in seconds and `sMaxAge` - for the time to live of the shared cache, also in seconds.
+
+```js
+connection.cache({
+    type: 'public', // type of the cache, can be 'private' or 'public', by default is private
+    maxAge: 3600,   // max age of the cache, by default is not defined
+    sMaxAge: 3600   // max age of the shared cache, by default is not defined
+});
+
+// or
+
+connection.cache('public, max-age=3600, s-maxage=3600');
+
+// Get the value of the Cache-Control header
+connection.cache(); // => public, max-age=3600, s-maxage=3600
+```
+
 #### <a name="http-connection-cookie"/> .cookie(name, value[, attributes])
 
 name: string
@@ -811,9 +832,9 @@ connection.lang(null);  // The 'Content-Language' header is being removed
 connection.lang();      // => undefined
 ```
 
-#### <a name="http-connection-link"/> .link(links)
+#### <a name="http-connection-link"/> .link([links])
 
-links: object
+links: object or null
 
 Define the relations of the current location with the other locations and populate `Link` header. Returns current instance, so calls can be chained.
 

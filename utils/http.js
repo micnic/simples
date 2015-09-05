@@ -95,7 +95,7 @@ http.createRenderListener = function (connection, view, importer) {
 				connection.render(view, data);
 			});
 		};
-	} else if (utils.isObject(importer)) {
+	} else {
 		listener = function (connection) {
 			connection.render(view, importer);
 		};
