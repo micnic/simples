@@ -1,7 +1,7 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.7.6
+# 0.8.0
 
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS)
+[![Gitter](https://badges.gitter.im/simples.png)](https://gitter.im/micnic/simpleS)
 
 simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
 
@@ -38,95 +38,145 @@ See the folder `examples/` in the module directory, it contains examples that co
 
 ## Usage
 
+### Server Creation
+
 ```js
 var simples = require('simples');
 
-var server = simples(12345); // Your server is set up on port 12345
-```
+var server = simples(); // Your server is set up on port 80
 
-## Routing
-
-```js
-// Route for the server root
-server.get('/', function (connection) {
-    connection.end('Simples Works');
+// Enable compression (default is deflate)
+server.config({
+    compression: {
+        enabled: true
+    }
 });
 
-// Route for static files located in the folder "static_files"
-server.serve('static_files');
+// Serve static files located in the folder "static"
+server.serve('static');
 
-// Route for HTTP 404 error
+// Catch 404 Error
 server.error(404, function (connection) {
     connection.end('Error 404 caught');
 });
+
+// Create the first route
+server.get('/', function (connection) {
+    connection.end('Simples Works');
+});
 ```
 
-## Virtual Hosting
+### Client Creation
 
 ```js
-var mainHost = server; // Main host
+var simples = require('simples');
+
+var client = simples.client();
+
+// GET request
+client.get('/').on('body', function (response, body) {
+    console.log('Response status: ' + response.status);
+    console.log('Response body: ' + body.toString());
+});
+
+// POST request
+client.post('/send').send(/* data */).on('response', function (response) {
+    // Do something with the response
+}).on('body', function (response, body) {
+    console.log('Response body: ' + body.toString());
+});
+```
+
+### Virtual Hosting
+
+```js
+var host0 = server; // The server is in the same time the main host
 var host1 = server.host('example.com'); // Other hosts
 var host2 = server.host('example2.com');
 
 // Now for each host you can apply individual routing
-mainHost.get('/', function (connection) {
+host0.get('/', function (connection) {
     connection.end('Main Host');
 });
 
 host1.get('/', function (connection) {
-    connection.end('Host1');
+    connection.end('Host 1');
 });
 
 host2.get('/', function (connection) {
-    connection.end('Host2');
+    connection.end('Host 2');
 });
 ```
 
-## WebSocket
+### WebSocket
+
+Let's create an echo WebSocket server:
 
 ```js
 server.ws('/', {
     limit: 1024, // The maximum size of a message
     mode: 'text', // Set connection mode, see docs for more info
-    origins: ['null'] // Set accepted origins
+    origins: ['null'] // Set accepted origins, "null" for localhost
 }, function (connection) {
+
+    // Log the new connection
     console.log('New connection');
 
+    // Listen for messages to send them back
     connection.on('message', function (message) {
         console.log('Message: ' + message.data);
         connection.send(message.data);
     });
 
+    // Log connection close
     connection.on('close', function () {
         console.log('Connection closed');
     });
 });
 ```
 
-On client:
+Access the server from the browser built-in WebSocket API:
 
 ```js
-// Use browser built-in API
-var socket = new WebSocket('ws://localhost:12345/', 'echo');
+var socket = new WebSocket('ws://localhost/', 'echo');
 
+// Listen for messages
 socket.onmessage = function (event) {
     console.log(event.data);
 };
 
+// Send the first message
 socket.send('ECHO');
+```
 
-// or simpleS client-side simple API
+Access the server from the browser simpleS WebSocket API:
+
+```js
 var socket = simples.ws('/', ['echo']);
 
+// Listen for messages
 socket.on('message', function (message) {
     console.log(message.data);
 });
 
+// Send the first message
 socket.send('ECHO');
 ```
 
-## Template engine connection
+Access the server from server-side simpleS client WebSocket API:
 
 ```js
-server.engine(bestTemplateEngine);
+var simples = require('simples');
+
+var client = simples.client();
+
+var socket = client.ws('/');
+
+// Listen for messages
+socket.on('message', function (message) {
+    console.log(message.data);
+});
+
+// Send the first message
+socket.send('ECHO');
 ```

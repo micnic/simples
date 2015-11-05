@@ -23,10 +23,10 @@ try {
 }
 
 // Link to the HTTP connection prototype constructor
-http.connection = require('simples/lib/http/connection');
+http.Connection = require('simples/lib/http/connection');
 
 // Link to the HTTP form prototype constructor
-http.form = require('simples/lib/http/form');
+http.Form = require('simples/lib/http/form');
 
 // Relations between HTTP methods and used REST verbs
 http.verbs = {
@@ -41,7 +41,7 @@ http.verbs = {
 // Listener for HTTP requests
 http.connectionListener = function (host, request, response) {
 
-	var connection = new http.connection(host, request, response),
+	var connection = new http.Connection(host, request, response),
 		failed = false,
 		index = 0,
 		length = host.middlewares.length,
@@ -58,7 +58,7 @@ http.connectionListener = function (host, request, response) {
 	}
 
 	// Set the default keep alive timeout to 5 seconds
-	connection.keep(5000);
+	connection.keep(host.options.timeout);
 
 	// Process the connection inside a domain
 	domain.create().on('error', function (error) {
@@ -84,13 +84,13 @@ http.connectionListener = function (host, request, response) {
 };
 
 // Create a render listener as a shortcut
-http.createRenderListener = function (connection, view, importer) {
+http.createRenderListener = function (view, importer) {
 
 	var listener = null;
 
 	// Check the type of the importer and prepare the listener
 	if (typeof importer === 'function') {
-		listener = function () {
+		listener = function (connection) {
 			importer(connection, function (data) {
 				connection.render(view, data);
 			});
@@ -123,7 +123,8 @@ http.defaultConfig = function () {
 		session: {
 			enabled: false,
 			store: new store()
-		}
+		},
+		timeout: 5000
 	};
 };
 

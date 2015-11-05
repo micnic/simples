@@ -65,7 +65,8 @@ ws.defaultConfig = function () {
 	return {
 		limit: 1048576, // bytes, by default 1 MB
 		mode: 'text', // can be 'binary', 'text' or 'object'
-		origins: []
+		origins: [],
+		timeout: 30000 // miliseconds, by default 30 seconds
 	};
 };
 
@@ -208,7 +209,8 @@ ws.processConnection = function (connection) {
 	var host = connection.parent,
 		message = null,
 		parser = new ws.parser(host.options.limit, false),
-		pong = ws.frameWrap(ws.pong, new Buffer(0), true);
+		pong = ws.frameWrap(ws.pong, new Buffer(0), true),
+		timeout = host.options.timeout;
 
 	// Add payload data to the message for long messages
 	function concatenatePayload(data) {
@@ -263,6 +265,20 @@ ws.processConnection = function (connection) {
 	parser.on('error', function (error) {
 		utils.emitError(connection, error);
 	}).on('frame', function (frame) {
+
+		// Check for a valid timeout of minimum 2 seconds
+		if (timeout >= 2000) {
+
+			// Reset the current timer
+			clearTimeout(connection.timer);
+
+			// Set a new timer
+			connection.timer = setTimeout(function () {
+				connection.socket.write(ws.ping);
+			}, timeout - 1000);
+		}
+
+		// Decide what to do based on the frame opcode
 		if (frame.opcode === 8) {
 			connection.end();
 		} else if (frame.opcode === 9) {
@@ -284,14 +300,7 @@ ws.processConnection = function (connection) {
 	});
 
 	// Listen for connection socket events
-	connection.socket.on('readable', function () {
-
-		// Clear the previous timer and create a new timeout for ping frames
-		clearTimeout(connection.timer);
-		connection.timer = setTimeout(function () {
-			connection.socket.write(ws.ping);
-		}, 25000);
-	}).on('close', function () {
+	connection.socket.on('close', function () {
 
 		var index = host.connections.indexOf(connection);
 
@@ -317,7 +326,7 @@ ws.processConnection = function (connection) {
 	}).run(function () {
 		connection.socket.write(connection.head + '\r\n');
 		connection.socket.write(ws.ping);
-		connection.socket.setTimeout(30000);
+		connection.socket.setTimeout(timeout);
 		host.listener(connection);
 	});
 };

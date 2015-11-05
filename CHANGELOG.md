@@ -1,3 +1,12 @@
+## 0.8.0
+- Added Mirrors
+- No more HTTP + HTTPS functional, use Mirrors instead
+- Improved Client API request piping
+- Improved QS parser to force array values
+- Fixed render listeners creation
+- Fixed websocket connection keep alive process in node >0.12 versions
+- Added `timeout` option for HTTP and WS hosts
+
 ## 0.7.6
 - Add `connection.cache()` method
 - Fix importer to be optional in host routing when the listener is a string

@@ -8,6 +8,8 @@
 
 > ##### [Server error handling](#server-error-handling)
 
+> ##### [Mirrors](#mirrors)
+
 > ##### [Virtual Hosting](#server-host)
 
 > ##### [Host Configuration](#server-host-config)
@@ -133,32 +135,75 @@ port: number
 
 options: object
 
-callback: function
+callback: function(server)
 
-simpleS needs only the port number and it sets up a HTTP or HTTPS server on this port. Note that a HTTP server can be set on port `80` or `>= 1024` while a HTTPS server can be set on port `443` or `>= 1024`.
+simpleS needs only the port number to set up a HTTP server on this port. Additionally options and a callback can be defined.
+
+The `options` parameter can have the following structure:
+
+```js
+{
+    port: 80,               // Port, default is 80 for HTTP and 443 for HTTPS, note that this value will overwrite the port parameter
+    hostname: '0.0.0.0',    // Hostname from which to accept connections, by default will accept from any address
+    backlog: 511,           // The maximum length of the queue of pending connections, default is 511, but is determined by the OS
+    https: {}               // Options for setting up a HTTPS server, more info: https://nodejs.org/api/tls.html#tls_tls_createserver_options_secureconnectionlistener
+}
+```
+
+The `options` parameter, basically, implements the [`http.Server.listen()`](https://nodejs.org/api/http.html#http_server_listen_port_hostname_backlog_callback) method with the possibility to create a HTTPS server by defining the [TLS options](https://nodejs.org/api/tls.html#tls_tls_createserver_options_secureconnectionlistener).
+
+If a callback function is defined then it is triggered when the server is started, it will receive one argument, which is the server itself.
+
+Simplest use case to create a HTTP server:
 
 ```js
 var server = simples(80);
 
 // or simpler
 
-var server = simples(); // the server will be set on the port 80
+var server = simples(); // The server will be set on port 80
+
+// or with a callback
+
+simples(function (server) { // The server is also set on port 80
+    // Do something with the server object
+});
 ```
 
-To set up an HTTPS server the options object is needed with `key` and `cert` or `pfx` attributes, these will be the paths to the `.pem` or `.pfx` files, see [`https`](http://nodejs.org/api/https.html) and [`tls`](http://nodejs.org/api/tls.html) core modules for more details, the `options` object is the same used there with the only difference that simpleS resolve the content of `key` and `cert` or `pfx` attributes, so the `key` and `cert` or `pfx` attributes are required. Automatically, with the HTTPS server an HTTP server is created which will have the same routes as the HTTPS server (see Routing). To check the protocol the `connection.protocol` property is used (see Connection Interface).
+If the `https` property is present in the `options` parameter the created server is a HTTPS server. These HTTPS options should be the same as they would pe provided for [`https.Server`](https://nodejs.org/api/https.html#https_https_createserver_options_requestlistener) with the exception that for the `key` and `cert` or `pfx` properties should be paths to the `.pem` or `.pfx` files, simpleS will resolve their content when it is required. Note: by creating a HTTPS server there will be no HTTP server provided, a mirror should be created for this purpose (see Mirror for more informations).
+
+Simplest use case to create a HTTPS server:
 
 ```js
 var server = simples(443, {
-    key: 'path/to/key.pem',
-    cert: 'path/to/cert.pem'
+    https: {
+        key: 'path/to/key.pem',
+        cert: 'path/to/cert.pem'
+    }
 });
 
 // or just
 
-var server = simples({ // the server will be set on port 443
-    key: 'path/to/key.pem',
-    cert: 'path/to/cert.pem'
+var server = simples({ // The server will be set on port 443
+    https: {
+        key: 'path/to/key.pem',
+        cert: 'path/to/cert.pem'
+    }
 });
+
+// or with a callback
+
+simples({ // The server is also set on port 443
+    https: {
+        key: 'path/to/key.pem',
+        cert: 'path/to/cert.pem'
+    }
+}, function (server) {
+    // Do something with the server object
+});
+
+// Add a HTTP mirror
+server.mirror(); // See Mirror for more info
 ```
 
 To redirect the client to HTTPS, use a structure like this:
@@ -175,8 +220,6 @@ server.get('/', function (connection) {
 
 or try [simples-redirect](https://github.com/micnic/simples-redirect) middleware with some more options.
 
-The third parameter `callback` is used to know when the server has started running.
-
 ## <a name="server-management"/> Server Management
 
 ### <a name="server-start"/> Starting and Restarting
@@ -185,12 +228,12 @@ The third parameter `callback` is used to know when the server has started runni
 
 port: number
 
-callback: function()
+callback: function(server)
 
-Start listening for requests on the provided port. If the server is already started then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
+Start listening for requests on the provided port. If the server is already started and the provided port differs from the server's port then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
 
 ```js
-server.start(80, function () {
+server.start(80, function (server) {
     // Application logic
 });
 ```
@@ -199,28 +242,53 @@ server.start(80, function () {
 
 `.stop([callback])`
 
-callback: function()
+callback: function(server)
 
 Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. Returns current instance, so calls can be chained.
 
 ```js
-server.stop(function () {
+server.stop(function (server) {
     // Application logic
 });
 ```
 
 ### <a name="server-error-handling"/> Server error handling
 
-Any simpleS instance is an event emitter, all possible errors that may appear at the level of the server can be caught using the usual error event listener attached to the instance object. The same approach can be applied for HTTP and WS hosts, in this case the error listeners will catch errors to the level of the host. It is recommended to attach error event listeners to the server and all its hosts to prevent any undesired behavior.
+Any server instance is an event emitter, all possible errors that may appear at the level of the server can be caught using the usual error event listener attached to the instance object. The same approach can be applied for HTTP and WS hosts, in this case the error listeners will catch errors to the level of the host. It is recommended to attach error event listeners to the server, mirror and all its hosts to prevent any undesired behavior.
 
 ```js
 server.on('error', function (error) {
-    // Handle any fatal errors that may occur at the level of the server
+    // Handle any fatal error that may occur at the level of the server
+});
+
+mirror.on('error', function (error) {
+    // Handle any fatal error that may occur at the level of the mirror
 });
 
 host.on('error', function (error) {
     // Handle any error that occurs at the level of the host
 });
+```
+
+### <a name="mirrors"/> Mirrors
+
+`.mirror([port, options, callback])`
+
+port: number
+
+options: object
+
+callback: function(mirror)
+
+To create additional server instances which will use the same hosts and routes but on different ports use the mirrors. Mirrors are a limited version of servers, which can start, restart, stop or be destroyed, nothing more. The basic use cases for mirrors are the HTTP + HTTPS server pair and additional servers for development purposes. The parameters for creating a mirror are the save as for creating a server. Note: mirrors are independend from the main server, if the server is stopped the mirrors are still functional until they are explicitly stopped.
+
+```
+var mirror = server.mirror(12345, function (mirror) {
+    // Do something with the mirror
+});
+
+// To destroy a mirror simply call `.destroy()` method
+mirror.destroy();
 ```
 
 ### <a name="server-host"/> Virtual Hosting
@@ -231,7 +299,7 @@ name: string
 
 options: object
 
-simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration. Returns current instance, so calls can be chained.
+simpleS can serve multiple domains on the same server and port, using `.host()` method it is simple to specify which host should use which routes. By default, simpleS has the main host which will route all existent routes of the simpleS instance, this is vital for one host on server or when it is needed a general behavior for incoming requests. This method will create and configure a new host or will return an existing host with a changed configuration.
 
 ```js
 var host = server.host('example.com');
@@ -254,6 +322,8 @@ compression: {
     preferred: 'deflate'    // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
+
+By default, the compression is disabled. When enabled it is applied on all connections with default zlib options and preferred `deflate` compression.
 
 ##### Cross-Origin Resource Sharing configuration (CORS):
 ```js
@@ -287,6 +357,13 @@ Sessions are stored by default inside a memcached container, to define another c
 `.set(id, session, callback)` - should add the session container defined by the first two paramters and execute the callback function when the session container is saved to the sessions storage.
 
 Note: The third party session stores have to implement their own technique for cleaning up expired sessions, if needed.
+
+##### Timeout
+```js
+timeout: 5000 // miliseconds of connection inactivity, default is 5 seconds
+```
+
+All connections are limited in time of inactivity, by default this time is limited to 5 seconds. To remove the inactivity timeout the 0 value should be set in the `timeout` option.
 
 ### <a name="server-host-middleware"/> Middlewares
 
@@ -462,7 +539,7 @@ verb: 'all', 'del', 'get', 'put' or 'post'
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection)
 
 Add listeners for all types of routes. The methods described above are just shortcuts to this method. For better readability use shortcuts. Returns current instance, so calls can be chained.
 
@@ -499,7 +576,7 @@ host.put('/update', 'update.ejs', {
     message: 'The page was updated successfully'
 });
 
-host.del('/delete', 'delete.ejs', function (callback) {
+host.del('/delete', 'delete.ejs', function (connection, callback) {
     db.getModel('delete', function (error, data) {
         if (error) {
             throw error;
@@ -531,7 +608,7 @@ callback: function(connection)
 host.serve('static_files', {
     dirs: /^css|img|js$/i,
     files: /\.(?:css|png|js)$/i
-}, function (connection, files) {
+}, function (connection) {
     // Application logic
 });
 ```
@@ -766,8 +843,8 @@ Sets, gets or removes the `Cache-Control` header. By providing a string the `Cac
 ```js
 connection.cache({
     type: 'public', // type of the cache, can be 'private' or 'public', by default is private
-    maxAge: 3600,   // max age of the cache, by default is not defined
-    sMaxAge: 3600   // max age of the shared cache, by default is not defined
+    maxAge: 3600,   // max age of the cache in seconds, by default is not defined
+    sMaxAge: 3600   // max age of the shared cache in seconds, by default is not defined
 });
 
 // or
@@ -945,10 +1022,10 @@ source: string
 
 imports: object
 
-Renders the response using the template engine defined by the host in `.engine()` method (see Templating). Should be used only once and should not be used with `.write()` or `.end()` methods.
+Renders the response using the template engine defined by the host in `.engine()` method (see Templating). `simpleS` will insert the `connection` in the `imports` object for convenince. Should be used only once and should not be used with `.write()` or `.end()` methods.
 
 ```js
-connection.render('Hello <%= world %>', {
+connection.render('/path/to/template.ejs', {
     world: 'World'
 });
 ```
@@ -1039,13 +1116,14 @@ options: object
 
 listener: function(connection)
 
-Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `options` parameter in bytes, default is 1048576 (1 MiB). The host can work in three modes, `binary`, `text` and `object`, in the `binary` and `text` mode only one type of messages can be send, with binary or text data, in these modes the host works in plain WebSocket protocol, it works faster but does not suppose any semantics for the messages. `object` mode allows multiple types of messages differenciated by different events, it is more flexible, because it adds an abstraction layer of JSON-based messages, but involves a bit more computing resources. By default, only connections from the current host are allowed, but it's possible to define any other host including the localhost as `null` in the `origins` member in configuration object, it's the same approach used for the http host CORS configuration.
+Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `options` parameter in bytes, default is 1048576 (1 MiB). The host can work in three modes, `binary`, `text` and `object`, in the `binary` and `text` mode only one type of messages can be send, with binary or text data, in these modes the host works in plain WebSocket protocol, it works faster but does not suppose any semantics for the messages. `object` mode allows multiple types of messages differenciated by different events, it is more flexible, because it adds an abstraction layer of JSON-based messages, but involves a bit more computing resources. By default, only connections from the current host are allowed, but it's possible to define any other host including the localhost as `null` in the `origins` member in configuration object, it's the same approach used for the http host CORS configuration. All connections have an inactivity timeout, which is by default 30000 miliseconds (30 seconds), the `timeout` options is used to change it, the minimal value accepted is 2 seconds timeout, to remove it use the zero value.
 
 ```js
 var echo = server.ws('/', {
     limit: 1024,
     mode: 'text',
-    origins: []
+    origins: [],
+    timeout: 60000
 }, function (connection) {
     // Application logic
 });
@@ -1273,6 +1351,21 @@ For convenience, there are shortcut methods to make different types of requests:
 `client.post(location[, options])`
 
 `client.put(location[, options])`
+
+For streaming data the following structures can be used:
+
+```js
+// Streaming to the request
+anyStream.pipe(client.post('http://localhost/post'));
+
+// Streaming from the request
+client.get('http://localhost/get').response.pipe(anyOtherStream);
+
+// Streaming to and from the request
+anyStream.pipe(client.put('http://localhost/put')).response.pipe(anyOtherStream);
+```
+
+Every request has a `response` property which is a data stream without any special properties and which will emit data when the underlaying response stream will be ready.
 
 ### <a name="client-api-ws"/> WS Connection
 

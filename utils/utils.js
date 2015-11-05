@@ -1,13 +1,16 @@
 'use strict';
 
 var crypto = require('crypto'),
+	fs = require('fs'),
+	http = require('http'),
+	https = require('https'),
 	url = require('url');
 
 // Utils namespace
 var utils = exports;
 
 // Export abstract connection prototype constructor
-utils.connection = require('simples/lib/connection');
+utils.Connection = require('simples/lib/connection');
 
 // Export http utils
 utils.http = require('simples/utils/http');
@@ -36,39 +39,69 @@ utils.accepts = function (connection, origins) {
 	return accepted;
 };
 
-// Partial polyfill for ES6 Object.assign
-utils.assign = function (target, source) {
+// Temporary Object.assign polyfill to be used until V8 fully supports ES6
+utils.assign = function (target) {
 
-	// Check if the source is an object and copy its properties
-	if (utils.isObject(source)) {
-		Object.keys(source).forEach(function (key) {
-			target[key] = source[key];
-		});
+	if (target === undefined || target === null) {
+		throw new TypeError('Cannot convert first argument to object');
 	}
 
-	return target;
-};
+	var to = Object(target);
+	for (var i = 1; i < arguments.length; i++) {
+		var nextSource = arguments[i];
+		if (nextSource === undefined || nextSource === null) {
+			continue;
+		}
+		nextSource = Object(nextSource);
 
-// Copy configuration from one object to another
-utils.copyConfig = function (destination, config, stop) {
-
-	// Iterate through the config keys to copy them
-	Object.keys(config).forEach(function (property) {
-
-		var object = utils.isObject(destination[property]),
-			valid = typeof destination[property] === typeof config[property];
-
-		// Copy the property if it has the same type
-		if (object && valid && !stop) {
-			utils.copyConfig(destination[property], config[property], true);
-		} else if (destination[property] === null || !object && valid) {
-			if (typeof destination[property] === 'string') {
-				destination[property] = config[property].toLowerCase();
-			} else {
-				destination[property] = config[property];
+		var keysArray = Object.keys(nextSource);
+		for (var j = 0, len = keysArray.length; j < len; j++) {
+			var nextKey = keysArray[j];
+			var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
+			if (desc !== undefined && desc.enumerable) {
+				to[nextKey] = nextSource[nextKey];
 			}
 		}
+	}
+	return to;
+};
+
+// Create internal instances for servers and mirrors
+utils.createInstance = function (server, options) {
+
+	var config = {},
+		instance = null;
+
+	// Prepare the internal instance
+	if (options.https) {
+		try {
+
+			// Prepare TLS configuration
+			Object.keys(options.https).forEach(function (option) {
+				if (/^(?:cert|key|pfx)$/.test(option)) {
+					config[option] = fs.readFileSync(options.https[option]);
+				} else {
+					config[option] = options.https[option];
+				}
+			});
+
+			// Create a HTTPS server and apply the TLS configuration
+			instance = https.Server(config);
+		} catch (error) {
+			server.emit('error', error);
+		}
+	} else {
+		instance = http.Server();
+	}
+
+	// Transfer the error event from the internal instance to the server
+	instance.on('error', function (error) {
+		server.busy = false;
+		server.started = false;
+		server.emit('error', error);
 	});
+
+	return instance;
 };
 
 // Emit safely errors to avoid fatal errors
@@ -318,33 +351,7 @@ utils.randomBytes = function (length, encoding) {
 // Run the callback if it is a function
 utils.runFunction = function (callback) {
 	if (typeof callback === 'function') {
-		callback();
-	}
-};
-
-// Set options for client request instances
-utils.setOptions = function (instance, options) {
-
-	// Change an option with a defined value
-	function setOption(name, value) {
-		if (value !== undefined) {
-			instance.options[name] = value;
-		}
-	}
-
-	// Set options only from an object container
-	if (utils.isObject(options)) {
-		setOption('agent', options.agent);
-		setOption('auth', options.auth);
-		setOption('ca', options.ca);
-		setOption('cert', options.cert);
-		setOption('ciphers', options.ciphers);
-		setOption('headers', options.headers);
-		setOption('key', options.key);
-		setOption('passphrase', options.passphrase);
-		setOption('pfx', options.pfx);
-		setOption('rejectUnauthorized', options.rejectUnauthorized);
-		setOption('secureProtocol', options.secureProtocol);
+		callback.apply(null, Array.prototype.slice.call(arguments, 1));
 	}
 };
 

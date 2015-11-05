@@ -1,5 +1,9 @@
 module.exports = function (server) {
 
+	server.on('error', function (error) {
+		console.log(error);
+	});
+
 	// Add a middleware
 	server.middleware(function (connection, next) {
 
