@@ -1,3 +1,9 @@
+## 0.8.1
+- Reveal `.connections` for WS host and channel in the public docs
+- Fix streams to work properly in node >0.12 versions
+- Fix rendering in WebSocket connection
+- Fix middleware removing
+
 ## 0.8.0
 - Added Mirrors
 - No more HTTP + HTTPS functional, use Mirrors instead

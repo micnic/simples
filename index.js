@@ -13,11 +13,11 @@ module.exports = module.exports.server = function (port, options, callback) {
 		if (typeof options === 'function') {
 			callback = options;
 			options = {};
-		} else if (!utils.isObject(options)) {
+		} else if (!options || typeof options !== 'object') {
 			options = {};
 			callback = null;
 		}
-	} else if (utils.isObject(port)) {
+	} else if (port && typeof port === 'object') {
 
 		// Make options argument optional
 		if (typeof options === 'function') {

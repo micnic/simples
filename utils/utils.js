@@ -179,11 +179,6 @@ utils.getSession = function (host, connection, callback) {
 	}
 };
 
-// Check for an object value
-utils.isObject = function (value) {
-	return Object.prototype.toString.call(value) === '[object Object]';
-};
-
 // Apply a map operation on an object
 utils.map = function (object, callback) {
 	return Object.keys(object).map(callback);

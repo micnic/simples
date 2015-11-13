@@ -319,7 +319,7 @@ compression: {
     enabled: false,         // Activate the compression, by default the compression is disabled
     filter: /^.+$/i,        // Filter content types that will be compressed, by default all kinds of file types are compressed
     options: null,          // Compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
-    preferred: 'deflate'    // The prefereed compression type, can be 'deflate' or 'gzip', by default is `deflate`
+    preferred: 'deflate'    // The preferred compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
 
@@ -399,7 +399,7 @@ host.middleware(function (connection, next) {
 
 engine: object
 
-To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object can be applied to make it be compatible. See the examples below to understand how to make any template engine compatible with `simpleS`. The template engine may be used to render HTTP responses and WebSocket messages. This method is applicable on each host independently (see Virtual Hosting). Returns current instance, so calls can be chained. Recommended template engine: [simpleT](http://micnic.github.com/simpleT).
+To render templates it is necessary to define the needed template engine which has a `.render()` method. The rendering method should accept 1, 2 or 3 parameters, `source`, `imports` and/or callback, `source` should be a string that defines the path to the templates, `imports` may be an optional parameter and should be an object containing data to be injected in the templates, `callback` is a function that is called if the result is generated asynchronously. The templates are rendered using the `.render()` method of the Connection Interface. If the template engine does not correspond to these requirements then a wrapper object can be applied to make it be compatible. See the examples below to understand how to make any template engine compatible with `simpleS`. The template engine may be used to render HTTP responses and WebSocket messages. This method is applicable on each host independently (see Virtual Hosting). Returns current instance, so calls can be chained. Recommended template engine: [simpleT](https://www.npmjs.com/package/simplet).
 
 ```js
 // Noop template engine example
@@ -438,6 +438,8 @@ host.engine({
     }
 });
 ```
+
+To connect any existing template engine which supports Express [simples-engineer](https://www.npmjs.com/package/simples-engineer) can be used.
 
 ## <a name="host-routing"/> Routing
 
@@ -1129,6 +1131,8 @@ var echo = server.ws('/', {
 });
 ```
 
+To access the currently active connections the `.connections` property should be used. This is an array, which should not be mutated to prevent any undesired behavior.
+
 #### <a name="ws-host-config"/> .config([options, callback])
 
 options: object
@@ -1270,7 +1274,7 @@ Emitted when the WebSocket host receives a message from the client and the host 
 
 ### <a name="ws-channel"/> WebSocket Channel
 
-The object that groups a set of connections. This is useful for sending messages to a group of connections in a better way than the `.broadcast()` method of the WebSocket host. WebSocket channel is an event emitter, see [`events`](http://nodejs.org/api/events.html) core module for more details.
+The object that groups a set of connections. This is useful for sending messages to a group of connections in a better way than the `.broadcast()` method of the WebSocket host. WebSocket channel is an event emitter, see [`events`](http://nodejs.org/api/events.html) core module for more details. To access the connections bound to the channel the `.connections` property should be used. This is an array, which should not be mutated to prevent any undesired behavior.
 
 #### <a name="ws-channel-bind"/> .bind(connection)
 

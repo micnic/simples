@@ -111,7 +111,7 @@ http.defaultConfig = function () {
 		compression: {
 			enabled: false,
 			filter: /^.+$/i,
-			options: null, // http://nodejs.org/api/zlib.html#zlib_options
+			options: null, // https://nodejs.org/api/zlib.html#zlib_options
 			preferred: 'deflate' // can be 'deflate' or 'gzip'
 		},
 		cors: {
