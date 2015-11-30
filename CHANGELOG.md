@@ -1,3 +1,6 @@
+## 0.8.2
+- Fix incorrect HTTP host configuration
+
 ## 0.8.1
 - Reveal `.connections` for WS host and channel in the public docs
 - Fix streams to work properly in node >0.12 versions

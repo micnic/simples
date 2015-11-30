@@ -1,5 +1,5 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
-# 0.8.1
+# 0.8.2
 
 [![Gitter](https://badges.gitter.im/simples.png)](https://gitter.im/micnic/simpleS)
 
@@ -21,7 +21,7 @@ simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers
 #### Any feedback is welcome!
 
 #### More simple modules:
-- [recache](https://www.npmjs.com/package/rechache)
+- [recache](https://www.npmjs.com/package/recache)
 - [simpleR](https://www.npmjs.com/package/simpler)
 - [simpleT](https://www.npmjs.com/package/simplet)
 
