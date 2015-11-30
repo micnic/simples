@@ -31,7 +31,7 @@
           <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
 
 <h1>
-<a id="081" class="anchor" href="#081" aria-hidden="true"><span class="octicon octicon-link"></span></a>0.8.1</h1>
+<a id="082" class="anchor" href="#082" aria-hidden="true"><span class="octicon octicon-link"></span></a>0.8.2</h1>
 
 <p><a href="https://gitter.im/micnic/simpleS"><img src="https://badges.gitter.im/simples.png" alt="Gitter"></a></p>
 
@@ -61,7 +61,7 @@
 <a id="more-simple-modules" class="anchor" href="#more-simple-modules" aria-hidden="true"><span class="octicon octicon-link"></span></a>More simple modules:</h4>
 
 <ul>
-<li><a href="https://www.npmjs.com/package/rechache">recache</a></li>
+<li><a href="https://www.npmjs.com/package/recache">recache</a></li>
 <li><a href="https://www.npmjs.com/package/simpler">simpleR</a></li>
 <li><a href="https://www.npmjs.com/package/simplet">simpleT</a></li>
 </ul>
@@ -93,26 +93,26 @@
 
 <div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
 
-<span class="pl-k">var</span> server <span class="pl-k">=</span> simples(); <span class="pl-c">// Your server is set up on port 80</span>
+<span class="pl-k">var</span> server <span class="pl-k">=</span> <span class="pl-en">simples</span>(); <span class="pl-c">// Your server is set up on port 80</span>
 
 <span class="pl-c">// Enable compression (default is deflate)</span>
-server.config({
+<span class="pl-smi">server</span>.<span class="pl-en">config</span>({
     compression<span class="pl-k">:</span> {
         enabled<span class="pl-k">:</span> <span class="pl-c1">true</span>
     }
 });
 
 <span class="pl-c">// Serve static files located in the folder "static"</span>
-server.serve(<span class="pl-s"><span class="pl-pds">'</span>static<span class="pl-pds">'</span></span>);
+<span class="pl-smi">server</span>.<span class="pl-en">serve</span>(<span class="pl-s"><span class="pl-pds">'</span>static<span class="pl-pds">'</span></span>);
 
 <span class="pl-c">// Catch 404 Error</span>
-server.<span class="pl-c1">error</span>(<span class="pl-c1">404</span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    connection.end(<span class="pl-s"><span class="pl-pds">'</span>Error 404 caught<span class="pl-pds">'</span></span>);
+<span class="pl-smi">server</span>.<span class="pl-c1">error</span>(<span class="pl-c1">404</span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
+    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Error 404 caught<span class="pl-pds">'</span></span>);
 });
 
 <span class="pl-c">// Create the first route</span>
-server.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    connection.end(<span class="pl-s"><span class="pl-pds">'</span>Simples Works<span class="pl-pds">'</span></span>);
+<span class="pl-smi">server</span>.<span class="pl-en">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
+    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Simples Works<span class="pl-pds">'</span></span>);
 });</pre></div>
 
 <h3>
@@ -120,39 +120,39 @@ server.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds"
 
 <div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
 
-<span class="pl-k">var</span> client <span class="pl-k">=</span> simples.client();
+<span class="pl-k">var</span> client <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">client</span>();
 
 <span class="pl-c">// GET request</span>
-client.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>).on(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response status: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> response.<span class="pl-c1">status</span>);
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> body.<span class="pl-c1">toString</span>());
+<span class="pl-smi">client</span>.<span class="pl-en">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response status: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">response</span>.<span class="pl-c1">status</span>);
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">body</span>.<span class="pl-c1">toString</span>());
 });
 
 <span class="pl-c">// POST request</span>
-client.post(<span class="pl-s"><span class="pl-pds">'</span>/send<span class="pl-pds">'</span></span>).<span class="pl-c1">send</span>(<span class="pl-c">/* data */</span>).on(<span class="pl-s"><span class="pl-pds">'</span>response<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>) {
+<span class="pl-smi">client</span>.<span class="pl-en">post</span>(<span class="pl-s"><span class="pl-pds">'</span>/send<span class="pl-pds">'</span></span>).<span class="pl-c1">send</span>(<span class="pl-c">/* data */</span>).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>response<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>) {
     <span class="pl-c">// Do something with the response</span>
-}).on(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> body.<span class="pl-c1">toString</span>());
+}).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">body</span>.<span class="pl-c1">toString</span>());
 });</pre></div>
 
 <h3>
 <a id="virtual-hosting" class="anchor" href="#virtual-hosting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Virtual Hosting</h3>
 
 <div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> host0 <span class="pl-k">=</span> server; <span class="pl-c">// The server is in the same time the main host</span>
-<span class="pl-k">var</span> host1 <span class="pl-k">=</span> server.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example.com<span class="pl-pds">'</span></span>); <span class="pl-c">// Other hosts</span>
-<span class="pl-k">var</span> host2 <span class="pl-k">=</span> server.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example2.com<span class="pl-pds">'</span></span>);
+<span class="pl-k">var</span> host1 <span class="pl-k">=</span> <span class="pl-smi">server</span>.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example.com<span class="pl-pds">'</span></span>); <span class="pl-c">// Other hosts</span>
+<span class="pl-k">var</span> host2 <span class="pl-k">=</span> <span class="pl-smi">server</span>.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example2.com<span class="pl-pds">'</span></span>);
 
 <span class="pl-c">// Now for each host you can apply individual routing</span>
-host0.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    connection.end(<span class="pl-s"><span class="pl-pds">'</span>Main Host<span class="pl-pds">'</span></span>);
+<span class="pl-smi">host0</span>.<span class="pl-en">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
+    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Main Host<span class="pl-pds">'</span></span>);
 });
 
-host1.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    connection.end(<span class="pl-s"><span class="pl-pds">'</span>Host 1<span class="pl-pds">'</span></span>);
+<span class="pl-smi">host1</span>.<span class="pl-en">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
+    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Host 1<span class="pl-pds">'</span></span>);
 });
 
-host2.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    connection.end(<span class="pl-s"><span class="pl-pds">'</span>Host 2<span class="pl-pds">'</span></span>);
+<span class="pl-smi">host2</span>.<span class="pl-en">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
+    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Host 2<span class="pl-pds">'</span></span>);
 });</pre></div>
 
 <h3>
@@ -160,7 +160,7 @@ host2.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">
 
 <p>Let's create an echo WebSocket server:</p>
 
-<div class="highlight highlight-source-js"><pre>server.ws(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, {
+<div class="highlight highlight-source-js"><pre><span class="pl-smi">server</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, {
     limit<span class="pl-k">:</span> <span class="pl-c1">1024</span>, <span class="pl-c">// The maximum size of a message</span>
     mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>text<span class="pl-pds">'</span></span>, <span class="pl-c">// Set connection mode, see docs for more info</span>
     origins<span class="pl-k">:</span> [<span class="pl-s"><span class="pl-pds">'</span>null<span class="pl-pds">'</span></span>] <span class="pl-c">// Set accepted origins, "null" for localhost</span>
@@ -170,13 +170,13 @@ host2.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">
     <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>New connection<span class="pl-pds">'</span></span>);
 
     <span class="pl-c">// Listen for messages to send them back</span>
-    connection.on(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-        <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Message: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> message.<span class="pl-c1">data</span>);
-        connection.<span class="pl-c1">send</span>(message.<span class="pl-c1">data</span>);
+    <span class="pl-smi">connection</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
+        <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Message: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
+        <span class="pl-smi">connection</span>.<span class="pl-c1">send</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
     });
 
     <span class="pl-c">// Log connection close</span>
-    connection.on(<span class="pl-s"><span class="pl-pds">'</span>close<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> () {
+    <span class="pl-smi">connection</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>close<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> () {
         <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Connection closed<span class="pl-pds">'</span></span>);
     });
 });</pre></div>
@@ -187,39 +187,39 @@ host2.get(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">
 
 <span class="pl-c">// Listen for messages</span>
 <span class="pl-c1">socket</span>.<span class="pl-en">onmessage</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">event</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-c1">event</span>.<span class="pl-c1">data</span>);
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">event</span>.<span class="pl-c1">data</span>);
 };
 
 <span class="pl-c">// Send the first message</span>
-socket.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
+<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
 
 <p>Access the server from the browser simpleS WebSocket API:</p>
 
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> socket <span class="pl-k">=</span> simples.ws(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, [<span class="pl-s"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>]);
+<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> socket <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, [<span class="pl-s"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>]);
 
 <span class="pl-c">// Listen for messages</span>
-socket.on(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(message.<span class="pl-c1">data</span>);
+<span class="pl-smi">socket</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
 });
 
 <span class="pl-c">// Send the first message</span>
-socket.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
+<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
 
 <p>Access the server from server-side simpleS client WebSocket API:</p>
 
 <div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
 
-<span class="pl-k">var</span> client <span class="pl-k">=</span> simples.client();
+<span class="pl-k">var</span> client <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">client</span>();
 
-<span class="pl-k">var</span> socket <span class="pl-k">=</span> client.ws(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>);
+<span class="pl-k">var</span> socket <span class="pl-k">=</span> <span class="pl-smi">client</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>);
 
 <span class="pl-c">// Listen for messages</span>
-socket.on(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(message.<span class="pl-c1">data</span>);
+<span class="pl-smi">socket</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
+    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
 });
 
 <span class="pl-c">// Send the first message</span>
-socket.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
+<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
         </section>
 
         <aside id="sidebar">
