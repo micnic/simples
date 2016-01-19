@@ -1,3 +1,8 @@
+## 0.8.3
+- Add `serve` event when the host cache is ready
+- Fix `connection.cache()` max age option checking
+- Fix WS channel `.broadcast()` with simple modes
+
 ## 0.8.2
 - Fix incorrect HTTP host configuration
 

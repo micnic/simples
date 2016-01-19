@@ -2,8 +2,7 @@
 
 var Client = require('simples/lib/client/client'),
 	Server = require('simples/lib/server'),
-	Store = require('simples/lib/store'),
-	utils = require('simples/utils/utils');
+	Store = require('simples/lib/store');
 
 // simpleS server factory
 module.exports = module.exports.server = function (port, options, callback) {

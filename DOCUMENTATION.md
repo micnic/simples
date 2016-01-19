@@ -135,7 +135,7 @@ port: number
 
 options: object
 
-callback: function(server)
+callback: function(server: object)
 
 simpleS needs only the port number to set up a HTTP server on this port. Additionally options and a callback can be defined.
 
@@ -228,7 +228,7 @@ or try [simples-redirect](https://www.npmjs.org/package/simples-redirect) middle
 
 port: number
 
-callback: function(server)
+callback: function(server: object)
 
 Start listening for requests on the provided port. If the server is already started and the provided port differs from the server's port then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
 
@@ -242,7 +242,7 @@ server.start(80, function (server) {
 
 `.stop([callback])`
 
-callback: function(server)
+callback: function(server: object)
 
 Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. Returns current instance, so calls can be chained.
 
@@ -278,11 +278,11 @@ port: number
 
 options: object
 
-callback: function(mirror)
+callback: function(mirror: object)
 
 To create additional server instances which will use the same hosts and routes but on different ports use the mirrors. Mirrors are a limited version of servers, which can start, restart, stop or be destroyed, nothing more. The basic use cases for mirrors are the HTTP + HTTPS server pair and additional servers for development purposes. The parameters for creating a mirror are the save as for creating a server. Note: mirrors are independend from the main server, if the server is stopped the mirrors are still functional until they are explicitly stopped.
 
-```
+```js
 var mirror = server.mirror(12345, function (mirror) {
     // Do something with the mirror
 });
@@ -369,7 +369,7 @@ All connections are limited in time of inactivity, by default this time is limit
 
 `.middleware(callback[, remove])`
 
-callback: function(connection, next)
+callback: function(connection: object, next: function(stop: boolean))
 
 remove: boolean
 
@@ -480,9 +480,9 @@ All the methods described below are applicable on each host independently (see [
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and `PUT`) and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. This method is useful for defining general behavior for all types of requests. This method has less priority than the other methods described below to allow specific behavior for routes. Returns current instance, so calls can be chained.
 
@@ -492,9 +492,9 @@ Listen for all supported types of requests (`DELETE`, `GET`, `HEAD`, `POST` and 
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for `DELETE` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -504,9 +504,9 @@ Listen for `DELETE` requests and uses a callback function with connection as par
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for `GET` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -516,9 +516,9 @@ Listen for `GET` requests and uses a callback function with connection as parame
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for `POST` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -528,9 +528,9 @@ Listen for `POST` requests and uses a callback function with connection as param
 
 route: array[strings] or string
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for `PUT` requests and uses a callback function with connection as parameter or a string for view rendering (see `Connection.render()`). The `importer` parameter is used only if the listener is a string and define the data for the view, as a function, the `callback` should provide an object as parameter to be imported in the view. Returns current instance, so calls can be chained.
 
@@ -541,7 +541,7 @@ verb: 'all', 'del', 'get', 'put' or 'post'
 
 route: array[strings] or string
 
-listener: function(connection)
+listener: function(connection: object)
 
 Add listeners for all types of routes. The methods described above are just shortcuts to this method. For better readability use shortcuts. Returns current instance, so calls can be chained.
 
@@ -551,9 +551,9 @@ Add listeners for all types of routes. The methods described above are just shor
 
 code: 404, 405 or 500
 
-listener: function(connection) or string
+listener: function(connection: object) or string
 
-importer: function(connection, callback) or object
+importer: function(connection: object, callback: function(data: object)) or object
 
 Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Inside the listeners there is no need to specify the connection status code, it is assigned automatically depending on the raised error. Returns current instance, so calls can be chained.
 
@@ -602,15 +602,20 @@ directory: string
 
 options: object
 
-callback: function(connection)
+callback: function(connection: object)
 
-`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the server. Under the hood the [recache](https://www.npmjs.org/package/recache) modules is used for caching the content of the directory, the `options` parameter is optionally used to configure the cache by filtering the cached directories and files with regular expressions (the cache is not persistent). simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder should be used to serve static files and the method `.serve()` should be called only once, it reads recursively and asynchronously the content of the files inside the folder and store them in memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` or `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, the `connection.data.files` is populated with array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
+`directory` is the local path to a folder that contains static files (for example: images, css or js files), this folder will serve as the root folder for the host. Under the hood the [recache](https://www.npmjs.org/package/recache) modules is used for caching the content of the directory, the `options` parameter is optionally used to configure the cache by filtering the cached directories and files with regular expressions (the cache is not persistent). simpleS will return response status 304 (Not Modified) if the files have not been changed since last visit of the client. Only one folder can be used to serve static files, the content of the files inside the folder is read asynchronously and recursively, then it is stored in the memory. The folder with static files can contain other folders, their content will be also served. The provided path must be relative to the current working directory. The `callback` parameter is the same as for `GET` or `POST` requests, but it is triggered only when the client accesses the root of a sub folder of the folder with static files, the `connection.data.files` is populated with array of objects representing the contained files and folders, these objects contain the name and the stats of the files and folders, the `callback` parameter is optional. When the cache has read and stored all directory files the host emits the `serve` event. All files are dynamically cached for better performance, so the provided folder should contain only necessary files and folders not to abuse the memory of the server. Returns current instance, so calls can be chained.
 
 ```js
 host.serve('static_files', {
     dirs: /^css|img|js$/i,
     files: /\.(?:css|png|js)$/i
 }, function (connection) {
+    // Application logic
+});
+
+// Do something when the cache is ready
+host.on('serve', function () {
     // Application logic
 });
 ```
@@ -992,9 +997,9 @@ Ends the connection stream, same as [stream.writable.end](http://nodejs.org/api/
 
 #### <a name="http-connection-send"/> .send(data[, replacer, space])
 
-data: any value
+data: any
 
-replacer: array[numbers or strings] or function(key, value)
+replacer: array[numbers or strings] or function(key: string, value: any)
 
 space: number or string
 
@@ -1116,7 +1121,7 @@ location: string
 
 options: object
 
-listener: function(connection)
+listener: function(connection: object)
 
 Create a WebSocket host and listen for WebSocket connections. The host is set on the specified location, can be configured to limit messages size by setting the `limit` attribute in the `options` parameter in bytes, default is 1048576 (1 MiB). The host can work in three modes, `binary`, `text` and `object`, in the `binary` and `text` mode only one type of messages can be send, with binary or text data, in these modes the host works in plain WebSocket protocol, it works faster but does not suppose any semantics for the messages. `object` mode allows multiple types of messages differenciated by different events, it is more flexible, because it adds an abstraction layer of JSON-based messages, but involves a bit more computing resources. By default, only connections from the current host are allowed, but it's possible to define any other host including the localhost as `null` in the `origins` member in configuration object, it's the same approach used for the http host CORS configuration. All connections have an inactivity timeout, which is by default 30000 miliseconds (30 seconds), the `timeout` options is used to change it, the minimal value accepted is 2 seconds timeout, to remove it use the zero value.
 
@@ -1137,7 +1142,7 @@ To access the currently active connections the `.connections` property should be
 
 options: object
 
-callback: function(connection)
+callback: function(connection: object)
 
 Restarts the WebSocket host with new configuration and callback. The missing configuration parameters will not be changed. Returns current instance, so calls can be chained.
 
@@ -1155,7 +1160,7 @@ event: string
 
 data: string or buffer
 
-filter: function(element, index, array)
+filter: function(connection: object, index: number, connection: array[objects])
 
 Sends a message to all connected clients. Clients can be filtered by providing the `filter` parameter, equivalent to `Array.filter()`. `filter` use should be minimized for high performance. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
@@ -1169,7 +1174,7 @@ echo.broadcast('HelloWorld', function (element, index, array) {
 
 name: string
 
-filter: function(element, index, array)
+filter: function(connection: object, index: number, connection: array[objects])
 
 Opens a new channel with the provided name. If `filter` is defined, then all the connections of the WebSocket host that respect the filter callback will be bound to the channel. The channel is bound to the WebSocket host. See WebSocket Channel for more information.
 
@@ -1238,7 +1243,7 @@ See Connection Interface `.log([stream, ]data)`.
 `.send([event, ]data)`
 event: string
 
-data: any value
+data: any
 
 Sends a message to the client. In `object` mode the event parameter is needed for sending data. All non-string data is stringified.
 
@@ -1298,7 +1303,7 @@ event: string
 
 data: string or buffer
 
-filter: function(element, index, array)
+filter: function(connection: object, index: number, connection: array[objects])
 
 Same as the WebSocket host `.broadcast()` method, but is applied to the connections of the channel. `filter` use should be minimized for high performance. Emits `broadcast` event with `event` and / or `data` as parameters. Returns current instance, so calls can be chained.
 
@@ -1402,7 +1407,7 @@ connection.on('open', function () {
 To have access to the simpleS client-side API it is necessary to add
 
 ```html
-<script src="simples.js"></script>
+<script src="/simples.js"></script>
 ```
 
 in the HTML code, this JavaScript file will provide a simple API for AJAX requests and WebSocket connections, also a simplified implementation of Node.JS event emitter, which is used mostly internally but is also available to use in the result applications.
