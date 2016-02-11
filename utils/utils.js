@@ -343,10 +343,10 @@ utils.randomBytes = function (length, encoding) {
 	return result;
 };
 
-// Run the callback if it is a function
-utils.runFunction = function (callback) {
-	if (typeof callback === 'function') {
-		callback.apply(null, Array.prototype.slice.call(arguments, 1));
+// Run the function in the provided context with the context as argument
+utils.runFunction = function (fn, context) {
+	if (typeof fn === 'function') {
+		fn.call(context, context);
 	}
 };
 

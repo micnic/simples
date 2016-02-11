@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.8.3",
+	"version": "0.8.4",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -23,7 +23,7 @@
 	},
 	"license": "GPL-3.0",
 	"author": {
-		"name": "Micleusanu Nicu",
+		"name": "Micleușanu Nicu",
 		"email": "micnic90@gmail.com",
 		"url": "https://github.com/micnic"
 	},
@@ -32,9 +32,15 @@
 		"type": "git",
 		"url": "https://github.com/micnic/simpleS"
 	},
+	"scripts": {
+		"test": "tap test"
+	},
 	"dependencies": {
 		"mime.json": "1.0.x",
 		"recache": "0.3.x"
+	},
+	"devDependencies": {
+		"tap": "5.x"
 	},
 	"engines": {
 		"iojs": ">=1.0",

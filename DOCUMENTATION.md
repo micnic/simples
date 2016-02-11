@@ -230,10 +230,15 @@ port: number
 
 callback: function(server: object)
 
-Start listening for requests on the provided port. If the server is already started and the provided port differs from the server's port then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
+Start listening for requests on the provided port. If the server is already started and the provided port differs from the server's port then simpleS will restart the server and will listen on the new provided port. Can have an optional callback. All connection in simpleS are kept alive and the restart can take few seconds for closing alive http and ws connections. While restarting, no new connection will be accepted but existing connections will be still served. When the server will be started the `start` event will be emitted. This method is called automatically when a new simpleS instance is created, it is not needed to call it explicitly on server creation. The purpose of this method is to provide a way to switch port. Returns current instance, so calls can be chained.
 
 ```js
 server.start(80, function (server) {
+    // Application logic
+});
+
+// Listen for the start of the server
+server.on('start', function (server) {
     // Application logic
 });
 ```
@@ -244,10 +249,15 @@ server.start(80, function (server) {
 
 callback: function(server: object)
 
-Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. Returns current instance, so calls can be chained.
+Stop the server. Can have an optional callback. All connection in simpleS are kept alive and the closing can take few seconds for closing alive http and ws connections. While closing, no new connection will be accepted but existing connections will be still served. When the server will be stopped the `stop` event will be emitted. Returns current instance, so calls can be chained.
 
 ```js
 server.stop(function (server) {
+    // Application logic
+});
+
+// Listen for the stop of the server
+server.on('stop', function (server) {
     // Application logic
 });
 ```
@@ -377,15 +387,15 @@ Each host accepts middlewares to be implemented, which allow to add some additio
 
 ```js
 host.middleware(function (connection, next) {
-    if (connection.path = '/restricted' && !connection.session.user) {
-        connection.end('You do not have right to be here');
+    if (connection.path === '/restricted' && !connection.session.user) {
+        connection.end('You are not allowed to be here');
         next(true); // Will stop the middleware chain and connection routing
     } else {
         next();     // Will continue to the next middleware if it exists or will continue to connection routing
     }
 });
 
-// another example to set X-Powered-By Header for all connections
+// another example, a middleware to set X-Powered-By header for all connections
 
 host.middleware(function (connection, next) {
     connection.header('X-Powered-By', 'simpleS');

@@ -1,3 +1,11 @@
+## 0.8.4
+- Added `start` and `stop` events for server and mirror instances
+- Fixed default session store to be compliant to the specs described in the docs
+- Fixed default session clean up
+- Throw error when mirror is on the same port with the main server instead of silent fail
+- Improve restart functional for server and mirror instances
+- Added some improved tests
+
 ## 0.8.3
 - Add `serve` event when the host cache is ready
 - Fix `connection.cache()` max age option checking

@@ -89,7 +89,7 @@ module.exports = function (server) {
 				form.on('field', function (field) {
 					connection.write(field.name + '\n');
 					field.on('readable', function () {
-						connection.write(this.read().slice(0, 32).toString('hex') + '\n');
+						connection.write((this.read() || Buffer(0)).slice(0, 32).toString('hex') + '\n');
 					}).on('end', function () {
 						connection.write('----------\n');
 					}).on('error', function (error) {
@@ -104,7 +104,7 @@ module.exports = function (server) {
 
 			plain: function (form) {
 				form.on('readable', function () {
-					connection.write(this.read().slice(0, 32).toString('hex'));
+					connection.write((this.read() || Buffer(0)).slice(0, 32).toString('hex'));
 				}).on('end', function () {
 					connection.end();
 				}).on('error', function (error) {
