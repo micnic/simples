@@ -159,7 +159,7 @@ var simples = (function () {
 		}
 
 		// Push the listener to the event listeners array
-		if (typeof listener === 'function' && listeners.indexOf(listener) < 0) {
+		if (typeof listener === 'function') {
 			listeners.push(listener);
 		}
 

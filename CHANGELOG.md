@@ -1,3 +1,9 @@
+## 0.8.5
+- Fixed `simples.server` not being defined
+- Now port argument will overwrite port property in server or mirror options
+- Removed limitation for error routes to use only 404, 405 and 500 errors
+- Added possibility to trigger defined error routes using the `estatus` event of the host
+
 ## 0.8.4
 - Added `start` and `stop` events for server and mirror instances
 - Fixed default session store to be compliant to the specs described in the docs

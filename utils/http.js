@@ -3,7 +3,7 @@
 var domain = require('domain'),
 	fs = require('fs'),
 	path = require('path'),
-	store = require('simples/lib/store'),
+	Store = require('simples/lib/store'),
 	utils = require('simples/utils/utils');
 
 // HTTP namespace
@@ -70,6 +70,7 @@ http.connectionListener = function (host, request, response) {
 		if (!connection.started && !failed) {
 			failed = true;
 			connection.status(500);
+			connection.data.error = error;
 			this.bind(host.routes.error[500]).call(host, connection);
 		} else {
 			connection.destroy();
@@ -110,9 +111,12 @@ http.defaultConfig = function () {
 	return {
 		compression: {
 			enabled: false,
+			// Regular expression for content type
 			filter: /^.+$/i,
-			options: null, // https://nodejs.org/api/zlib.html#zlib_options
-			preferred: 'deflate' // can be 'deflate' or 'gzip'
+			// https://nodejs.org/api/zlib.html#zlib_class_options
+			options: null,
+			// Preferred compression can be 'deflate' or 'gzip'
+			preferred: 'deflate'
 		},
 		cors: {
 			credentials: false,
@@ -122,7 +126,7 @@ http.defaultConfig = function () {
 		},
 		session: {
 			enabled: false,
-			store: new store()
+			store: new Store()
 		},
 		timeout: 5000
 	};

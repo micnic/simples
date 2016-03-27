@@ -143,7 +143,7 @@ The `options` parameter can have the following structure:
 
 ```js
 {
-    port: 80,               // Port, default is 80 for HTTP and 443 for HTTPS, note that this value will overwrite the port parameter
+    port: 80,               // Port, default is 80 for HTTP and 443 for HTTPS, note that this value may be overwritten by the port parameter
     hostname: '0.0.0.0',    // Hostname from which to accept connections, by default will accept from any address
     backlog: 511,           // The maximum length of the queue of pending connections, default is 511, but is determined by the OS
     https: {}               // Options for setting up a HTTPS server, more info: https://nodejs.org/api/tls.html#tls_tls_createserver_options_secureconnectionlistener
@@ -290,7 +290,7 @@ options: object
 
 callback: function(mirror: object)
 
-To create additional server instances which will use the same hosts and routes but on different ports use the mirrors. Mirrors are a limited version of servers, which can start, restart, stop or be destroyed, nothing more. The basic use cases for mirrors are the HTTP + HTTPS server pair and additional servers for development purposes. The parameters for creating a mirror are the save as for creating a server. Note: mirrors are independend from the main server, if the server is stopped the mirrors are still functional until they are explicitly stopped.
+To create additional server instances which will use the same hosts and routes but on different ports use the mirrors. Mirrors are a limited version of servers, which can start, restart, stop or be destroyed, nothing more. The basic use cases for mirrors are the HTTP + HTTPS server pair and additional servers for development purposes. The parameters for creating a mirror are the same as for creating a server. This method will create and configure a new mirror or will return an existing mirror in the case the port is already occupied by a mirror. Note: mirrors are independend from the main server, if the server is stopped the mirrors are still functional until they are explicitly stopped.
 
 ```js
 var mirror = server.mirror(12345, function (mirror) {
@@ -328,7 +328,7 @@ Change the configuration of the host. Returns current instance, so calls can be 
 compression: {
     enabled: false,         // Activate the compression, by default the compression is disabled
     filter: /^.+$/i,        // Filter content types that will be compressed, by default all kinds of file types are compressed
-    options: null,          // Compression options, see more on http://nodejs.org/api/zlib.html#zlib_options
+    options: null,          // Compression options, see more on https://nodejs.org/api/zlib.html#zlib_class_options
     preferred: 'deflate'    // The preferred compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
 ```
@@ -559,13 +559,13 @@ Add listeners for all types of routes. The methods described above are just shor
 
 `.error(code, listener[, importer])`
 
-code: 404, 405 or 500
+code: number
 
 listener: function(connection: object) or string
 
 importer: function(connection: object, callback: function(data: object)) or object
 
-Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are: 404 (Not Found), 405 (Method Not Allowed) and 500 (Internal Server Error). If no error routes are defined, then the default ones will be used. Inside the listeners there is no need to specify the connection status code, it is assigned automatically depending on the raised error. Returns current instance, so calls can be chained.
+Listen for errors that can have place and uses a callback function with connection as parameter or a string for rendering (see `Connection.render()`). Only one method call can be used for a specific error code, if more `.error()` methods will be called for the same error code only the last will be used for routing. Possible values for error codes are any number, but it is recommended to stick to the HTTP standard and use `4xx` for client errors and `5xx` for server errors. By default, only listeners for `404`, `405` and `500` error codes are treated, if no error routes are defined, then the default ones will be used. The internal server error with the `500` status code will populate `connection.data.error` with the error object. To trigger any any defined error route the `estatus` event should be emitted with 2 additional arguments: the error code and the connection object. Inside the listeners there is no need to specify the connection status code, it is assigned automatically depending on the raised error. Returns current instance, so calls can be chained.
 
 #### <a name="example-routes"/> Examples for routing methods:
 
