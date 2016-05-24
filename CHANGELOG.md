@@ -1,3 +1,10 @@
+## 0.8.6
+- Added virtual hosts defined with wild cards, websocket host included
+- Added `host.data`
+- Added `connection.use()` and `connection.unuse()` methods
+- Improve websocket message broadcasting
+- Improved internal code reutilization
+
 ## 0.8.5
 - Fixed `simples.server` not being defined
 - Now port argument will overwrite port property in server or mirror options
