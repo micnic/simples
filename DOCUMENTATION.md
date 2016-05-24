@@ -163,7 +163,13 @@ var server = simples(80);
 
 var server = simples(); // The server will be set on port 80
 
-// or with a callback
+// or with the port and a callback
+
+simples(80, function (server) {
+    // Do something with the server object
+});
+
+// or with just the callback
 
 simples(function (server) { // The server is also set on port 80
     // Do something with the server object
@@ -313,7 +319,26 @@ simpleS can serve multiple domains on the same server and port, using `.host()` 
 
 ```js
 var host = server.host('example.com');
+
+// or define a host with a wildcard
+
+var host = server.host('*.example.com');
+
+// options can be added to the host definition
+
+var host = server.host('example.com', {
+    compression: {
+        enabled: true
+    },
+    session: {
+        enabled: true
+    }
+});
 ```
+
+#### Host local data container
+
+Each simpleS host has a `.data` property which represents an object container to store any data which is necessary for the host or the application in general.
 
 #### <a name="server-host-config"/> Host Configuration
 
@@ -327,7 +352,7 @@ Change the configuration of the host. Returns current instance, so calls can be 
 ```js
 compression: {
     enabled: false,         // Activate the compression, by default the compression is disabled
-    filter: /^.+$/i,        // Filter content types that will be compressed, by default all kinds of file types are compressed
+    filter: /^.+$/,        // Filter content types that will be compressed, by default all kinds of file types are compressed
     options: null,          // Compression options, see more on https://nodejs.org/api/zlib.html#zlib_class_options
     preferred: 'deflate'    // The preferred compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
@@ -377,9 +402,9 @@ All connections are limited in time of inactivity, by default this time is limit
 
 ### <a name="server-host-middleware"/> Middlewares
 
-`.middleware(callback[, remove])`
+`.middleware(middleware[, remove])`
 
-callback: function(connection: object, next: function(stop: boolean))
+middleware: function(connection: object, next: function(stop: boolean)) or array[function(connection, next)]
 
 remove: boolean
 
@@ -402,6 +427,18 @@ host.middleware(function (connection, next) {
     next();
 });
 ```
+
+`.use(middleware)`
+
+middleware: function(connection: object, next: function(stop: boolean)) or array[function(connection, next)]
+
+Synonym method for adding middlewares.
+
+`.unuse(middleware)`
+
+middleware: function(connection: object, next: function(stop: boolean)) or array[function(connection, next)]
+
+Synonym method for removing middlewares.
 
 ### <a name="server-templating"/> Templating
 

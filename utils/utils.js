@@ -1,22 +1,10 @@
 'use strict';
 
 var crypto = require('crypto'),
-	fs = require('fs'),
-	http = require('http'),
-	https = require('https'),
 	url = require('url');
 
 // Utils namespace
 var utils = exports;
-
-// Export abstract connection prototype constructor
-utils.Connection = require('simples/lib/connection');
-
-// Export http utils
-utils.http = require('simples/utils/http');
-
-// Export ws utils
-utils.ws = require('simples/utils/ws');
 
 // Check if the origin header is accepted by the host (CORS)
 utils.accepts = function (connection, origins) {
@@ -43,7 +31,7 @@ utils.accepts = function (connection, origins) {
 utils.assign = function (target) {
 
 	if (target === undefined || target === null) {
-		throw new TypeError('Cannot convert first argument to object');
+		throw TypeError('Cannot convert first argument to object');
 	}
 
 	var to = Object(target);
@@ -66,49 +54,12 @@ utils.assign = function (target) {
 	return to;
 };
 
-// Create internal instances for servers and mirrors
-utils.createInstance = function (server, options) {
-
-	var config = {},
-		instance = null;
-
-	// Prepare the internal instance
-	if (options.https) {
-		try {
-
-			// Prepare TLS configuration
-			Object.keys(options.https).forEach(function (option) {
-				if (/^(?:cert|key|pfx)$/.test(option)) {
-					config[option] = fs.readFileSync(options.https[option]);
-				} else {
-					config[option] = options.https[option];
-				}
-			});
-
-			// Create a HTTPS server and apply the TLS configuration
-			instance = https.Server(config);
-		} catch (error) {
-			server.emit('error', error);
-		}
-	} else {
-		instance = http.Server();
-	}
-
-	// Transfer the error event from the internal instance to the server
-	instance.on('error', function (error) {
-		server.busy = false;
-		server.started = false;
-		server.emit('error', error);
-	});
-
-	return instance;
-};
-
 // Emit safely errors to avoid fatal errors
 utils.emitError = function (emitter, error) {
 	if (emitter.listeners('error').length) {
 		emitter.emit('error', error);
 	} else if (process.stderr.isTTY) {
+		// eslint-disable-next-line
 		console.error('\n' + error.stack + '\n');
 	}
 };
@@ -116,12 +67,12 @@ utils.emitError = function (emitter, error) {
 // Generate hash from data and send it to the callback
 utils.generateHash = function (data, encoding, callback) {
 
-	var hash = new Buffer(0);
+	var hash = Buffer(0);
 
 	// Hash received data
 	crypto.Hash('sha1').on('readable', function () {
 
-		var chunk = this.read() || new Buffer(0);
+		var chunk = this.read() || Buffer(0);
 
 		// Append data to the hash
 		hash = Buffer.concat([hash, chunk], hash.length + chunk.length);
@@ -134,7 +85,7 @@ utils.generateHash = function (data, encoding, callback) {
 utils.generateSession = function (host, callback) {
 
 	var config = host.options.session,
-		source = new Buffer(32);
+		source = Buffer(32);
 
 	// Generate a random session id of 16 bytes
 	crypto.randomBytes(16, function (error, buffer) {
@@ -184,150 +135,10 @@ utils.map = function (object, callback) {
 	return Object.keys(object).map(callback);
 };
 
-// Get the cookies of the request
-utils.parseCookies = function (header) {
-
-	var cookies = {},
-		current = header[0],
-		index = 0,
-		length = 0,
-		name = '',
-		value = '';
-
-	// Populate cookies
-	while (current) {
-
-		// Skip whitespace
-		while (current === ' ') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the length of the name of the cookie
-		while (current && current !== '=') {
-			length++;
-			current = header[index + length];
-		}
-
-		// Get the name of the cookie
-		name = header.substr(index, length).trim();
-
-		// Set the new index and reset length
-		index += length;
-		length = 0;
-
-		// Skip "="
-		if (current === '=') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the length of the value of the cookie
-		while (current && current !== ';') {
-			length++;
-			current = header[index + length];
-		}
-
-		// Get the value of the cookie
-		value = decodeURIComponent(header.substr(index, length).trim());
-
-		// Set the current cookie
-		cookies[name] = value;
-
-		// Prepare for the next cookie
-		index += length + 1;
-		length = 0;
-		name = '';
-		value = '';
-		current = header[index];
-	}
-
-	return cookies;
-};
-
-// Get the languages accepted by the client
-utils.parseLangs = function (header) {
-
-	var current = header[0],
-		index = 0,
-		langs = [],
-		length = 0,
-		name = '',
-		quality = '';
-
-	// Populate langs
-	while (current) {
-
-		// Skip whitespace
-		while (current === ' ') {
-			index++;
-			current = header[index];
-		}
-
-		// Get the length of the name of the language
-		while (current && current !== ',' && current !== ';') {
-			length++;
-			current = header[index + length];
-		}
-
-		// Get the name of the language
-		name = header.substr(index, length);
-
-		// Set the new index and reset length
-		index += length;
-		length = 0;
-
-		// Set the quality factor to 1 if none found or continue to get it
-		if (!current || current === ',') {
-			quality = '1';
-		} else if (current === ';') {
-			index++;
-			current = header[index];
-		}
-
-		// Check for quality factor
-		if (!quality && header.substr(index, 2) === 'q=') {
-			index += 2;
-			current = header[index];
-		}
-
-		// Get the length of the quality factor of the language
-		while (!quality && current && current !== ',') {
-			length++;
-			current = header[index + length];
-		}
-
-		// Get the quality factor of the language
-		if (!quality) {
-			quality = header.substr(index, length);
-		}
-
-		// Add the current language to the set
-		langs.push({
-			name: name,
-			quality: Number(quality)
-		});
-
-		// Prepare for the next language
-		index += length + 1;
-		length = 0;
-		name = '';
-		quality = '';
-		current = header[index];
-	}
-
-	// Sort the languages in the order of their importance and return them
-	return langs.sort(function (first, second) {
-		return second.quality - first.quality;
-	}).map(function (lang) {
-		return lang.name;
-	});
-};
-
 // Generate non-cryptographically strong pseudo-random data
 utils.randomBytes = function (length, encoding) {
 
-	var result = new Buffer(length);
+	var result = Buffer(length);
 
 	// Fill the result with random 0-255 values
 	while (length) {

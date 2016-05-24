@@ -37,7 +37,6 @@ host('127.0.0.1').get('/', function (connection) {
 
 tap.ok(server instanceof Host, 'server is an instance of Host');
 tap.ok(host() === server, 'server is the implicit main host');
-tap.ok(host('main') === server, 'server is the explicit main host');
 tap.ok(host('127.0.0.1') === host('127.0.0.1'), 'host getter check');
 
 tap.test('Request to the main host', function (test) {

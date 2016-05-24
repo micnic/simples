@@ -1,4 +1,5 @@
-var simples = (function () {
+/* eslint strict: ["error", "function"] */
+window.simples = (function () {
 	'use strict';
 
 	// Transform object to encoded URI keys and values
@@ -38,12 +39,12 @@ var simples = (function () {
 
 		// Default error listener
 		this.listeners.error = function () {
-			throw new Error('Error listener not defined');
+			throw Error('Error listener not defined');
 		};
 
 		// Default success listener
 		this.listeners.success = function () {
-			throw new Error('Success listener not defined');
+			throw Error('Success listener not defined');
 		};
 
 		// Set method to lower case for comparison
@@ -182,7 +183,7 @@ var simples = (function () {
 			if (args[0] instanceof Error) {
 				throw args[0];
 			} else {
-				throw new Error('Uncaught, unspecified "error" event.');
+				throw Error('Uncaught, unspecified "error" event.');
 			}
 		}
 
@@ -395,7 +396,7 @@ var simples = (function () {
 		// Catch socket errors
 		this.socket.onerror = function () {
 			that.started = false;
-			that.emit('error', new Error('Disconnected from ' + this.location));
+			that.emit('error', Error('Disconnected from ' + this.location));
 		};
 
 		// Listen for incoming messages
@@ -409,7 +410,7 @@ var simples = (function () {
 					message = JSON.parse(event.data);
 					that.emit(message.event, message.data);
 				} catch (error) {
-					that.emit('error', new Error('Can not parse message'));
+					that.emit('error', Error('Can not parse message'));
 					that.emit('message', event);
 				}
 			} else {

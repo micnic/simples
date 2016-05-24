@@ -7,9 +7,7 @@ var Mirror = require('simples/lib/mirror');
 
 var http_localhost = 'http://localhost/',
 	http_localhost_12345 = 'http://localhost:12345/',
-	http_localhost_54321 = 'http://localhost:54321/',
-	https_localhost = 'https://localhost/',
-	https_localhost_12345 = 'https://localhost:12345/';
+	https_localhost = 'https://localhost/';
 
 var clientOptions = {
 	rejectUnauthorized: false
@@ -24,11 +22,19 @@ var defaultOptions = {
 var httpsOptions = {
 	https: {
 		cert: __dirname + '/ssl/server-cert.pem',
-		key: __dirname + '/ssl/server-key.pem'
+		key: __dirname + '/ssl/server-key.pem',
+		handshakeTimeout: 60
 	}
 };
 
-var shouldNotRespond = Error('Mirror should not respond');
+var inexistentSslCert = {
+	port: 443,
+	https: {
+		cert: __dirname + '/inexistent.pem'
+	}
+};
+
+var shoudlNotHappen = Error('This should not happen');
 
 var client = simples.client(clientOptions);
 
@@ -97,43 +103,11 @@ tap.test('Mirror: port 80', function (test) {
 	});
 });
 
-tap.test('Mirror: port 12345', function (test) {
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
 tap.test('Mirror: null options', function (test) {
 	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
 		server.mirror(null).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			head(http_localhost).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: default options', function (test) {
-	simples(12345).on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(defaultOptions).on('error', function (error) {
 			testFail(test, error, server, this);
 		}).once('start', function (mirror) {
 			head(http_localhost).on('error', function (error) {
@@ -161,6 +135,18 @@ tap.test('Mirror: HTTPS options', function (test) {
 	});
 });
 
+tap.test('Mirror: inexistent SSL certificate', function (test) {
+	simples().on('error', function (error) {
+		testFail(test, error, this);
+	}).once('start', function (server) {
+		server.mirror(inexistentSslCert).on('error', function () {
+			testEnd(test, server);
+		}).once('start', function (mirror) {
+			testFail(test, shoudlNotHappen, server);
+		});
+	});
+});
+
 tap.test('Mirror: callback', function (test) {
 
 	var assertions = 0;
@@ -184,62 +170,14 @@ tap.test('Mirror: callback', function (test) {
 	});
 });
 
-tap.test('Mirror: port 443, HTTPS options', function (test) {
-	simples().on('error', function (error) {
+tap.test('Mirror: port 80, null options', function (test) {
+	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
-		server.mirror(443, httpsOptions).on('error', function (error) {
+		server.mirror(80, null).on('error', function (error) {
 			testFail(test, error, server, this);
 		}).once('start', function (mirror) {
-			head(https_localhost).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, null options', function (test) {
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, null).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, default options', function (test) {
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, defaultOptions).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, HTTPS options', function (test) {
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, httpsOptions).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			head(https_localhost_12345).on('error', function (error) {
+			head(http_localhost).on('error', function (error) {
 				testFail(test, error, server, mirror);
 			}).once('response', function () {
 				testEnd(test, server, mirror);
@@ -271,29 +209,6 @@ tap.test('Mirror: port 80, callback', function (test) {
 	});
 });
 
-tap.test('Mirror: port 12345, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
 tap.test('Mirror: null options, callback', function (test) {
 
 	var assertions = 0;
@@ -317,14 +232,14 @@ tap.test('Mirror: null options, callback', function (test) {
 	});
 });
 
-tap.test('Mirror: default options, callback', function (test) {
+tap.test('Mirror: port 80, default options, callback', function (test) {
 
 	var assertions = 0;
 
 	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
-		server.mirror(defaultOptions, function (mirror) {
+		server.mirror(80, defaultOptions, function (mirror) {
 			mirrorOk(test, mirror, this);
 			assertions = 2;
 		}).on('error', function (error) {
@@ -332,121 +247,6 @@ tap.test('Mirror: default options, callback', function (test) {
 		}).once('start', function (mirror) {
 			assertionsOk(test, assertions, 2);
 			head(http_localhost).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: HTTPS options, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(httpsOptions, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(https_localhost).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, null options, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, null, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, default options, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, defaultOptions, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(http_localhost_12345).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 443, HTTPS options, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(443, httpsOptions, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(https_localhost).on('error', function (error) {
-				testFail(test, error, server, mirror);
-			}).once('response', function () {
-				testEnd(test, server, mirror);
-			});
-		});
-	});
-});
-
-tap.test('Mirror: port 12345, HTTPS options, callback', function (test) {
-
-	var assertions = 0;
-
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345, httpsOptions, function (mirror) {
-			mirrorOk(test, mirror, this);
-			assertions = 2;
-		}).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			assertionsOk(test, assertions, 2);
-			head(https_localhost_12345).on('error', function (error) {
 				testFail(test, error, server, mirror);
 			}).once('response', function () {
 				testEnd(test, server, mirror);
@@ -473,7 +273,7 @@ tap.test('Mirror restart: no parameters', function (test) {
 	});
 });
 
-tap.test('Mirror restart: port 80', function (test) {
+tap.test('Mirror restart: same port', function (test) {
 	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
@@ -491,7 +291,7 @@ tap.test('Mirror restart: port 80', function (test) {
 	});
 });
 
-tap.test('Mirror restart: port 12345', function (test) {
+tap.test('Mirror restart: different 12345', function (test) {
 	simples(54321).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
@@ -534,7 +334,7 @@ tap.test('Mirror restart: callback', function (test) {
 	});
 });
 
-tap.test('Mirror restart: port 80, callback', function (test) {
+tap.test('Mirror restart: same port, callback', function (test) {
 
 	var assertions = 0;
 
@@ -559,7 +359,7 @@ tap.test('Mirror restart: port 80, callback', function (test) {
 	});
 });
 
-tap.test('Mirror restart: port 12345, callback', function (test) {
+tap.test('Mirror restart: different port, callback', function (test) {
 
 	var assertions = 0;
 
@@ -595,7 +395,7 @@ tap.test('Mirror stop: no parameters', function (test) {
 				head(http_localhost).on('error', function () {
 					testEnd(test, server, mirror);
 				}).once('response', function () {
-					testFail(test, shouldNotRespond, server, mirror);
+					testFail(test, shoudlNotHappen, server, mirror);
 				});
 			});
 		});
@@ -620,7 +420,7 @@ tap.test('Mirror stop: callback', function (test) {
 				head(http_localhost).on('error', function () {
 					testEnd(test, server, mirror);
 				}).once('response', function () {
-					testFail(test, shouldNotRespond, server, mirror);
+					testFail(test, shoudlNotHappen, server, mirror);
 				});
 			});
 		});
@@ -645,7 +445,7 @@ tap.test('Mirror restart and stop: no parameters', function (test) {
 				head(http_localhost).on('error', function () {
 					testEnd(test, server, mirror);
 				}).once('response', function () {
-					testFail(test, shouldNotRespond, server, mirror);
+					testFail(test, shoudlNotHappen, server, mirror);
 				});
 			});
 		});
@@ -673,7 +473,7 @@ tap.test('Mirror restart and stop: callback', function (test) {
 				head(http_localhost).on('error', function () {
 					testEnd(test, server, mirror);
 				}).once('response', function () {
-					testFail(test, shouldNotRespond, server, mirror);
+					testFail(test, shoudlNotHappen, server, mirror);
 				});
 			});
 		});
@@ -733,7 +533,7 @@ tap.test('Mirror stop and start: callback', function (test) {
 	});
 });
 
-tap.test('Get an existing without providing port', function (test) {
+tap.test('Get existing mirror: no parameters', function (test) {
 	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
@@ -746,7 +546,7 @@ tap.test('Get an existing without providing port', function (test) {
 	})
 });
 
-tap.test('Get an existing by providing the port 80', function (test) {
+tap.test('Get existing mirror: port provided', function (test) {
 	simples(12345).on('error', function (error) {
 		testFail(test, error, this);
 	}).once('start', function (server) {
@@ -754,19 +554,6 @@ tap.test('Get an existing by providing the port 80', function (test) {
 			testFail(test, error, server, this);
 		}).once('start', function (mirror) {
 			test.ok(mirror === server.mirror(80), 'mirror is valid');
-			testEnd(test, server, mirror);
-		});
-	})
-});
-
-tap.test('Get an existing by providing the port 12345', function (test) {
-	simples().on('error', function (error) {
-		testFail(test, error, this);
-	}).once('start', function (server) {
-		server.mirror(12345).on('error', function (error) {
-			testFail(test, error, server, this);
-		}).once('start', function (mirror) {
-			test.ok(mirror === server.mirror(12345), 'mirror is valid');
 			testEnd(test, server, mirror);
 		});
 	})
@@ -783,8 +570,42 @@ tap.test('Mirror destroy', function (test) {
 				head(http_localhost).on('error', function () {
 					testEnd(test, server);
 				}).once('response', function () {
-					testFail(test, shouldNotRespond, server);
+					testFail(test, shoudlNotHappen, server);
 				});
+			});
+		});
+	});
+});
+
+tap.test('Start destroyed mirror', function (test) {
+	simples(12345).on('error', function (error) {
+		testFail(test, error, this);
+	}).once('start', function (server) {
+		server.mirror().on('error', function (error) {
+			testFail(test, error, server, this);
+		}).once('start', function (mirror) {
+			mirror.destroy(function () {
+				mirror.start(function () {
+					testFail(test, shoudlNotHappen, server, mirror);
+				});
+				testEnd(test, server);
+			});
+		});
+	});
+});
+
+tap.test('Stop destroyed mirror', function (test) {
+	simples(12345).on('error', function (error) {
+		testFail(test, error, this);
+	}).once('start', function (server) {
+		server.mirror().on('error', function (error) {
+			testFail(test, error, server, this);
+		}).once('start', function (mirror) {
+			mirror.destroy(function () {
+				mirror.stop(function () {
+					testFail(test, shoudlNotHappen, server, mirror);
+				});
+				testEnd(test, server);
 			});
 		});
 	});

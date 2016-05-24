@@ -5,12 +5,13 @@ var simples = require('simples'),
 
 var Store = require('simples/lib/store');
 
+tap.ok(simples.store() instanceof Store, 'store is an instance of Store');
+
 tap.test('Store without parameters', function (test) {
 
 	var store = simples.store(),
 		data = {};
 
-	test.ok(store instanceof Store, 'store is an instance of Store');
 	store.set('1234567890', data, function () {
 		store.get('1234567890', function (session) {
 			test.ok(session === data, 'received session is correct');

@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.8.5",
+	"version": "0.8.6",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -40,6 +40,8 @@
 		"recache": "0.3.x"
 	},
 	"devDependencies": {
+		"eslint": "2.x",
+		"jsinspect": "0.8.x",
 		"tap": "5.x"
 	},
 	"engines": {
