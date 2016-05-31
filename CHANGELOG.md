@@ -1,3 +1,7 @@
+## 0.8.7
+- Fix client WebSocket connection creation
+- Fix dynamic HTTP host removal
+
 ## 0.8.6
 - Added virtual hosts defined with wild cards, websocket host included
 - Added `host.data`
