@@ -1,3 +1,7 @@
+## 0.8.8
+- Fix big WebSocket frames parsing
+- Fix possible server crash by sending invalid WebSocket frames
+
 ## 0.8.7
 - Fix client WebSocket connection creation
 - Fix dynamic HTTP host removal

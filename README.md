@@ -1,6 +1,6 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
 
-# 0.8.7
+# 0.8.8
 
 [![Gitter](https://badges.gitter.im/simples.png)](https://gitter.im/micnic/simpleS)
 
