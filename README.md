@@ -1,3 +1,4 @@
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/micnic/simpleS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
 
 # 0.8.8
