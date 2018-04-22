@@ -1,13 +1,13 @@
 'use strict';
 
-var Client = require('simples/lib/client/client'),
-	Server = require('simples/lib/server'),
-	Store = require('simples/lib/store');
+const Client = require('simples/lib/client/client');
+const Server = require('simples/lib/server');
+const Store = require('simples/lib/store/store');
 
 module.exports = Server.create;
 
-module.exports.server = Server.create;
-
 module.exports.client = Client.create;
+
+module.exports.server = Server.create;
 
 module.exports.store = Store.create;

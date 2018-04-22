@@ -1,3 +1,19 @@
+## 0.9.0-alpha (in progress)
+- Full rewrite using ES6 syntax and new language feature
+- Use MIT licence
+- General performance improvements and bug fixes
+- Removed `recache` dependency
+- Added improved hierarchic router
+- Removed `host.config()`
+- Removed possibility to unuse middlewares
+- Removed `host.middleware()`
+- Removed `host.leave()`
+- Renamed `.del()` route to `.delete()` route
+- Removed possibility to add multiple routes with the same listener
+- Removed `host.leave()`
+- Renamed ws modes to boolean `advanced` mode
+- Removed `.ajax()` and `.ee()` browser API
+
 ## 0.8.8
 - Fix big WebSocket frames parsing
 - Fix possible server crash by sending invalid WebSocket frames
@@ -97,7 +113,7 @@
 - Added separated accepted origins for WebSocket configuration
 - Improved client-side code
 - Improved examples
-- Fixed documention errors
+- Fixed documentation errors
 - Bug fixes
 
 ## 0.6.6
@@ -116,12 +132,12 @@
 - Improved server's commands execution
 - Improved some internal functional related to websockets
 - Improved connection preparation
-- Fixed server crash because of possible incorect request body
+- Fixed server crash because of possible incorrect request body
 - Fixed incorrect cache reading
 
 ## 0.6.3
 - Fixed HTTPS content serving
-- Implement a better synchronisation between HTTP and HTTPS servers
+- Implement a better synchronization between HTTP and HTTPS servers
 
 ## 0.6.2
 - Fixed routes which rendered views
@@ -145,7 +161,7 @@
 - Implemented `connection.log()`
 - Removed `host.log` in favor of `connection.log`
 - Now session stores should manage expired sessions
-- Fixed incorect session cookie expire time
+- Fixed incorrect session cookie expire time
 
 ## 0.5.9
 - Modified error handling for the server and hosts
@@ -176,7 +192,7 @@
 - Added the possibility to remove headers from the response
 - Implemented session store
 - Removed the need in session secret key
-- Added prefered type of compression
+- Added preferred type of compression
 - Added `.length()` method to define or get the content length header
 - Fixed static directory routing
 - Internal structure improvements
@@ -201,7 +217,7 @@
 
 ## 0.5.2
 - Fixed CORS content providing
-- Small internal structure impromevents
+- Small internal structure improvements
 
 ## 0.5.1
 - Improved configuration for http host and ws host
@@ -219,7 +235,7 @@
 ## 0.4.9
 - Improved request parsing, added parsing for json data
 - Parsed data is now stored in `connection.body`
-- Fixed bugs related to dynamic caching and cache accesing
+- Fixed bugs related to dynamic caching and cache accessing
 - Improved client-side API
 
 ## 0.4.8
@@ -255,7 +271,7 @@
 - Added Node.JS event emitter implementation on client-side as `simples.ee`
 - Fixed bug related to advanced routing
 - Fixed `.drain()` streaming on error
-- Fixed auxiliar server in HTTPS server pair WebSocket handling
+- Fixed auxiliary server in HTTPS server pair WebSocket handling
 - Improved dynamic caching
 - Improved `.config()` method of http host by adding session time to live
 - Improved `.drain()` method by adding parameters for setting the type of the content
@@ -333,7 +349,7 @@
 ## 0.3.0
 - Better session mechanics
 - Improved WebSocket channel
-- Added referer blocking
+- Added referrer blocking
 
 ## 0.2.9
 - Added WebSocket channel
@@ -363,7 +379,7 @@
 - Added raw / advanced mode for WebSocket
 
 ## 0.2.2
-- Just bugfixes and API improments
+- Just bugfixes and API improvements
 
 ## 0.2.1
 - Added virtual hosting
