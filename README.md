@@ -24,8 +24,8 @@ simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers
 - [simpleR](https://www.npmjs.com/package/simpler)
 - [simpleT](https://www.npmjs.com/package/simplet)
 
-### [Changelog](https://github.com/micnic/simpleS/wiki/Changelog)
-### [Documentation](https://github.com/micnic/simpleS/wiki/Documentation)
+### Changelog (link will be added soon, check repo for changelog)
+### Documentation (link will be added soon, check repo for documentation)
 
 ## Installation
 
