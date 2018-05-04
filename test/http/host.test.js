@@ -10,16 +10,6 @@ const constants = require('simples/lib/utils/constants');
 
 const sandbox = sinon.createSandbox();
 
-tap.test('HttpHost.routersContainer()', (test) => {
-
-	test.match(HttpHost.routersContainer(), {
-		dynamic: new Map(),
-		fixed: new Map()
-	});
-
-	test.end();
-});
-
 tap.test('HttpHost.routesContainer()', (test) => {
 
 	test.match(HttpHost.routesContainer(), {
@@ -59,7 +49,6 @@ tap.test('HttpHost.create()', (test) => {
 
 	sandbox.spy(HttpHost, 'getPattern');
 	sandbox.spy(HttpHost, 'isDynamic');
-	sandbox.spy(HttpHost, 'routersContainer');
 	sandbox.spy(HttpHost, 'routesContainer');
 
 	test.test('Fixed host', (t) => {
@@ -69,7 +58,10 @@ tap.test('HttpHost.create()', (test) => {
 		t.ok(host instanceof HttpHost);
 		t.ok(host instanceof HttpRouter);
 		t.ok(host._name === 'host.com');
-		t.match(host._routers, HttpHost.routersContainer());
+		t.match(host._routers, {
+			dynamic: new Map(),
+			fixed: new Map()
+		});
 		t.match(host._routes, HttpHost.routesContainer());
 		t.ok(host._errors.get(constants.internalServerErrorStatusCode) === HttpUtils.internalServerError);
 		t.ok(host._errors.get(constants.methodNotAllowedStatusCode) === HttpUtils.methodNotAllowed);
@@ -85,7 +77,10 @@ tap.test('HttpHost.create()', (test) => {
 		t.ok(host instanceof HttpHost);
 		t.ok(host instanceof HttpRouter);
 		t.ok(host._name === '*.host.com');
-		t.match(host._routers, HttpHost.routersContainer());
+		t.match(host._routers, {
+			dynamic: new Map(),
+			fixed: new Map()
+		});
 		t.match(host._routes, HttpHost.routesContainer());
 		t.ok(host._dynamic === true);
 		t.ok(host._pattern instanceof RegExp);

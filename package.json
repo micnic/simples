@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.9.0-alpha-1",
+	"version": "0.9.0-alpha-2",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -21,7 +21,7 @@
 		"url": "https://github.com/micnic/simpleS/issues",
 		"email": "micnic90@gmail.com"
 	},
-	"license": "MIT",
+	"license": "GPL-3.0",
 	"author": {
 		"name": "Nicu Micleușanu",
 		"email": "micnic90@gmail.com",
@@ -42,7 +42,8 @@
 		"test-cov-html": "tap test/new --coverage --coverage-report=html"
 	},
 	"dependencies": {
-		"mime.json": "1.0.x"
+		"mime.json": "1.x",
+		"uv": "1.x"
 	},
 	"devDependencies": {
 		"babel-cli": "6.x",

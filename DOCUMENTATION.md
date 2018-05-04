@@ -1338,7 +1338,7 @@ request.on('response', (response) => {
 
 For convenience, there are shortcut methods to make different types of requests:
 
-`client.del(location[, options])`
+`client.delete(location[, options])`
 
 `client.get(location[, options])`
 
@@ -1355,13 +1355,11 @@ For streaming data the following structures can be used:
 anyStream.pipe(client.post('http://localhost/post'));
 
 // Streaming from the request
-client.get('http://localhost/get').response.pipe(anyOtherStream);
+client.get('http://localhost/get').stream(anyOtherStream);
 
 // Streaming to and from the request
-anyStream.pipe(client.put('http://localhost/put')).response.pipe(anyOtherStream);
+anyStream.pipe(client.put('http://localhost/put')).stream(anyOtherStream);
 ```
-
-Every request has a `response` property which is a data stream without any special properties and which will emit data when the underlying response stream will be ready.
 
 ### <a name="client-api-ws"/> WS Connection
 

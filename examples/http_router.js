@@ -1,11 +1,11 @@
 module.exports = function (server) {
 
 	server.on('error', function (error) {
-		console.log(error);
+		console.log(error.stack);
 	});
 
 	// Add a middleware
-	server.middleware(function (connection, next) {
+	server.use(function (connection, next) {
 
 		// Log connection when all data is written
 		connection.on('finish', function () {
@@ -18,9 +18,6 @@ module.exports = function (server) {
 		// End the current middleware
 		next();
 	});
-
-	// Set the static content
-	server.serve(__dirname + '/static');
 
 	// Set GET root index route
 	server.get('/', function (connection) {
@@ -131,8 +128,20 @@ module.exports = function (server) {
 	server.ws('/echo', {
 		limit: 10
 	}, function (connection) {
+
+		console.time('error');
+		console.time('connection');
+
 		connection.on('message', function (message) {
 			connection.send(message.data);
+		});
+
+		connection.on('error', function (error) {
+			console.timeEnd('error');
+		});
+
+		connection.on('close', function () {
+			console.timeEnd('connection');
 		});
 	});
 
