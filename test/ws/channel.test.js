@@ -6,7 +6,7 @@ const tap = require('tap');
 const { EventEmitter } = require('events');
 const WsChannel = require('simples/lib/ws/channel');
 const WsConnection = require('simples/lib/ws/connection');
-const WsUtils = require('simples/lib/utils/ws-utils');
+const WsFormatter = require('simples/lib/utils/ws-formatter');
 
 tap.test('WsChannel.create()', (test) => {
 
@@ -157,12 +157,12 @@ tap.test('WsChannel.prototype.broadcast()', (test) => {
 
 	const channel = new WsChannel(fakeParentHost, 'name');
 
-	sinon.spy(WsUtils, 'broadcast');
+	sinon.spy(WsFormatter, 'broadcast');
 
 	test.ok(channel.broadcast('data') === channel);
-	test.ok(WsUtils.broadcast.calledOnce);
+	test.ok(WsFormatter.broadcast.calledOnce);
 
-	WsUtils.broadcast.restore();
+	WsFormatter.broadcast.restore();
 
 	test.end();
 });

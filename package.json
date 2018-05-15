@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.9.0-alpha-2",
+	"version": "0.9.0-alpha-3",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -37,9 +37,9 @@
 		"build-es5": "babel dist/simples.esnext.js -o dist/simples.js --presets=env",
 		"build-uglify": "uglifyjs dist/simples.js -o dist/simples.min.js",
 		"build-client": "npm run build-umd && npm run build-es5 && npm run build-uglify",
-		"test": "tap test/new",
-		"test-cov": "tap test/new --coverage",
-		"test-cov-html": "tap test/new --coverage --coverage-report=html"
+		"test": "tap test/",
+		"test-cov": "tap test/ --coverage",
+		"test-cov-html": "tap test/ --coverage --coverage-report=html"
 	},
 	"dependencies": {
 		"mime.json": "1.x",
@@ -50,7 +50,7 @@
 		"babel-preset-env": "1.x",
 		"eslint": "4.x",
 		"jsinspect": "0.12.x",
-		"sinon": "4.x",
+		"sinon": "5.x",
 		"tap": "11.x",
 		"uglify-js": "3.x",
 		"umd": "3.x"

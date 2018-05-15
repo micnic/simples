@@ -7,8 +7,8 @@ const Config = require('simples/lib/utils/config');
 const HttpHost = require('simples/lib/http/host');
 const WsChannel = require('simples/lib/ws/channel');
 const WsConnection = require('simples/lib/ws/connection');
+const WsFormatter = require('simples/lib/utils/ws-formatter');
 const WsHost = require('simples/lib/ws/host');
-const WsUtils = require('simples/lib/utils/ws-utils');
 
 tap.test('WsHost.optionsContainer()', (test) => {
 
@@ -80,12 +80,12 @@ tap.test('WsHost.prototype.broadcast()', (test) => {
 
 	const host = new WsHost();
 
-	sinon.spy(WsUtils, 'broadcast');
+	sinon.spy(WsFormatter, 'broadcast');
 
 	test.ok(host.broadcast('data') === host);
-	test.ok(WsUtils.broadcast.calledOnce);
+	test.ok(WsFormatter.broadcast.calledOnce);
 
-	WsUtils.broadcast.restore();
+	WsFormatter.broadcast.restore();
 
 	test.end();
 });
