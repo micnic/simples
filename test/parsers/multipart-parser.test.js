@@ -1,13 +1,10 @@
 'use strict';
 
-const sinon = require('sinon');
+const { PassThrough, Transform } = require('stream');
 const tap = require('tap');
 
-const ErrorEmitter = require('simples/lib/utils/error-emitter');
 const MultipartParser = require('simples/lib/parsers/multipart-parser');
 const symbols = require('simples/lib/utils/symbols');
-
-const { PassThrough, Transform } = require('stream');
 
 const boundary = '--------boundary';
 const dispositionHeader = 'Content-Disposition';
@@ -15,42 +12,6 @@ const dispositionValue = 'form-data; name="name"; filename="filename"';
 const filename = 'filename';
 const header = `multipart/form-data; boundary=${boundary}`;
 const name = 'name';
-
-const sandbox = sinon.createSandbox();
-
-tap.test('MultipartParserField.prototype.constructor()', (test) => {
-
-	test.test('Only name provided', (t) => {
-
-		const field = new MultipartParser.MultipartField(name);
-
-		t.ok(field instanceof MultipartParser.MultipartField);
-		t.ok(field instanceof PassThrough);
-		t.match(field, {
-			headers: {},
-			name
-		});
-
-		t.end();
-	});
-
-	test.test('Name and filename provided', (t) => {
-
-		const field = new MultipartParser.MultipartField(name, filename);
-
-		t.ok(field instanceof MultipartParser.MultipartField);
-		t.ok(field instanceof PassThrough);
-		t.match(field, {
-			filename,
-			headers: {},
-			name
-		});
-
-		t.end();
-	});
-
-	test.end();
-});
 
 tap.test('MultipartParser.getBoundary()', (test) => {
 
@@ -84,23 +45,16 @@ tap.test('MultipartParser.create()', (test) => {
 
 	test.test('Empty header', (t) => {
 
-		sandbox.spy(MultipartParser, 'getBoundary');
-
 		try {
 			MultipartParser.create('');
 		} catch (error) {
 			t.ok(error instanceof Error);
-			t.ok(MultipartParser.getBoundary.calledOnce);
 		}
-
-		sandbox.restore();
 
 		t.end();
 	});
 
 	test.test('Full header', (t) => {
-
-		sandbox.spy(MultipartParser, 'getBoundary');
 
 		const parser = MultipartParser.create(header);
 
@@ -118,9 +72,6 @@ tap.test('MultipartParser.create()', (test) => {
 			startIndex: 0,
 			stopIndex: 0
 		});
-		t.ok(MultipartParser.getBoundary.calledOnce);
-
-		sandbox.restore();
 
 		t.end();
 	});
@@ -729,14 +680,7 @@ tap.test('MultipartParser.prototype.parseByte()', (test) => {
 	const someBuffer = Buffer.alloc(0);
 	const someCallback = () => {};
 
-	sinon.spy(parser, 'skipFirstBoundary');
-	sinon.spy(parser, 'getHeader');
-	sinon.spy(parser, 'getData');
-	sinon.spy(parser, 'endParsing');
-
 	parser.parseByte(someBuffer, byte, index, someCallback);
-
-	test.ok(parser.skipFirstBoundary.withArgs(byte, someCallback).calledOnce);
 
 	// --------------------
 
@@ -744,23 +688,17 @@ tap.test('MultipartParser.prototype.parseByte()', (test) => {
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
 
-	test.ok(parser.getHeader.withArgs(byte, index, someCallback).calledOnce);
-
 	// --------------------
 
 	parser.expect = symbols.expectData;
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
 
-	test.ok(parser.getData.withArgs(someBuffer, byte, index, someCallback).calledOnce);
-
 	// --------------------
 
 	parser.expect = symbols.expectRequestEnd;
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
-
-	test.ok(parser.endParsing.withArgs(byte, someCallback).calledOnce);
 
 	// --------------------
 
@@ -788,22 +726,11 @@ tap.test('MultipartParser.prototype.write()', (test) => {
 		}
 	});
 
-	sinon.spy(parser, 'parseByte');
-
 	parser.write(someBuffer);
-
-	test.ok(parser.parseByte.withArgs(someBuffer, byte, 0, sinon.match.func).calledOnce);
 
 	// --------------------
 
-	parser.parseByte.restore();
-	sinon.stub(parser, 'parseByte').callsFake(() => {
-		parser.expect = symbols.parsingFailed;
-	}).callsArgWith(3, someError);
-
 	parser.write(someBuffer);
-
-	test.ok(parser.parseByte.withArgs(someBuffer, byte, 0, sinon.match.func).calledOnce);
 
 	test.end();
 });

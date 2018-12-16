@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { IncomingMessage, RequestOptions, ServerResponse } from 'http';
-import { ServerOptions as HttpsServerOptions } from 'https';
+import { ServerOptions as HTTPSServerOptions } from 'https';
 import { PassThrough, Transform, Writable } from 'stream';
 import { Url } from 'url';
 import { ZlibOptions } from 'zlib';
@@ -30,12 +30,12 @@ type CookieAttributes = {
 	secure?: boolean;
 };
 
-type DataCallback<T> = (data: T) => void;
-type DataImporter<D, S, T> = (connection: HttpConnection<D, S>, callback: DataCallback<T>) => void;
+type DataCallback<D> = (data: D) => void;
+type DataImporter<D, S, T> = (connection: HTTPConnection<D, S>, callback: DataCallback<T>) => void;
 type Enabled = boolean | EnabledFunction;
 type EnabledFunction = () => boolean;
 type ErrorCallback = (error: Error) => void;
-type FormCallback = (form: HttpForm) => void;
+type FormCallback = (form: HTTPForm) => void;
 
 type IpAddress = {
 	port: number;
@@ -43,9 +43,7 @@ type IpAddress = {
 	address: string;
 };
 
-type JSONReplacer<V, R> = (key: string, value: V) => R;
-
-type Middleware<D, S> = (connection: HttpConnection<D, S>, next: Callback) => void;
+type Middleware<D, S> = (connection: HTTPConnection<D, S>, next: Callback) => void;
 
 type MirrorCallback<D> = (mirror: Mirror<D>) => void;
 
@@ -53,52 +51,62 @@ type MirrorOptions = {
 	port?: number;
 	hostname?: string;
 	backlog?: number;
-	https?: HttpsServerOptions;
+	https?: HTTPSServerOptions;
 };
 
-type ParseConfig<J, U> = {
+type ParseConfig<J> = {
 	limit?: number;
 	plain?: FormCallback;
 	json?: ResultCallback<J>;
 	multipart?: FormCallback;
-	urlencoded?: ResultCallback<U>;
+	urlencoded?: ResultCallback<Container<string | string[]>>;
 };
 
 type PipeOptions = {
 	end?: boolean;
 };
 
-type ResultCallback<T> = (error: Error, result: Container<T>) => void;
-type RouteListener<D, S> = (connection: HttpConnection<D, S>) => void;
+type ResultCallback<R> = (error: Error, result: R) => void;
+type RouteListener<D, S> = (connection: HTTPConnection<D, S>) => void;
+
+type RouterCompressionOptions = {
+	enabled?: Enabled;
+	options?: ZlibOptions;
+	preferred?: 'deflate' | 'gzip';
+};
+
+type RouterCORSOptions = {
+	credentials?: boolean;
+	headers?: string[];
+	methods?: string[];
+	origins?: string[];
+};
+
+type RouterLoggerOptions = {
+	enabled?: Enabled;
+	format?: string;
+	log?: StringCallback;
+	tokens?: Tokens;
+};
 
 type RouterOptions<S> = {
-	compression?: {
-		enabled?: Enabled;
-		options?: ZlibOptions;
-		preferred?: 'deflate' | 'gzip';
-	};
-	cors?: {
-		credentials?: boolean;
-		headers?: string[];
-		methods?: string[];
-		origins?: string[];
-	};
-	logger?: {
-		enabled?: Enabled;
-		format?: string;
-		log?: StringCallback;
-		tokens?: Tokens;
-	};
-	session?: {
-		enabled?: Enabled;
-		store?: Store<S>;
-	};
-	static?: {
-		enabled?: Enabled;
-		index?: string[];
-		location?: string;
-	};
+	compression?: RouterCompressionOptions;
+	cors?: RouterCORSOptions;
+	logger?: RouterLoggerOptions;
+	session?: RouterSessionOptions<S>;
+	static?: RouterStaticOptions;
 	timeout?: number;
+};
+
+type RouterSessionOptions<S> = {
+	enabled?: Enabled;
+	store?: Store<S>;
+};
+
+type RouterStaticOptions = {
+	enabled?: Enabled;
+	index?: string[];
+	location?: string;
 };
 
 type ServerCallback<T> = (server: Server<T>) => void;
@@ -107,13 +115,11 @@ type ServerOptions<S> = {
 	config?: RouterOptions<S>;
 } & MirrorOptions;
 
-type StoreGetCallback<T> = (error: Error, session: T) => void;
-
-type StoreOptions<S> = {
-
-	get(id: string, callback: StoreGetCallback<S>): void;
-	set(id: string, session: S, callback: ErrorCallback): void;
-	unset(id: string, callback: ErrorCallback): void;
+type SessionContainer<S> = {
+	container: S;
+	hash: string;
+	id: string;
+	timeout: number
 };
 
 type StringContainer = {
@@ -130,20 +136,27 @@ type Tokens = {
 	[key: string]: (data: string) => string;
 };
 
-type WsFilterCallback<D, S> = (connection: WsConnection<D, S>, index: number, connections: WsConnection<D, S>[]) => void;
-type WsListener<D, S> = (connection: WsConnection<D, S>) => void;
+type WSFilterCallback<D, S> = (connection: WSConnection<D, S>, index: number, connections: WSConnection<D, S>[]) => void;
+type WSListener<D, S> = (connection: WSConnection<D, S>) => void;
 
-type WsOptions = {
+type WSOptions = {
 	advanced: boolean;
 	limit: number;
 	origins: string[];
 	timeout: number;
 };
 
+interface StoreInterface<S> {
+
+	get(id: string): Promise<SessionContainer<S>>;
+	set(id: string, session: SessionContainer<S>): Promise<null>;
+	unset(id: string): Promise<null>;
+};
+
 declare abstract class Connection<D, S> extends Transform {
 
 	cookies: StringContainer;
-	data: Container<D>;
+	data: D;
 	headers: StringContainer;
 	host: string;
 	hostname: string;
@@ -159,9 +172,9 @@ declare abstract class Connection<D, S> extends Transform {
 	url: Url;
 
 	destroy(): void;
-	log(data: string | Buffer, tokens?: Tokens): Connection<D, S>;
+	log(format: string | Buffer, tokens?: Tokens): Connection<D, S>;
 	log(logger: StringCallback, tokens?: Tokens): Connection<D, S>;
-	log(data?: string | Buffer, logger?: StringCallback, tokens?: Tokens): Connection<D, S>;
+	log(format?: string | Buffer, logger?: StringCallback, tokens?: Tokens): Connection<D, S>;
 }
 
 declare class Client extends EventEmitter {
@@ -181,193 +194,375 @@ declare class ClientConnection extends Transform {
 	close(callback: Callback): void;
 	close(code?: number, callback?: Callback): void;
 	destroy(): void;
-	send<T>(data: T): void;
+	send<D>(data: D): void;
 	send<D, R>(event: string, data: D, callback?: DataCallback<R>): void;
 }
 
 declare class ClientRequest extends Transform {
 
-	send<T, V, R>(data: T, replacer?: (string | number)[] | JSONReplacer<V, R>, space?: string | number): void;
+	send<D>(data: D, callback: Callback): void;
 	stream(destination: Writable, options?: PipeOptions): void;
 }
 
-declare class HttpConnection<D, S> extends Connection<D, S> {
+declare class HTTPConnection<D, S> extends Connection<D, S> {
 
 	method: string;
 	response: ServerResponse;
 
 	cache(): string;
-	cache(config: CacheConfig | string): HttpConnection<D, S>;
+	cache(config: CacheConfig | string): HTTPConnection<D, S>;
 	close(callback?: Callback): void;
-	cookie(name: string, value: string, attributes?: CookieAttributes): HttpConnection<D, S>;
+	cookie(name: string, value: string, attributes?: CookieAttributes): HTTPConnection<D, S>;
 	drain(location: string, type?: string, override?: boolean): void;
 	error(code: number): void;
 	header(name: string): string;
-	header(name: string, value: string | number | boolean | string[]): HttpConnection<D, S>;
-	keep(timeout?: number): HttpConnection<D, S>;
+	header(name: string, value: string | number | boolean | string[]): HTTPConnection<D, S>;
+	keep(timeout?: number): HTTPConnection<D, S>;
 	lang(): string;
-	lang(value: string): HttpConnection<D, S>;
+	lang(value: string): HTTPConnection<D, S>;
 	link(): string;
-	link(links: StringContainer): HttpConnection<D, S>;
-	parse<J, U>(config: ParseConfig<J, U>): void;
+	link(links: StringContainer): HTTPConnection<D, S>;
+	parse<J>(config: ParseConfig<J>): void;
 	redirect(location: string, permanent?: boolean): void;
-	render<T>(source: string, imports: T): void;
-	send<T, V, R>(data: T, replacer?: (string | number)[] | JSONReplacer<V, R>, space?: string | number): void;
+	render<I>(source: string, imports: I, callback?: Callback): void;
+	send<T>(data: T, callback?: Callback): void;
 	status(): number;
-	status(code: number): HttpConnection<D, S>;
+	status(code: number): HTTPConnection<D, S>;
 	type(): string;
-	type(type: string, override?: boolean): HttpConnection<D, S>;
+	type(type: string, override?: boolean): HTTPConnection<D, S>;
 }
 
-declare class HttpForm extends PassThrough {
+declare class HTTPForm extends PassThrough {
 
 	type: string;
 }
 
-declare class HttpRouter<D> extends EventEmitter {
+declare class Router<D> extends EventEmitter {
 
-	data: Container<D>;
+	/**
+	 * Container to store user data
+	 */
+	data: D;
 
-	all<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	all<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	all<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	delete<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	delete<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	delete<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	engine<I>(engine: TemplateEngine<I>): HttpRouter<D>;
-	error<A, S>(code: number, listener: RouteListener<A, S>): HttpRouter<D>;
-	error<T>(code: number, view: string, imports: Container<T>): HttpRouter<D>;
-	error<A, S, T>(code: number, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	get<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	get<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	get<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	patch<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	patch<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	patch<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	post<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	post<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	post<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	put<A, S>(route: string, listener: RouteListener<A, S>): HttpRouter<D>;
-	put<T>(route: string, view: string, imports: Container<T>): HttpRouter<D>;
-	put<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): HttpRouter<D>;
-	router<S>(location: string, options?: RouterOptions<S>): HttpRouter<D>;
-	use<A, S>(middleware: Middleware<A, S>): HttpRouter<D>;
-	ws<A, S>(location: string, options: WsOptions, listener: WsListener<A, S>): WsHost<A, S>;
-	ws<A, S>(location: string, listener?: WsListener<A, S>): WsHost<A, S>;
+	/**
+	 * Route all types of requests
+	 */
+	all<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route all types of requests
+	 */
+	all<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route all types of requests
+	 */
+	all<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Configure router compression options
+	 */
+	compression(config: RouterCompressionOptions): Router<D>;
+
+	/**
+	 * Configure router CORS options
+	 */
+	cors(config: RouterCORSOptions): Router<D>;
+
+	/**
+	 * Route DELETE requests
+	 */
+	delete<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route DELETE requests
+	 */
+	delete<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route DELETE requests
+	 */
+	delete<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Define the template engine to render the responses
+	 */
+	engine<I>(engine: TemplateEngine<I>): Router<D>;
+
+	/**
+	 * Route HTTP errors for 4xx and 5xx error codes
+	 */
+	error<A, S>(code: number, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route HTTP errors for 4xx and 5xx error codes
+	 */
+	error<T>(code: number, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route HTTP errors for 4xx and 5xx error codes
+	 */
+	error<A, S, T>(code: number, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Route GET requests
+	 */
+	get<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route GET requests
+	 */
+	get<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route GET requests
+	 */
+	get<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Configure router logger options
+	 */
+	logger(format: string, config: RouterLoggerOptions): Router<D>;
+
+	/**
+	 * Configure router logger options
+	 */
+	logger(config: RouterLoggerOptions): Router<D>;
+
+	/**
+	 * Route PATCH requests
+	 */
+	patch<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route PATCH requests
+	 */
+	patch<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route PATCH requests
+	 */
+	patch<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Route POST requests
+	 */
+	post<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route POST requests
+	 */
+	post<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route POST requests
+	 */
+	post<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Route PUT requests
+	 */
+	put<A, S>(route: string, listener: RouteListener<A, S>): Router<D>;
+
+	/**
+	 * Route PUT requests
+	 */
+	put<T>(route: string, view: string, imports?: T): Router<D>;
+
+	/**
+	 * Route PUT requests
+	 */
+	put<A, S, T>(route: string, view: string, importer?: DataImporter<A, S, T>): Router<D>;
+
+	/**
+	 * Create a new router
+	 */
+	router<S>(location: string, options?: RouterOptions<S>): Router<D>;
+
+	/**
+	 * Configure router session options
+	 */
+	session(config: RouterSessionOptions): Router<D>;
+
+	/**
+	 * Configure router static files options
+	 */
+	static(location: string, config: RouterStaticOptions): Router<D>;
+
+	/**
+	 * Configure router static files options
+	 */
+	static(config: RouterStaticOptions): Router<D>;
+
+	/**
+	 * Configure router HTTP timeout
+	 */
+	timeout(value: number): Router<D>;
+
+	/**
+	 * Add a middleware to the router
+	 */
+	use<A, S>(middleware: Middleware<A, S>): Router<D>;
+
+	/**
+	 * Set a new WS host
+	 */
+	ws<A, S>(location: string, options: WSOptions, listener: WSListener<A, S>): WSHost<A, S>;
+
+	/**
+	 * Set a new WS host
+	 */
+	ws<A, S>(location: string, listener?: WSListener<A, S>): WSHost<A, S>;
 }
 
-declare class HttpHost<D> extends HttpRouter<D> {}
+declare class HTTPHost<D> extends Router<D> {}
 
 declare class Mirror<D> extends EventEmitter {
 
 	data: D;
 
+	/**
+	 * Start or restart the mirror
+	 */
 	start(port?: number, callback?: MirrorCallback<D>): Mirror<D>;
+
+	/**
+	 * Start or restart the mirror
+	 */
 	start(callback: MirrorCallback<D>): Mirror<D>;
+
+	/**
+	 * Stop the mirror
+	 */
 	stop(callback?: MirrorCallback<D>): Mirror<D>;
 }
 
-declare class Server<D> extends HttpHost<D> {
+declare class Server<D> extends HTTPHost<D> {
 
-	host<S, H>(name: string, options?: RouterOptions<S>): HttpHost<H>;
+	/**
+	 * Create a new HTTP host
+	 */
+	host<S, H>(name: string, options?: RouterOptions<S>): HTTPHost<H>;
+
+	/**
+	 * Create a new mirror
+	 */
 	mirror<M>(port?: number, options?: MirrorOptions, callback?: MirrorCallback<M>): Mirror<M>;
+
+	/**
+	 * Create a new mirror
+	 */
 	mirror<M>(port: number, callback?: MirrorCallback<M>): Mirror<M>;
+
+	/**
+	 * Create a new mirror
+	 */
 	mirror<M>(options: MirrorOptions, callback?: MirrorCallback<M>): Mirror<M>;
+
+	/**
+	 * Create a new mirror
+	 */
 	mirror<M>(callback: MirrorCallback<M>): Mirror<M>;
+
+	/**
+	 * Start or restart the server
+	 */
 	start(port?: number, callback?: ServerCallback<D>): Server<D>;
+
+	/**
+	 * Start or restart the server
+	 */
 	start(callback: ServerCallback<D>): Server<D>;
+
+	/**
+	 * Stop the server
+	 */
 	stop(callback?: ServerCallback<D>): Server<D>;
 }
 
-declare class Store<S> {
+declare class Store<S> implements StoreInterface<S> {}
 
-	get(id: string, callback: StoreGetCallback<S>): void;
-	set(id: string, session: S, callback: ErrorCallback): void;
-	unset(id: string, callback: ErrorCallback): void;
-}
+declare class WSChannel<D, S> extends EventEmitter {
 
-declare class WsChannel<D, S> extends EventEmitter {
+	connections: Set<WSConnection<D, S>>;
 
-	connections: Set<WsConnection<D, S>>;
-
-	bind(connection: WsConnection<D, S>): WsChannel<D, S>;
-	broadcast<T>(event: string, data: T, filter?: WsFilterCallback<D, S>): WsChannel<D, S>;
-	broadcast<T>(data: T, filter?: WsFilterCallback<D, S>): WsChannel<D, S>;
+	bind(connection: WSConnection<D, S>): WSChannel<D, S>;
+	broadcast<T>(event: string, data: T, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
+	broadcast<T>(data: T, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
 	close(): void;
-	unbind(connection: WsConnection<D, S>): WsChannel<D, S>;
+	unbind(connection: WSConnection<D, S>): WSChannel<D, S>;
 }
 
-declare class WsConnection<D, S> extends Connection<D, S> {
+declare class WSConnection<D, S> extends Connection<D, S> {
 
 	protocols: string[];
 
 	close(code?: number, callback?: Callback): void;
 	close(callback: Callback): void;
-	send<A, R>(event: string, data: A, callback?: DataCallback<R>): void;
+	send<T, R>(event: string, data: T, callback?: DataCallback<R>): void;
 	send<T>(data: T): void;
 }
 
-declare class WsHost<D, S> extends EventEmitter {
+declare class WSHost<D, S> extends EventEmitter {
 
-	connections: Set<WsConnection<D, S>>;
+	connections: Set<WSConnection<D, S>>;
 
-	broadcast<T>(event: string, data: T, filter?: WsFilterCallback<D, S>): WsHost<D, S>;
-	broadcast<T>(data: T, filter?: WsFilterCallback<D, S>): WsHost<D, S>;
-	channel(name: string, filter?: WsFilterCallback<D, S>): WsChannel<D, S>;
+	broadcast<T>(event: string, data: T, filter?: WSFilterCallback<D, S>): WSHost<D, S>;
+	broadcast<T>(data: T, filter?: WSFilterCallback<D, S>): WSHost<D, S>;
+	channel(name: string, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
 }
 
 /**
- * Create a server with the provided port, options and callback
+ * Create and start a new server
  */
 declare function simples<S, D>(port?: number, options?: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
 
 /**
- * Create a server with the provided port and callback
+ * Create and start a new server
  */
 declare function simples<D>(port: number, callback: ServerCallback<D>): Server<D>;
 
 /**
- * Create a server with the provided options or callback
+ * Create and start a new server
  */
 declare function simples<S, D>(options: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
 
 /**
- * Create a server with the provided callback
+ * Create and start a new server
  */
 declare function simples<D>(callback: ServerCallback<D>): Server<D>;
 
 declare namespace simples {
 
 	/**
-	 * Create a client with the provided options
+	 * Create a new client
 	 */
 	function client(options?: ClientOptions): Client;
 
 	/**
-	 * Create a server with the provided port, options and callback
+	 * Create and start a new server
 	 */
 	function server<S, D>(port?: number, options?: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
 
 	/**
-	 * Create a server with the provided port and callback
+	 * Create and start a new server
 	 */
 	function server<D>(port: number, callback: ServerCallback<D>): Server<D>;
 
 	/**
-	 * Create a server with the provided options or callback
+	 * Create and start a new server
 	 */
 	function server<S, D>(options: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
 
 	/**
-	 * Create a server with the provided callback
+	 * Create and start a new server
 	 */
 	function server<D>(callback: ServerCallback<D>): Server<D>;
 
 	/**
-	 * Create a session store with the provided options, if the options are not
-	 * provided it will return a memcached session store
+	 * Create a new session store
 	 */
-	function store<S>(options?: StoreOptions<S>): Store<S>;
+	function store<S>(options?: StoreInterface<S>): Store<S>;
 }
 
 export = simples;

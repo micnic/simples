@@ -1,7 +1,7 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
+const TestUtils = require('simples/test/test-utils');
 
 const MemoryStore = require('simples/lib/store/memory-store');
 
@@ -10,6 +10,8 @@ const expiredId = 'expiredId';
 const nonExistentId = 'nonExistentId';
 const nonExpiredId = 'nonExpiredId';
 const second = 1000;
+
+TestUtils.mockSetInterval();
 
 tap.test('MemoryStore.clear', (test) => {
 
@@ -25,8 +27,8 @@ tap.test('MemoryStore.clear', (test) => {
 
 	MemoryStore.clear(storeContainer);
 
-	test.ok(storeContainer.get(expiredId) === undefined);
-	test.ok(storeContainer.get(nonExpiredId) === validSessionContainer);
+	test.equal(storeContainer.get(expiredId), undefined);
+	test.equal(storeContainer.get(nonExpiredId), validSessionContainer);
 
 	test.end();
 });
@@ -42,19 +44,18 @@ tap.test('MemoryStore.get', (test) => {
 
 	const getImplementation = MemoryStore.get(storeContainer);
 
-	test.ok(typeof getImplementation === 'function');
+	test.equal(typeof getImplementation, 'function');
 
-	getImplementation(nonExistentId, (error, session) => {
-		test.ok(error === null);
-		test.ok(session === null);
+	Promise.all([
+		getImplementation(nonExistentId).then((session) => {
+			test.equal(session, null);
+		}),
+		getImplementation(existentId).then((session) => {
+			test.equal(session, fakeSession);
+		})
+	]).then(() => {
+		test.end();
 	});
-
-	getImplementation(existentId, (error, session) => {
-		test.ok(error === null);
-		test.ok(session === fakeSession);
-	});
-
-	test.end();
 });
 
 tap.test('MemoryStore.set', (test) => {
@@ -64,17 +65,15 @@ tap.test('MemoryStore.set', (test) => {
 
 	const setImplementation = MemoryStore.set(storeContainer);
 
-	test.ok(typeof setImplementation === 'function');
+	test.equal(typeof setImplementation, 'function');
 
-	setImplementation(existentId, fakeSession, (error) => {
-		test.ok(error === null);
+	setImplementation(existentId, fakeSession).then(() => {
+		test.equal(typeof storeContainer.get(existentId), 'object');
+		test.equal(typeof storeContainer.get(existentId).expire, 'number');
+		test.equal(storeContainer.get(existentId).session, fakeSession);
+	}).then(() => {
+		test.end();
 	});
-
-	test.ok(typeof storeContainer.get(existentId) === 'object');
-	test.ok(typeof storeContainer.get(existentId).expire === 'number');
-	test.ok(storeContainer.get(existentId).session === fakeSession);
-
-	test.end();
 });
 
 tap.test('MemoryStore.unset', (test) => {
@@ -88,49 +87,24 @@ tap.test('MemoryStore.unset', (test) => {
 
 	const unsetImplementation = MemoryStore.unset(storeContainer);
 
-	test.ok(typeof unsetImplementation === 'function');
+	test.equal(typeof unsetImplementation, 'function');
 
-	unsetImplementation(existentId, (error) => {
-		test.ok(error === null);
+	unsetImplementation(existentId).then(() => {
+		test.equal(storeContainer.get(existentId), undefined);
+	}).then(() => {
+		test.end();
 	});
-
-	test.ok(storeContainer.get(existentId) === undefined);
-
-	test.end();
 });
 
 tap.test('MemoryStore.createConfig', (test) => {
 
-	const fakeGetImplementation = () => null;
-	const fakeSetImplementation = () => null;
-	const fakeUnsetImplementation = () => null;
-
-	sinon.stub(MemoryStore, 'clear');
-	sinon.stub(MemoryStore, 'get').returns(fakeGetImplementation);
-	sinon.stub(MemoryStore, 'set').returns(fakeSetImplementation);
-	sinon.stub(MemoryStore, 'unset').returns(fakeUnsetImplementation);
-
-	const clock = sinon.useFakeTimers();
 	const storeConfig = MemoryStore.createConfig(second);
 
-	clock.next();
-	clock.restore();
-
 	test.match(storeConfig, {
-		get: fakeGetImplementation,
-		set: fakeSetImplementation,
-		unset: fakeUnsetImplementation
+		get: Function,
+		set: Function,
+		unset: Function
 	});
-
-	test.ok(MemoryStore.clear.withArgs(sinon.match({})).calledOnce);
-	test.ok(MemoryStore.get.withArgs(sinon.match({})).calledOnce);
-	test.ok(MemoryStore.set.withArgs(sinon.match({})).calledOnce);
-	test.ok(MemoryStore.unset.withArgs(sinon.match({})).calledOnce);
-
-	MemoryStore.clear.restore();
-	MemoryStore.get.restore();
-	MemoryStore.set.restore();
-	MemoryStore.unset.restore();
 
 	test.end();
 });

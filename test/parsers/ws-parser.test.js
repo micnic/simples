@@ -1,18 +1,18 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
 const symbols = require('simples/lib/utils/symbols');
-const WsParser = require('simples/lib/parsers/ws-parser');
+const WSFrame = require('simples/lib/ws/frame');
+const WSParser = require('simples/lib/parsers/ws-parser');
 
 const { Writable } = require('stream');
 
-tap.test('WsParser.create', (test) => {
+tap.test('WSParser.create', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
-	test.ok(parser instanceof WsParser);
+	test.ok(parser instanceof WSParser);
 	test.ok(parser instanceof Writable);
 	test.match(parser, {
 		buffer: null,
@@ -27,9 +27,9 @@ tap.test('WsParser.create', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#readyBuffer', (test) => {
+tap.test('WSParser#readyBuffer', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	let result = parser.readyBuffer(2, 0x00);
 
@@ -52,9 +52,9 @@ tap.test('WsParser#readyBuffer', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#resetBuffer', (test) => {
+tap.test('WSParser#resetBuffer', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.buffer = Buffer.alloc(1);
 	parser.bufferBytes = 1;
@@ -69,9 +69,9 @@ tap.test('WsParser#resetBuffer', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#validateFrame', (test) => {
+tap.test('WSParser#validateFrame', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {};
 
@@ -162,9 +162,9 @@ tap.test('WsParser#validateFrame', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#emitMessage', (test) => {
+tap.test('WSParser#emitMessage', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 	const fakeMessage = {};
 
 	parser.on('message', (message) => {
@@ -211,9 +211,9 @@ tap.test('WsParser#emitMessage', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#joinMessageData', (test) => {
+tap.test('WSParser#joinMessageData', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 	const fakeMessage = {};
 
 	parser.on('message', (message) => {
@@ -258,9 +258,9 @@ tap.test('WsParser#joinMessageData', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#createMessage', (test) => {
+tap.test('WSParser#createMessage', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -292,9 +292,9 @@ tap.test('WsParser#createMessage', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#emitControlFrame', (test) => {
+tap.test('WSParser#emitControlFrame', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 	const fakeFrame = {};
 
 	fakeFrame.opcode = 10;
@@ -339,9 +339,9 @@ tap.test('WsParser#emitControlFrame', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#endFrameProcessing', (test) => {
+tap.test('WSParser#endFrameProcessing', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -412,11 +412,11 @@ tap.test('WsParser#endFrameProcessing', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#parseHeader', (test) => {
+tap.test('WSParser#parseHeader', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
-	parser.parseHeader(0x81, (error) => {
+	parser.parseHeader(0x81, () => {
 		test.fail('Callback function should not be called');
 	});
 
@@ -491,13 +491,10 @@ tap.test('WsParser#parseHeader', (test) => {
 	parser.bufferBytes = 1;
 	parser.expect = symbols.expectHeader;
 
-	sinon.stub(parser, 'endFrameProcessing');
-
 	parser.parseHeader(0x00, () => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.endFrameProcessing.withArgs(sinon.match.func).calledOnce);
 	test.match(parser, {
 		buffer: null,
 		bufferBytes: 0,
@@ -523,9 +520,9 @@ tap.test('WsParser#parseHeader', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#parse16BitLength', (test) => {
+tap.test('WSParser#parse16BitLength', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {};
 
@@ -569,9 +566,9 @@ tap.test('WsParser#parse16BitLength', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#parse64BitLength', (test) => {
+tap.test('WSParser#parse64BitLength', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {};
 
@@ -692,9 +689,9 @@ tap.test('WsParser#parse64BitLength', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#parseMask', (test) => {
+tap.test('WSParser#parseMask', (test) => {
 
-	const parser = WsParser.create(0, true);
+	const parser = WSParser.create(0, true);
 
 	parser.frame = {};
 
@@ -731,23 +728,19 @@ tap.test('WsParser#parseMask', (test) => {
 
 	// --------------------
 
-	sinon.stub(parser, 'endFrameProcessing');
-
 	parser.parseMask(0x01, () => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.endFrameProcessing.withArgs(sinon.match.func).calledOnce);
 	test.match(parser, {
 		buffer: null,
 		bufferBytes: 0,
-		frame: {
-			mask: Buffer.from([0x01, 0x01, 0x01, 0x01])
-		}
+		frame: null
 	});
 
 	// --------------------
 
+	parser.frame = {};
 	parser.frame.length = 1;
 	parser.buffer = Buffer.from([0x01, 0x01, 0x01, 0x00]);
 	parser.bufferBytes = 3;
@@ -765,31 +758,23 @@ tap.test('WsParser#parseMask', (test) => {
 	test.end();
 });
 
-tap.test('WsParser#parseByte', (test) => {
+tap.test('WSParser#parseByte', (test) => {
 
 	const byte = 0x00;
-	const parser = WsParser.create(0, true);
-
-	sinon.stub(parser, 'parse16BitLength');
-	sinon.stub(parser, 'parse64BitLength');
-	sinon.stub(parser, 'parseMask');
-	sinon.stub(parser, 'parseHeader');
+	const parser = WSParser.create(0, true);
 
 	parser.parseByte(byte, () => {
 		test.fail('Callback function should not be called');
 	});
-
-	test.ok(parser.parseHeader.withArgs(byte, sinon.match.func).calledOnce);
 
 	// --------------------
 
 	parser.expect = symbols.expect16BitLength;
+	parser.frame = {};
 
 	parser.parseByte(byte, () => {
 		test.fail('Callback function should not be called');
 	});
-
-	test.ok(parser.parse16BitLength.withArgs(byte).calledOnce);
 
 	// --------------------
 
@@ -799,8 +784,6 @@ tap.test('WsParser#parseByte', (test) => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.parse64BitLength.withArgs(byte, sinon.match.func).calledOnce);
-
 	// --------------------
 
 	parser.expect = symbols.expectMask;
@@ -809,80 +792,63 @@ tap.test('WsParser#parseByte', (test) => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.parseMask.withArgs(byte, sinon.match.func).calledOnce);
-
 	test.end();
 });
 
-tap.test('WsParser#getData', (test) => {
+tap.test('WSParser#getData', (test) => {
 
-	const parser = WsParser.create(1024, true);
+	const parser = WSParser.create(1024, true);
 
 	const callback = () => {
 		test.fail('Callback function should not be called');
 	};
 
-	parser.frame = {
-		appendData: sinon.stub(),
+	parser.frame = WSFrame.create(Buffer.alloc(2));
+	parser.message = {
 		data: Buffer.alloc(0),
-		length: 1
+		type: 'text'
 	};
-
-	sinon.stub(parser, 'endFrameProcessing');
 
 	parser.getData(Buffer.alloc(0), 0, callback);
 
-	test.ok(parser.frame.appendData.withArgs(sinon.match.instanceOf(Buffer)).calledOnce);
-
 	// --------------------
 
+	parser.frame = WSFrame.create(Buffer.alloc(2));
 	parser.frame.data = Buffer.alloc(1);
 
 	parser.getData(Buffer.alloc(0), 0, callback);
 
-	test.ok(parser.frame.appendData.calledTwice);
-	test.ok(parser.endFrameProcessing.withArgs(callback).calledOnce);
-
 	test.end();
 });
 
-tap.test('WsParser#write', (test) => {
+tap.test('WSParser#write', (test) => {
 
-	const parser = WsParser.create(1024, true);
+	const parser = WSParser.create(1024, true);
 
 	parser.on('error', (error) => {
 		test.ok(error instanceof Error);
 	});
 
-	sinon.stub(parser, 'parseByte');
-
 	parser.write(Buffer.alloc(1));
-
-	test.ok(parser.parseByte.withArgs(0x00, sinon.match.func).calledOnce);
 
 	// --------------------
 
 	parser.expect = symbols.expectData;
-
-	sinon.stub(parser, 'getData');
+	parser.frame = WSFrame.create(Buffer.alloc(2));
+	parser.message = {
+		data: Buffer.alloc(0),
+		type: 'text'
+	};
 
 	parser.write(Buffer.alloc(1));
-
-	test.ok(parser.getData.withArgs(sinon.match.instanceOf(Buffer), 0, sinon.match.func).calledOnce);
 
 	// --------------------
 
 	parser.expect = symbols.expectHeader;
 
-	parser.parseByte.restore();
-	sinon.stub(parser, 'parseByte').callsFake(() => {
-		parser.expect = symbols.parsingFailed;
-	}).callsArgWith(1, Error());
-
-	parser.write(Buffer.alloc(1));
+	parser.write(Buffer.from([0xFF, 0xFF]));
 
 	test.ok(parser.expect === symbols.parsingFailed);
-	test.ok(parser.parseByte.withArgs(0x00, sinon.match.func).calledOnce);
 
 	test.end();
 });

@@ -1,46 +1,38 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
-const Config = require('simples/lib/utils/config');
-const HttpHost = require('simples/lib/http/host');
-const WsChannel = require('simples/lib/ws/channel');
-const WsConnection = require('simples/lib/ws/connection');
-const WsFormatter = require('simples/lib/utils/ws-formatter');
-const WsHost = require('simples/lib/ws/host');
+const HTTPHost = require('simples/lib/http/host');
+const WSChannel = require('simples/lib/ws/channel');
+const WSConnection = require('simples/lib/ws/connection');
+const WSHost = require('simples/lib/ws/host');
 
-tap.test('WsHost.optionsContainer()', (test) => {
+tap.test('WSHost.optionsContainer()', (test) => {
 
-	sinon.spy(Config, 'getConfig');
-
-	test.match(WsHost.optionsContainer(), {
+	test.match(WSHost.optionsContainer(), {
 		advanced: false,
 		limit: 1048576,
 		origins: [],
 		timeout: 30000
 	});
-	test.ok(Config.getConfig.calledOnce);
-
-	Config.getConfig.restore();
 
 	test.end();
 });
 
-tap.test('WsHost.create()', (test) => {
+tap.test('WSHost.create()', (test) => {
 
 	test.test('Fixed host', (t) => {
 
-		const httpHost = new HttpHost();
+		const httpHost = HTTPHost.create('hostname');
 		const noopListener = () => null;
 
-		const wsHost = WsHost.create(httpHost, '/', null, noopListener);
+		const wsHost = WSHost.create(httpHost, '/', null, noopListener);
 
 		t.ok(httpHost._routes.ws.fixed.size === 1);
 		t.ok(httpHost._routes.ws.fixed.get('/') === wsHost);
 		t.ok(wsHost.connections instanceof Set);
 		t.ok(wsHost._channels instanceof Map);
-		t.match(wsHost._options, WsHost.optionsContainer());
+		t.match(wsHost._options, WSHost.optionsContainer());
 		t.ok(wsHost._advanced === false);
 		t.ok(wsHost._parent === httpHost);
 		t.ok(wsHost.dynamic === false);
@@ -52,16 +44,16 @@ tap.test('WsHost.create()', (test) => {
 
 	test.test('Dynamic host', (t) => {
 
-		const httpHost = new HttpHost();
+		const httpHost = HTTPHost.create('hostname');
 		const noopListener = () => null;
 
-		const wsHost = WsHost.create(httpHost, '/*', null, noopListener);
+		const wsHost = WSHost.create(httpHost, '/*', null, noopListener);
 
 		t.ok(httpHost._routes.ws.dynamic.size === 1);
 		t.ok(httpHost._routes.ws.dynamic.get('/*') === wsHost);
 		t.ok(wsHost.connections instanceof Set);
 		t.ok(wsHost._channels instanceof Map);
-		t.match(wsHost._options, WsHost.optionsContainer());
+		t.match(wsHost._options, WSHost.optionsContainer());
 		t.ok(wsHost._advanced === false);
 		t.ok(wsHost._parent === httpHost);
 		t.ok(wsHost.dynamic === true);
@@ -76,23 +68,18 @@ tap.test('WsHost.create()', (test) => {
 	test.end();
 });
 
-tap.test('WsHost.prototype.broadcast()', (test) => {
+tap.test('WSHost.prototype.broadcast()', (test) => {
 
-	const host = new WsHost();
-
-	sinon.spy(WsFormatter, 'broadcast');
+	const host = new WSHost();
 
 	test.ok(host.broadcast('data') === host);
-	test.ok(WsFormatter.broadcast.calledOnce);
-
-	WsFormatter.broadcast.restore();
 
 	test.end();
 });
 
-tap.test('WsHost.prototype.channel()', (test) => {
+tap.test('WSHost.prototype.channel()', (test) => {
 
-	const host = new WsHost();
+	const host = new WSHost();
 
 	let newChannel = null;
 
@@ -105,14 +92,11 @@ tap.test('WsHost.prototype.channel()', (test) => {
 
 	test.test('Create a new channel', (t) => {
 
-		sinon.spy(WsChannel, 'create');
-
 		newChannel = host.channel('name');
 
 		t.ok(host._channels.size === 1);
 		t.ok(host._channels.get('name') === newChannel);
-		t.ok(newChannel instanceof WsChannel);
-		t.ok(WsChannel.create.calledOnce);
+		t.ok(newChannel instanceof WSChannel);
 
 		t.end();
 	});
@@ -136,8 +120,8 @@ tap.test('WsHost.prototype.channel()', (test) => {
 			headers: []
 		};
 
-		const firstConnection = new WsConnection(host, fakeLocation, fakeRequest);
-		const secondConnection = new WsConnection(host, fakeLocation, fakeRequest);
+		const firstConnection = new WSConnection(host, fakeLocation, fakeRequest);
+		const secondConnection = new WSConnection(host, fakeLocation, fakeRequest);
 
 		firstConnection.data.allowed = true;
 		secondConnection.data.allowed = false;

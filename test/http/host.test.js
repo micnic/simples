@@ -1,18 +1,14 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
-const HttpHost = require('simples/lib/http/host');
-const HttpRouter = require('simples/lib/http/router');
-const HttpUtils = require('simples/lib/utils/http-utils');
+const HTTPHost = require('simples/lib/http/host');
+const HTTPUtils = require('simples/lib/utils/http-utils');
 const constants = require('simples/lib/utils/constants');
 
-const sandbox = sinon.createSandbox();
+tap.test('HTTPHost.routesContainer()', (test) => {
 
-tap.test('HttpHost.routesContainer()', (test) => {
-
-	test.match(HttpHost.routesContainer(), {
+	test.match(HTTPHost.routesContainer(), {
 		dynamic: {
 			all: new Map(),
 			delete: new Map(),
@@ -38,58 +34,19 @@ tap.test('HttpHost.routesContainer()', (test) => {
 	test.end();
 });
 
-tap.test('HttpHost.create()', (test) => {
+tap.test('HTTPHost.create()', (test) => {
 
-	const fakeServer = {
-		_hosts: {
-			dynamic: new Map(),
-			fixed: new Map()
-		}
-	};
+	const host = HTTPHost.create('hostname');
 
-	sandbox.spy(HttpHost, 'getPattern');
-	sandbox.spy(HttpHost, 'isDynamic');
-	sandbox.spy(HttpHost, 'routesContainer');
-
-	test.test('Fixed host', (t) => {
-
-		const host = HttpHost.create(fakeServer, 'host.com');
-
-		t.ok(host instanceof HttpHost);
-		t.ok(host instanceof HttpRouter);
-		t.ok(host._name === 'host.com');
-		t.match(host._routers, {
-			dynamic: new Map(),
-			fixed: new Map()
-		});
-		t.match(host._routes, HttpHost.routesContainer());
-		t.ok(host._errors.get(constants.internalServerErrorStatusCode) === HttpUtils.internalServerError);
-		t.ok(host._errors.get(constants.methodNotAllowedStatusCode) === HttpUtils.methodNotAllowed);
-		t.ok(host._errors.get(constants.notFoundStatusCode) === HttpUtils.notFound);
-
-		t.end();
+	test.ok(host instanceof HTTPHost);
+	test.match(host._routers, {
+		dynamic: new Map(),
+		fixed: new Map()
 	});
-
-	test.test('Dynamic host', (t) => {
-
-		const host = HttpHost.create(fakeServer, '*.host.com');
-
-		t.ok(host instanceof HttpHost);
-		t.ok(host instanceof HttpRouter);
-		t.ok(host._name === '*.host.com');
-		t.match(host._routers, {
-			dynamic: new Map(),
-			fixed: new Map()
-		});
-		t.match(host._routes, HttpHost.routesContainer());
-		t.ok(host._dynamic === true);
-		t.ok(host._pattern instanceof RegExp);
-		t.ok(host._errors.get(constants.internalServerErrorStatusCode) === HttpUtils.internalServerError);
-		t.ok(host._errors.get(constants.methodNotAllowedStatusCode) === HttpUtils.methodNotAllowed);
-		t.ok(host._errors.get(constants.notFoundStatusCode) === HttpUtils.notFound);
-
-		t.end();
-	});
+	test.match(host._routes, HTTPHost.routesContainer());
+	test.ok(host._errors.get(constants.internalServerErrorStatusCode) === HTTPUtils.internalServerError);
+	test.ok(host._errors.get(constants.methodNotAllowedStatusCode) === HTTPUtils.methodNotAllowed);
+	test.ok(host._errors.get(constants.notFoundStatusCode) === HTTPUtils.notFound);
 
 	test.end();
 });

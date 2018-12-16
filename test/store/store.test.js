@@ -81,19 +81,20 @@ tap.test('Store.prototype.get()', (test) => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
-			t.ok(error.message === notImplemented);
+			t.equal(error.message, notImplemented);
 			t.end();
 		});
 	});
 
 	test.test('Implemented, normal execution', (t) => {
 		Store.create({
-			get(id, callback) {
-				t.ok(id === sessionId);
-				callback(null, fakeSession);
+			get(id) {
+				t.equal(id, sessionId);
+
+				return Promise.resolve(fakeSession);
 			}
 		}).get(sessionId).then((session) => {
-			t.ok(session === fakeSession);
+			t.equal(session, fakeSession);
 			t.end();
 		}).catch(() => {
 			t.fail('Error should not be called');
@@ -102,14 +103,30 @@ tap.test('Store.prototype.get()', (test) => {
 
 	test.test('Implemented, throws error', (t) => {
 		Store.create({
-			get(id, callback) {
-				t.ok(id === sessionId);
-				callback(someError);
+			get(id) {
+				t.equal(id, sessionId);
+
+				throw someError;
 			}
 		}).get(sessionId).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
-			t.ok(error === someError);
+			t.equal(error, someError);
+			t.end();
+		});
+	});
+
+	test.test('Implemented, rejects with error', (t) => {
+		Store.create({
+			get(id) {
+				t.equal(id, sessionId);
+
+				return Promise.reject(someError);
+			}
+		}).get(sessionId).then(() => {
+			t.fail('This function should not be called');
+		}).catch((error) => {
+			t.equal(error, someError);
 			t.end();
 		});
 	});
@@ -124,17 +141,18 @@ tap.test('Store.prototype.set()', (test) => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
-			t.ok(error.message === notImplemented);
+			t.equal(error.message, notImplemented);
 			t.end();
 		});
 	});
 
 	test.test('Implemented', (t) => {
 		Store.create({
-			set(id, session, callback) {
-				t.ok(id === sessionId);
-				t.ok(session === fakeSession);
-				callback(null);
+			set(id, session) {
+				t.equal(id, sessionId);
+				t.equal(session, fakeSession);
+
+				return Promise.resolve();
 			}
 		}).set(sessionId, fakeSession).then(() => {
 			t.end();
@@ -145,15 +163,32 @@ tap.test('Store.prototype.set()', (test) => {
 
 	test.test('Implemented, throws error', (t) => {
 		Store.create({
-			set(id, session, callback) {
-				t.ok(id === sessionId);
-				t.ok(session === fakeSession);
-				callback(someError);
+			set(id, session) {
+				t.equal(id, sessionId);
+				t.equal(session, fakeSession);
+
+				throw someError;
 			}
 		}).set(sessionId, fakeSession).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
-			t.ok(error === someError);
+			t.equal(error, someError);
+			t.end();
+		});
+	});
+
+	test.test('Implemented, rejects with error', (t) => {
+		Store.create({
+			set(id, session) {
+				t.equal(id, sessionId);
+				t.equal(session, fakeSession);
+
+				return Promise.reject(someError);
+			}
+		}).set(sessionId, fakeSession).then(() => {
+			t.fail('This function should not be called');
+		}).catch((error) => {
+			t.equal(error, someError);
 			t.end();
 		});
 	});
@@ -168,16 +203,17 @@ tap.test('Store.prototype.unset()', (test) => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
-			t.ok(error.message === notImplemented);
+			t.equal(error.message, notImplemented);
 			t.end();
 		});
 	});
 
 	test.test('Implemented', (t) => {
 		Store.create({
-			unset(id, callback) {
-				t.ok(id === sessionId);
-				callback(null);
+			unset(id) {
+				t.equal(id, sessionId);
+
+				return Promise.resolve();
 			}
 		}).unset(sessionId).then(() => {
 			t.end();
@@ -188,14 +224,30 @@ tap.test('Store.prototype.unset()', (test) => {
 
 	test.test('Implemented, throws error', (t) => {
 		Store.create({
-			unset(id, callback) {
-				t.ok(id === sessionId);
-				callback(someError);
+			unset(id) {
+				t.equal(id, sessionId);
+
+				throw someError;
 			}
 		}).unset(sessionId).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
-			t.ok(error === someError);
+			t.equal(error, someError);
+			t.end();
+		});
+	});
+
+	test.test('Implemented, rejects with error', (t) => {
+		Store.create({
+			unset(id) {
+				t.equal(id, sessionId);
+
+				return Promise.reject(someError);
+			}
+		}).unset(sessionId).then(() => {
+			t.fail('This function should not be called');
+		}).catch((error) => {
+			t.equal(error, someError);
 			t.end();
 		});
 	});

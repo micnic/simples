@@ -1,13 +1,12 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
-const WsFrame = require('simples/lib/ws/frame');
+const WSFrame = require('simples/lib/ws/frame');
 
-tap.test('WsFrame.create', (test) => {
+tap.test('WSFrame.create', (test) => {
 
-	const frame = WsFrame.create(Buffer.from([0xFF, 0xFF]));
+	const frame = WSFrame.create(Buffer.from([0xFF, 0xFF]));
 
 	test.match(frame, {
 		data: Buffer.alloc(0),
@@ -22,7 +21,7 @@ tap.test('WsFrame.create', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame.xor', (test) => {
+tap.test('WSFrame.xor', (test) => {
 
 	const randomByte = () => Math.round(Math.random() * 255);
 	const initial = Buffer.from([randomByte(), randomByte(), randomByte(), randomByte()]);
@@ -31,7 +30,7 @@ tap.test('WsFrame.xor', (test) => {
 
 	initial.copy(buffer);
 
-	WsFrame.xor(buffer, mask, 0);
+	WSFrame.xor(buffer, mask, 0);
 
 	for (let index = 0; index < 4; index++) {
 		test.ok(buffer[index] ^ mask[index] === initial[index]);
@@ -40,11 +39,9 @@ tap.test('WsFrame.xor', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame#appendData', (test) => {
+tap.test('WSFrame.prototype.appendData()', (test) => {
 
-	const sandbox = sinon.createSandbox();
-
-	const frame = WsFrame.create(Buffer.from([0x00, 0x82]));
+	const frame = WSFrame.create(Buffer.from([0x00, 0x82]));
 
 	frame.appendData(Buffer.from([0x01]));
 
@@ -54,21 +51,16 @@ tap.test('WsFrame#appendData', (test) => {
 
 	frame.mask = Buffer.from([0x00, 0x01, 0x02, 0x03]);
 
-	sandbox.stub(WsFrame, 'xor');
-
 	frame.appendData(Buffer.from([0x02]));
 
-	test.match(frame.data, Buffer.from([0x01, 0x02]));
-	test.ok(WsFrame.xor.withArgs(frame.data, frame.mask, 0).calledOnce);
-
-	sandbox.restore();
+	test.match(frame.data, Buffer.from([0x01, 0x03]));
 
 	test.end();
 });
 
-tap.test('WsFrame.buffer', (test) => {
+tap.test('WSFrame.buffer', (test) => {
 
-	let buffer = WsFrame.buffer({
+	let buffer = WSFrame.buffer({
 		fin: true,
 		masked: false,
 		opcode: 0
@@ -79,7 +71,7 @@ tap.test('WsFrame.buffer', (test) => {
 
 	// --------------------
 
-	buffer = WsFrame.buffer({
+	buffer = WSFrame.buffer({
 		fin: true,
 		masked: true,
 		opcode: 0
@@ -91,23 +83,23 @@ tap.test('WsFrame.buffer', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame.close', (test) => {
+tap.test('WSFrame.close', (test) => {
 
-	let buffer = WsFrame.close(0, false);
-
-	test.ok(Buffer.isBuffer(buffer));
-	test.ok(buffer.length === 4);
-
-	// --------------------
-
-	buffer = WsFrame.close(1000, false);
+	let buffer = WSFrame.close(0, false);
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 4);
 
 	// --------------------
 
-	buffer = WsFrame.close(2000, false);
+	buffer = WSFrame.close(1000, false);
+
+	test.ok(Buffer.isBuffer(buffer));
+	test.ok(buffer.length === 4);
+
+	// --------------------
+
+	buffer = WSFrame.close(2000, false);
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 4);
@@ -115,9 +107,9 @@ tap.test('WsFrame.close', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame.ping', (test) => {
+tap.test('WSFrame.ping', (test) => {
 
-	const buffer = WsFrame.ping();
+	const buffer = WSFrame.ping();
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 2);
@@ -125,9 +117,9 @@ tap.test('WsFrame.ping', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame.pong', (test) => {
+tap.test('WSFrame.pong', (test) => {
 
-	const buffer = WsFrame.pong({
+	const buffer = WSFrame.pong({
 		data: Buffer.alloc(0)
 	}, false);
 
@@ -137,21 +129,21 @@ tap.test('WsFrame.pong', (test) => {
 	test.end();
 });
 
-tap.test('WsFrame.wrap', (test) => {
+tap.test('WSFrame.wrap', (test) => {
 
-	WsFrame.wrap(Buffer.alloc(200000), true, () => {
+	WSFrame.wrap(Buffer.alloc(200000), true, () => {
 		test.pass('Callback function was called');
 	});
 
 	// --------------------
 
-	WsFrame.wrap('', true, () => {
+	WSFrame.wrap('', true, () => {
 		test.pass('Callback function was called');
 	});
 
 	// --------------------
 
-	WsFrame.wrap({}, true, () => {
+	WSFrame.wrap({}, true, () => {
 		test.pass('Callback function was called');
 	});
 

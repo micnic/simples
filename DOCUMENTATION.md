@@ -997,13 +997,11 @@ connection.keep();      // or connection.keep(0); removes the timeout
 connection.keep(10000); // sets the timeout for 10 seconds
 ```
 
-#### <a name="http-connection-send"/> .send(data[, replacer, space])
+#### <a name="http-connection-send"/> .send(data[, callback])
 
 data: any
 
-replacer: (number | string)[] | (key: string, value: any) => void
-
-space: number or string
+callback: () => void
 
 Writes preformatted data to the connection stream and ends the connection, implements the functionality of `JSON.stringify()` for arrays, booleans, numbers and objects, buffers and strings are sent as they are. If the connection does not have a `Content-Type` defined and the `data` parameter is not a buffer nor a string then it will have the type `application/json`. Should be used only once and should not be used with `.write()` or `.end()` methods.
 

@@ -1,14 +1,10 @@
-module.exports = function (server) {
-
-	server.on('error', function (error) {
-		console.log(error.stack);
-	});
+module.exports = (server) => {
 
 	// Add a middleware
-	server.use(function (connection, next) {
+	server.use((connection, next) => {
 
 		// Log connection when all data is written
-		connection.on('finish', function () {
+		connection.on('finish', () => {
 			connection.log('%ip %method %status %protocol://%host%path');
 		});
 
@@ -20,26 +16,23 @@ module.exports = function (server) {
 	});
 
 	// Set GET root index route
-	server.get('/', function (connection) {
+	server.get('/', (connection) => {
 		connection.drain(__dirname + '/static/index.html');
 	});
 
 	// Set GET routes for "/home" and "/index" to redirect
-	server.get([
-		'/home',
-		'/index'
-	], function (connection) {
+	server.get('/index', (connection) => {
 		connection.redirect('/index.html');
 	});
 
 	// Set GET route to "/hello"
-	server.get('/hello', function (connection) {
+	server.get('/hello', (connection) => {
 		connection.write('Hello simpleS');
 		connection.end();
 	});
 
 	// Set GET route to "/json"
-	server.get('/json', function (connection) {
+	server.get('/json', (connection) => {
 		connection.type('json');
 		connection.send({
 			cookies: connection.cookies,
@@ -55,16 +48,16 @@ module.exports = function (server) {
 			query: connection.query,
 			session: connection.session,
 			url: connection.url
-		}, null, '    ');
+		});
 	});
 
 	// Set GET route for "/upload"
-	server.get('/upload', function (connection) {
+	server.get('/upload', (connection) => {
 		connection.drain(__dirname + '/static/upload.html');
 	});
 
 	// Set POST route for "/upload"
-	server.post('/upload', function (connection) {
+	server.post('/upload', (connection) => {
 
 		// Set "text/plain" content type header
 		connection.type('txt');
@@ -74,45 +67,45 @@ module.exports = function (server) {
 
 			limit: 1024,
 
-			json: function () {
-				form.on('end', function () {
-					connection.send(form.result, null, '    ');
-				}).on('error', function (error) {
+			json: () => {
+				form.on('end', () => {
+					connection.send(form.result);
+				}).on('error', (error) => {
 					console.log(error);
 				});
 			},
 
-			multipart: function (form) {
-				form.on('field', function (field) {
+			multipart: (form) => {
+				form.on('field', (field) => {
 					connection.write(field.name + '\n');
-					field.on('readable', function () {
-						connection.write((this.read() || Buffer(0)).slice(0, 32).toString('hex') + '\n');
-					}).on('end', function () {
+					field.on('readable', () => {
+						connection.write((field.read() || Buffer(0)).slice(0, 32).toString() + '\n');
+					}).on('end', () => {
 						connection.write('----------\n');
-					}).on('error', function (error) {
+					}).on('error', (error) => {
 						console.log(error);
 					});
-				}).on('end', function () {
+				}).on('end', () => {
 					connection.end();
-				}).on('error', function (error) {
+				}).on('error', (error) => {
 					console.log(error);
 				});
 			},
 
-			plain: function (form) {
-				form.on('readable', function () {
-					connection.write((this.read() || Buffer(0)).slice(0, 32).toString('hex'));
-				}).on('end', function () {
+			plain: (form) => {
+				form.on('readable', () => {
+					connection.write((form.read() || Buffer(0)).slice(0, 32).toString('hex'));
+				}).on('end', () => {
 					connection.end();
-				}).on('error', function (error) {
+				}).on('error', (error) => {
 					console.log(error);
 				});
 			},
 
-			urlencoded: function (form) {
-				form.on('end', function () {
+			urlencoded: (form) => {
+				form.on('end', () => {
 					connection.send(form.result, null, '    ');
-				}).on('error', function (error) {
+				}).on('error', (error) => {
 					console.log(error);
 				});
 			}
@@ -120,37 +113,17 @@ module.exports = function (server) {
 	});
 
 	// Set route to WebSocket echo example
-	server.get('/ws_echo', function (connection) {
+	server.get('/ws_echo', (connection) => {
 		connection.drain(__dirname + '/static/ws_echo.html');
 	});
 
 	// Set WebSocket host for "/echo"
 	server.ws('/echo', {
 		limit: 10
-	}, function (connection) {
+	}, (connection) => {
 
-		console.time('error');
-		console.time('connection');
-
-		connection.on('message', function (message) {
+		connection.on('message', (message) => {
 			connection.send(message.data);
 		});
-
-		connection.on('error', function (error) {
-			console.timeEnd('error');
-		});
-
-		connection.on('close', function () {
-			console.timeEnd('connection');
-		});
-	});
-
-	// Set route to WebSocket chat example
-	server.get('/ws_chat', function (connection) {
-		connection.drain(__dirname + '/static/ws_chat.html');
-	});
-
-	server.ws('/chat', function (connection) {
-
 	});
 };

@@ -2,11 +2,11 @@
 
 const tap = require('tap');
 
-const LangParser = require('simples/lib/parsers/lang-parser');
+const QValueParser = require('simples/lib/parsers/q-value-parser');
 
 const langString = 'ro,en;q=0.8';
 
-tap.test('LangParser.getNameEndIndex()', (test) => {
+tap.test('QValueParser.getValueEndIndex()', (test) => {
 
 	let expectedIndex = langString.indexOf(',');
 
@@ -14,7 +14,7 @@ tap.test('LangParser.getNameEndIndex()', (test) => {
 
 	test.test('First index', (t) => {
 
-		const result = LangParser.getNameEndIndex(langString, index);
+		const result = QValueParser.getValueEndIndex(langString, index);
 
 		t.ok(result === expectedIndex);
 
@@ -25,7 +25,7 @@ tap.test('LangParser.getNameEndIndex()', (test) => {
 
 	test.test('Expected index', (t) => {
 
-		const result = LangParser.getNameEndIndex(langString, index);
+		const result = QValueParser.getValueEndIndex(langString, index);
 
 		t.ok(result === expectedIndex);
 
@@ -37,7 +37,7 @@ tap.test('LangParser.getNameEndIndex()', (test) => {
 
 	test.test('Greater index', (t) => {
 
-		const result = LangParser.getNameEndIndex(langString, index);
+		const result = QValueParser.getValueEndIndex(langString, index);
 
 		t.ok(result === expectedIndex);
 
@@ -48,7 +48,7 @@ tap.test('LangParser.getNameEndIndex()', (test) => {
 
 	test.test('Next greater index', (t) => {
 
-		const result = LangParser.getNameEndIndex(langString, index);
+		const result = QValueParser.getValueEndIndex(langString, index);
 
 		t.ok(result === langString.length);
 
@@ -58,7 +58,7 @@ tap.test('LangParser.getNameEndIndex()', (test) => {
 	test.end();
 });
 
-tap.test('LangParser.getNextLangDelimiterIndex()', (test) => {
+tap.test('QValueParser.getNextDelimiterIndex()', (test) => {
 
 	const expectedIndex = langString.indexOf(',');
 
@@ -66,7 +66,7 @@ tap.test('LangParser.getNextLangDelimiterIndex()', (test) => {
 
 	test.test('First index', (t) => {
 
-		const result = LangParser.getNextLangDelimiterIndex(langString, index);
+		const result = QValueParser.getNextDelimiterIndex(langString, index);
 
 		t.ok(result === expectedIndex);
 
@@ -77,7 +77,7 @@ tap.test('LangParser.getNextLangDelimiterIndex()', (test) => {
 
 	test.test('Expected index', (t) => {
 
-		const result = LangParser.getNextLangDelimiterIndex(langString, index);
+		const result = QValueParser.getNextDelimiterIndex(langString, index);
 
 		t.ok(result === expectedIndex);
 
@@ -88,7 +88,7 @@ tap.test('LangParser.getNextLangDelimiterIndex()', (test) => {
 
 	test.test('Greater index', (t) => {
 
-		const result = LangParser.getNextLangDelimiterIndex(langString, index);
+		const result = QValueParser.getNextDelimiterIndex(langString, index);
 
 		t.ok(result === langString.length);
 
@@ -98,25 +98,25 @@ tap.test('LangParser.getNextLangDelimiterIndex()', (test) => {
 	test.end();
 });
 
-tap.test('LangParser.parse()', (test) => {
+tap.test('QValueParser.parse()', (test) => {
 
 	test.test('Empty input', (t) => {
 
-		t.match(LangParser.parse(), []);
+		t.match(QValueParser.parse(), []);
 
 		t.end();
 	});
 
 	test.test('Empty string', (t) => {
 
-		t.match(LangParser.parse(''), []);
+		t.match(QValueParser.parse(''), []);
 
 		t.end();
 	});
 
 	test.test('One lang string', (t) => {
 
-		t.match(LangParser.parse('ro'), [
+		t.match(QValueParser.parse('ro'), [
 			'ro'
 		]);
 
@@ -125,7 +125,7 @@ tap.test('LangParser.parse()', (test) => {
 
 	test.test('Multiple langs string', (t) => {
 
-		t.match(LangParser.parse('ro,en'), [
+		t.match(QValueParser.parse('ro,en'), [
 			'ro',
 			'en'
 		]);
@@ -135,7 +135,7 @@ tap.test('LangParser.parse()', (test) => {
 
 	test.test('Langs with q factor string', (t) => {
 
-		t.match(LangParser.parse(langString), [
+		t.match(QValueParser.parse(langString), [
 			'ro',
 			'en'
 		]);
@@ -145,7 +145,7 @@ tap.test('LangParser.parse()', (test) => {
 
 	test.test('Unsorted langs string', (t) => {
 
-		t.match(LangParser.parse('ro,fr;q=0.7,en;q=0.8'), [
+		t.match(QValueParser.parse('ro,fr;q=0.7,en;q=0.8'), [
 			'ro',
 			'en',
 			'fr'
@@ -156,10 +156,20 @@ tap.test('LangParser.parse()', (test) => {
 
 	test.test('Langs with whitespace string', (t) => {
 
-		t.match(LangParser.parse('ro, en;q=0.8,   fr;q=0.7'), [
+		t.match(QValueParser.parse('ro, en;q=0.8,   fr;q=0.7'), [
 			'ro',
 			'en',
 			'fr'
+		]);
+
+		t.end();
+	});
+
+	test.test('Lowercase', (t) => {
+
+		t.match(QValueParser.parse('RO, EN', true), [
+			'ro',
+			'en'
 		]);
 
 		t.end();

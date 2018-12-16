@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.9.0-alpha-3",
+	"version": "0.9.0-alpha-4",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -21,7 +21,7 @@
 		"url": "https://github.com/micnic/simpleS/issues",
 		"email": "micnic90@gmail.com"
 	},
-	"license": "GPL-3.0",
+	"license": "MIT",
 	"author": {
 		"name": "Nicu Micleușanu",
 		"email": "micnic90@gmail.com",
@@ -37,9 +37,9 @@
 		"build-es5": "babel dist/simples.esnext.js -o dist/simples.js --presets=env",
 		"build-uglify": "uglifyjs dist/simples.js -o dist/simples.min.js",
 		"build-client": "npm run build-umd && npm run build-es5 && npm run build-uglify",
-		"test": "tap test/",
-		"test-cov": "tap test/ --coverage",
-		"test-cov-html": "tap test/ --coverage --coverage-report=html"
+		"test": "tap test/*.test.js test/*/*.test.js",
+		"test-cov": "npm test -- --coverage",
+		"test-cov-html": "npm run test-cov -- --coverage-report=html"
 	},
 	"dependencies": {
 		"mime.json": "1.x",
@@ -48,10 +48,9 @@
 	"devDependencies": {
 		"babel-cli": "6.x",
 		"babel-preset-env": "1.x",
-		"eslint": "4.x",
+		"eslint": "5.x",
 		"jsinspect": "0.12.x",
-		"sinon": "5.x",
-		"tap": "11.x",
+		"tap": "12.x",
 		"uglify-js": "3.x",
 		"umd": "3.x"
 	},

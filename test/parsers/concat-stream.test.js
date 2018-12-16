@@ -4,23 +4,8 @@ const tap = require('tap');
 
 const ConcatStream = require('simples/lib/parsers/concat-stream');
 
-const { Transform } = require('stream');
-const { StringDecoder } = require('string_decoder');
-
 const dataString = 'ĂÂÎȘȚ';
 const dataBuffer = Buffer.from(dataString);
-
-tap.test('ConcatStream.prototype.constructor()', (test) => {
-
-	const concatStream = new ConcatStream();
-
-	test.ok(concatStream instanceof ConcatStream);
-	test.ok(concatStream instanceof Transform);
-	test.ok(concatStream.buffer === '');
-	test.ok(concatStream.decoder instanceof StringDecoder);
-
-	test.end();
-});
 
 tap.test('ConcatStream.prototype.end()', (test) => {
 

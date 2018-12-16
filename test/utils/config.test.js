@@ -4,11 +4,6 @@ const tap = require('tap');
 
 const Config = require('simples/lib/utils/config');
 
-const {
-	availableCompressions,
-	defaultCompression
-} = require('simples/lib/utils/constants');
-
 tap.test('Config.getEnableOption', (test) => {
 
 	const enableFunction = () => true;
@@ -34,6 +29,9 @@ tap.test('Config.getObjectOption', (test) => {
 });
 
 tap.test('Config.getSetOption', (test) => {
+
+	const availableCompressions = new Set(['deflate', 'gzip']);
+	const defaultCompression = 'deflate';
 
 	test.ok(Config.getSetOption('gzip', availableCompressions, defaultCompression) === 'gzip');
 	test.ok(Config.getSetOption('invalid-compression', availableCompressions, defaultCompression) === 'deflate');
@@ -131,6 +129,16 @@ tap.test('Config.getConfig', (test) => {
 		set: 'head',
 		string: ''
 	});
+
+	test.end();
+});
+
+tap.test('Config.isEnabled()', (test) => {
+
+	test.equal(Config.isEnabled(() => true, null), true);
+	test.equal(Config.isEnabled(() => false, null), false);
+	test.equal(Config.isEnabled(true, null), true);
+	test.equal(Config.isEnabled(false, null), false);
 
 	test.end();
 });

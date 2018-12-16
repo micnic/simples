@@ -1,6 +1,6 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
 
-# 0.9.0-alpha-3
+# 0.9.0-alpha-4
 
 simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
 
@@ -29,7 +29,7 @@ simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers
 
 ## Installation
 
-    npm install simples
+    npm install simples@alpha
 
 ## Examples
 
@@ -44,9 +44,6 @@ const simples = require('simples');
 
 const server = simples(); // Your server is set up on port 80
 
-// Serve static files located in the folder "static"
-server.serve('static');
-
 // Catch 404 Error
 server.error(404, (connection) => {
     connection.end('Error 404 caught');
@@ -55,27 +52,6 @@ server.error(404, (connection) => {
 // Create the first route
 server.get('/', (connection) => {
     connection.end('Simples Works');
-});
-```
-
-### Client Creation
-
-```js
-const simples = require('simples');
-
-const client = simples.client();
-
-// GET request
-client.get('/').on('body', (response, body) => {
-    console.log('Response status: ' + response.status);
-    console.log('Response body: ' + body.toString());
-});
-
-// POST request
-client.post('/send').send(/* data */).on('response', (response) => {
-    // Do something with the response
-}).on('body', (response, body) => {
-    console.log('Response body: ' + body.toString());
 });
 ```
 
@@ -171,4 +147,25 @@ socket.on('message', (message) => {
 
 // Send the first message
 socket.send('ECHO');
+```
+
+### Client Creation
+
+```js
+const simples = require('simples');
+
+const client = simples.client();
+
+// GET request
+client.get('/').on('body', (response, body) => {
+    console.log('Response status: ' + response.status);
+    console.log('Response body: ' + body.toString());
+});
+
+// POST request
+client.post('/send').send(/* data */).on('response', (response) => {
+    // Do something with the response
+}).on('body', (response, body) => {
+    console.log('Response body: ' + body.toString());
+});
 ```
