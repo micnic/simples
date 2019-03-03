@@ -1,0 +1,162 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Mirror · simpleS</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="A Simple Web Framework for Node.js"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Mirror · simpleS"/><meta property="og:type" content="website"/><meta property="og:url" content="https://micnic.github.io/simplesindex.html"/><meta property="og:description" content="A Simple Web Framework for Node.js"/><meta property="og:image" content="https://micnic.github.io/simples/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://micnic.github.io/simples/img/logo.svg"/><link rel="shortcut icon" href="/simplesimg/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/foundation.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/simplescss/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/simples"><img class="logo" src="/simplesimg/logo-white.svg" alt="simpleS"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/simplesdocs/" target="_self">Docs</a></li><li class=""><a href="https://npmjs.org/package/simples" target="_self">npm</a></li><li class=""><a href="https://github.com/micnic/simpleS" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Reference</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Docs</h3><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/">Index</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/start">Get Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Reference</h3><ul><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">General</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/server">Server</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/simplesdocs/mirror">Mirror</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/store">Store</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">HTTP</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/http-host">HTTPHost</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/router">Router</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/http-connection">HTTPConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">WS</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-host">WSHost</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-channel">WSChannel</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-connection">WSConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Client</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/client">Client</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/client-request">ClientRequest</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/client-connection">ClientConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Info</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/logging">Logging</a></li></ul></div></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Mirror</h1></header><article><div><span><p><code>simpleS</code> allows, using mirrors, to create servers with the same configuration
+but on different ports.</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> simples = <span class="hljs-built_in">require</span>(<span class="hljs-string">'simples'</span>);
+
+<span class="hljs-keyword">const</span> server = simples();
+
+<span class="hljs-keyword">const</span> mirror = server.mirror(<span class="hljs-number">8080</span>);
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="mirror-instance"></a><a href="#mirror-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mirror Instance</h2>
+<pre><code class="hljs css language-js">server.mirror([port, options, callback])
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>port</code></td><td><code>number</code></td><td><code>80</code> - HTTP, <code>443</code> - HTTPS</td></tr>
+<tr><td style="text-align:center"><code>options</code></td><td><code>simples.MirrorOptions</code></td><td><code>null</code></td></tr>
+<tr><td style="text-align:center"><code>callback</code></td><td><code>(mirror: simples.Mirror) =&gt; void</code></td><td><code>null</code></td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Mirror</code></td><td></td></tr>
+</tbody>
+</table>
+<p>Mirror instances are configured in the same way <a href="/simplesdocs/server#server-instance">server instances</a> are
+configured with the exception the mirrors do not use <code>config</code> property as they
+do not have to configure any main router.</p>
+<hr>
+<p>Mirrors are a limited version of servers, which can start, restart or stop,
+nothing more, they will serve the hosts that are defined in their parent server.
+The basic use cases for mirrors are the HTTP + HTTPS server pair and additional
+servers for development purposes. The <code>.mirror()</code> method of the server will
+create and configure a new mirror.</p>
+<p><strong>Note:</strong> mirrors are independent from the main server, if the server is stopped
+the mirrors are still functional until they are explicitly stopped.</p>
+<h2><a class="anchor" aria-hidden="true" id="https-http-server-pair"></a><a href="#https-http-server-pair" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>HTTPS - HTTP server pair</h2>
+<p>The basic use case for mirrors is the HTTPS - HTTP server pair:</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> server = simples({ <span class="hljs-comment">// The server is set on port 443</span>
+    https: {
+        <span class="hljs-attr">key</span>: <span class="hljs-string">'path/to/key.pem'</span>,
+        <span class="hljs-attr">cert</span>: <span class="hljs-string">'path/to/cert.pem'</span>
+    }
+});
+
+<span class="hljs-keyword">const</span> mirror = server.mirror(); <span class="hljs-comment">// The mirror is set on port 80</span>
+</code></pre>
+<pre><code class="hljs css language-js"><span class="hljs-comment">// This can be achieved in the other way too</span>
+
+<span class="hljs-keyword">const</span> server = simples(); <span class="hljs-comment">// The server is set on port 80</span>
+
+<span class="hljs-keyword">const</span> mirror = server.mirror({ <span class="hljs-comment">// The mirror is set on port 443</span>
+    https: {
+        <span class="hljs-attr">key</span>: <span class="hljs-string">'path/to/key.pem'</span>,
+        <span class="hljs-attr">cert</span>: <span class="hljs-string">'path/to/cert.pem'</span>
+    }
+});
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="multiple-development-mirrors"></a><a href="#multiple-development-mirrors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multiple Development Mirrors</h2>
+<p>The other use case for mirrors are multiple development mirrors on different
+ports:</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> server = simples(); <span class="hljs-comment">// The server is set on port 80</span>
+
+<span class="hljs-keyword">const</span> mirror1 = server.mirror(<span class="hljs-number">8080</span>); <span class="hljs-comment">// The mirror is set on port 8080</span>
+<span class="hljs-keyword">const</span> mirror2 = server.mirror(<span class="hljs-number">8081</span>); <span class="hljs-comment">// The mirror is set on port 8081</span>
+<span class="hljs-keyword">const</span> mirror3 = server.mirror(<span class="hljs-number">8082</span>); <span class="hljs-comment">// The mirror is set on port 8082</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="data-container"></a><a href="#data-container" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data Container</h2>
+<p><code>.data</code></p>
+<p>Every mirror has a data container to store any meta data about the mirror.</p>
+<h2><a class="anchor" aria-hidden="true" id="starting-and-restarting"></a><a href="#starting-and-restarting" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting and Restarting</h2>
+<pre><code class="hljs css language-js">.start([port, callback])
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>port</code></td><td><code>number</code></td><td><code>80</code> - HTTP, <code>443</code> - HTTPS</td></tr>
+<tr><td style="text-align:center"><code>callback</code></td><td><code>(mirror: simples.Mirror) =&gt; void</code></td><td><code>null</code></td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Mirror</code></td><td></td></tr>
+</tbody>
+</table>
+<p>Start listening for requests on the provided port. If the mirror is already
+started and the provided port differs from the mirror's port then <code>simpleS</code> will
+restart the mirror and will listen on the new provided port. Can have an
+optional callback. All connection in simpleS are kept alive and the restart can
+take few seconds for closing alive http and ws connections. While restarting, no
+new connection will be accepted but existing connections will be still served.
+When the mirror will be started the <code>start</code> event will be emitted. This method
+is called automatically when a new mirror instance is created, it is not needed
+to call it explicitly on mirror creation. The purpose of this method is to
+provide a way to switch port. Returns current instance, so calls can be chained.</p>
+<pre><code class="hljs css language-js">mirror.start(<span class="hljs-number">80</span>, (mirror) =&gt; {
+    <span class="hljs-comment">// Application logic</span>
+});
+
+<span class="hljs-comment">// Listen for the start of the mirror</span>
+mirror.on(<span class="hljs-string">'start'</span>, (mirror) =&gt; {
+    <span class="hljs-comment">// Application logic</span>
+});
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="stopping"></a><a href="#stopping" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Stopping</h2>
+<pre><code class="hljs css language-js">.stop([callback])
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>callback</code></td><td><code>(mirror: simples.Mirror) =&gt; void</code></td><td><code>null</code></td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Mirror</code></td><td></td></tr>
+</tbody>
+</table>
+<p>Stop the mirror. Can have an optional callback. All connection in simpleS are
+kept alive and the closing can take few seconds for closing alive HTTP and WS
+connections. While closing, no new connection will be accepted but existing
+connections will be still served. When the mirror will be stopped the <code>stop</code>
+event will be emitted. Returns current instance, so calls can be chained.</p>
+<pre><code class="hljs css language-js">mirror.stop(<span class="hljs-function">(<span class="hljs-params">mirror</span>) =&gt;</span> {
+    <span class="hljs-comment">// Application logic</span>
+});
+
+<span class="hljs-comment">// Listen for the stop of the mirror</span>
+mirror.on(<span class="hljs-string">'stop'</span>, (mirror) =&gt; {
+    <span class="hljs-comment">// Application logic</span>
+});
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="error-handling"></a><a href="#error-handling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Error Handling</h2>
+<p>Any mirror instance is an event emitter, all possible errors that may appear at
+the level of the mirror can be caught using the usual error event listener
+attached to the instance. It is recommended to attach error event listeners to
+the mirror to prevent any undesired behavior.</p>
+<pre><code class="hljs css language-js">mirror.on(<span class="hljs-string">'error'</span>, (error) =&gt; {
+    <span class="hljs-comment">// Handle any error that occurs at the mirror level</span>
+});
+</code></pre>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/simplesdocs/server"><span class="arrow-prev">← </span><span>Server</span></a><a class="docs-next button" href="/simplesdocs/store"><span>Store</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#mirror-instance">Mirror Instance</a></li><li><a href="#https-http-server-pair">HTTPS - HTTP server pair</a></li><li><a href="#multiple-development-mirrors">Multiple Development Mirrors</a></li><li><a href="#data-container">Data Container</a></li><li><a href="#starting-and-restarting">Starting and Restarting</a></li><li><a href="#stopping">Stopping</a></li><li><a href="#error-handling">Error Handling</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/simples" class="nav-home"><img src="/simplesimg/logo-square.svg" alt="simpleS" width="66" height="58"/></a><div><h5>Docs</h5><a href="/simplesdocs/en/index">Index</a><a href="/simplesdocs/en/start">Get Started</a></div><div><h5>More</h5><a href="https://npmjs.org/package/simples">npm</a><a href="https://github.com/micnic/simpleS">GitHub</a><a class="github-button" href="https://github.com/micnic/simples" data-icon="octicon-star" data-count-href="/micnic/simples/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2012 - 2019 Nicu Micleușanu</section></footer></div></body></html>

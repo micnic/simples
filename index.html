@@ -1,244 +1,28 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+<!DOCTYPE html><html lang=""><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>simpleS · A Simple Web Framework for Node.js</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="A Simple Web Framework for Node.js"/><meta property="og:title" content="simpleS · A Simple Web Framework for Node.js"/><meta property="og:type" content="website"/><meta property="og:url" content="https://micnic.github.io/simplesindex.html"/><meta property="og:description" content="A Simple Web Framework for Node.js"/><meta property="og:image" content="https://micnic.github.io/simples/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://micnic.github.io/simples/img/logo.svg"/><link rel="shortcut icon" href="/simplesimg/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/foundation.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/simplescss/main.css"/></head><body><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/simples"><img class="logo" src="/simplesimg/logo-white.svg" alt="simpleS"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavItemActive"><a href="/simplesdocs/" target="_self">Docs</a></li><li class=""><a href="https://npmjs.org/package/simples" target="_self">npm</a></li><li class=""><a href="https://github.com/micnic/simpleS" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div><div class="homeContainer"><div class="homeSplashFade"><div class="wrapper homeWrapper"><div class="inner"><h2 class="projectTitle"><img src="/simplesimg/logo.svg"/><small>A Simple Web Framework for Node.js</small></h2><div class="section promoSection"><div class="promoRow"><div class="pluginRowBlock"><div class="pluginWrapper buttonWrapper"><a class="button" href="#install">Installation</a></div><div class="pluginWrapper buttonWrapper"><a class="button" href="/simplesdocs/start">Get Started</a></div><div class="pluginWrapper buttonWrapper"><a class="button" href="/simplesdocs/index">Documentation</a></div></div></div></div></div></div></div></div><div class="mainContainer"><div class="container lightBackground paddingBottom paddingTop"><div class="wrapper"><div class="gridBlock"><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/graph.svg"/></div><div class="blockContent"><h2><div><span><p>Simplicity and Performance</p>
+</span></div></h2><div><span><p>API is focused on simplicity but keeping a high performance</p>
+</span></div></div></div><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/server-client.svg"/></div><div class="blockContent"><h2><div><span><p>HTTP(S) and WS(S) API</p>
+</span></div></h2><div><span><p>API for creating servers and clients for the HTTP(S) and WebSocket protocols</p>
+</span></div></div></div><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/routing.svg"/></div><div class="blockContent"><h2><div><span><p>Advanced Routing</p>
+</span></div></h2><div><span><p>Advanced routing for HTTP requests, static files and errors</p>
+</span></div></div></div><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/hosting.svg"/></div><div class="blockContent"><h2><div><span><p>Virtual Hosting and Mirrors</p>
+</span></div></h2><div><span><p>Every server can serve multiple hosts and on multiple ports</p>
+</span></div></div></div><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/templating.svg"/></div><div class="blockContent"><h2><div><span><p>Template Engine Support</p>
+</span></div></h2><div><span><p>Support for third-party template engines</p>
+</span></div></div></div><div class="blockElement alignCenter imageAlignTop threeByGridBlock"><div class="blockImage"><img src="/simplesimg/middlewares.svg"/></div><div class="blockContent"><h2><div><span><p>All-In-One Solution</p>
+</span></div></h2><div><span><p>Includes most common tools out of the box</p>
+</span></div></div></div></div></div></div><div class="container paddingBottom paddingTop" id="install"><div class="wrapper"><div class="gridBlock"><div class="blockElement imageAlignSide imageAlignLeft twoByGridBlock"><div class="blockImage"><img src="/simplesimg/command-line.svg"/></div><div class="blockContent"><h2><div><span><p>Installation</p>
+</span></div></h2><div><span><p>Install latest simpleS version 0.9.0 by running the following command:</p>
+<p><code>npm i simples@alpha</code></p>
+</span></div></div></div></div></div></div><div class="container lightBackground paddingBottom paddingTop" id="try"><div class="wrapper"><div class="gridBlock"><div class="blockElement imageAlignSide imageAlignRight twoByGridBlock"><div class="blockContent"><h2><div><span><p>Try now!</p>
+</span></div></h2><div><span><p>Create your own server just by using few lines of code:</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> simples = <span class="hljs-built_in">require</span>(<span class="hljs-string">'simples'</span>);
 
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+<span class="hljs-keyword">const</span> server = simples();
 
-    <title>simpleS by micnic</title>
-  </head>
-
-  <body>
-    <header>
-      <div class="inner">
-        <h1>simpleS</h1>
-        <h2>Simple Server for Node.js</h2>
-        <a href="https://github.com/micnic/simpleS" class="button"><small>View project on</small> GitHub</a>
-      </div>
-    </header>
-
-    <div id="content-wrapper">
-      <div class="inner clearfix">
-        <section id="main-content">
-          <p><img src="https://raw.github.com/micnic/simpleS/master/logo.png"></p>
-
-<h1>
-<a id="088" class="anchor" href="#088" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>0.8.8</h1>
-
-<p><a href="https://gitter.im/micnic/simpleS"><img src="https://badges.gitter.im/simples.png" alt="Gitter"></a></p>
-
-<p>simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:</p>
-
-<ul>
-<li>High performance and simple structure with minimum configuration</li>
-<li>Advanced routing for http requests, static files and errors</li>
-<li>Unique interface for requests and responses (named as connection)</li>
-<li>Response compression (deflate and gzip, disabled by default)</li>
-<li>Virtual Hosting</li>
-<li>CORS support</li>
-<li>Sessions (disabled by default)</li>
-<li>Template engine support</li>
-<li>WebSocket implementation (version 13, RFC 6455)</li>
-<li>Client API for HTTP requests and WebSocket connections</li>
-<li>Browser simple API for AJAX and WebSocket</li>
-</ul>
-
-<h4>
-<a id="works-with-nodejs-010-and-iojs-10-" class="anchor" href="#works-with-nodejs-010-and-iojs-10-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Works with node.js 0.10+ and io.js 1.0+ !</h4>
-
-<h4>
-<a id="any-feedback-is-welcome" class="anchor" href="#any-feedback-is-welcome" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Any feedback is welcome!</h4>
-
-<h4>
-<a id="more-simple-modules" class="anchor" href="#more-simple-modules" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>More simple modules:</h4>
-
-<ul>
-<li><a href="https://www.npmjs.com/package/recache">recache</a></li>
-<li><a href="https://www.npmjs.com/package/simpler">simpleR</a></li>
-<li><a href="https://www.npmjs.com/package/simplet">simpleT</a></li>
-</ul>
-
-<h3>
-<a id="changelog" class="anchor" href="#changelog" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Changelog">Changelog</a>
-</h3>
-
-<h3>
-<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><a href="https://github.com/micnic/simpleS/wiki/Documentation">Documentation</a>
-</h3>
-
-<h2>
-<a id="instalation" class="anchor" href="#instalation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Instalation</h2>
-
-<pre><code>npm install simples
+server.get(<span class="hljs-string">'/'</span>, (connection) =&gt; {
+    connection.end(<span class="hljs-string">'Hello World'</span>);
+});
 </code></pre>
-
-<h2>
-<a id="examples" class="anchor" href="#examples" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Examples</h2>
-
-<p>See the folder <code>examples/</code> in the module directory, it contains examples that cover most simpleS features.</p>
-
-<h2>
-<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
-
-<h3>
-<a id="server-creation" class="anchor" href="#server-creation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Server Creation</h3>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
-
-<span class="pl-k">var</span> server <span class="pl-k">=</span> <span class="pl-en">simples</span>(); <span class="pl-c">// Your server is set up on port 80</span>
-
-<span class="pl-c">// Enable compression (default is deflate)</span>
-<span class="pl-smi">server</span>.<span class="pl-en">config</span>({
-    compression<span class="pl-k">:</span> {
-        enabled<span class="pl-k">:</span> <span class="pl-c1">true</span>
-    }
-});
-
-<span class="pl-c">// Serve static files located in the folder "static"</span>
-<span class="pl-smi">server</span>.<span class="pl-en">serve</span>(<span class="pl-s"><span class="pl-pds">'</span>static<span class="pl-pds">'</span></span>);
-
-<span class="pl-c">// Catch 404 Error</span>
-<span class="pl-smi">server</span>.<span class="pl-en">error</span>(<span class="pl-c1">404</span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Error 404 caught<span class="pl-pds">'</span></span>);
-});
-
-<span class="pl-c">// Create the first route</span>
-<span class="pl-smi">server</span>.<span class="pl-c1">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Simples Works<span class="pl-pds">'</span></span>);
-});</pre></div>
-
-<h3>
-<a id="client-creation" class="anchor" href="#client-creation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Client Creation</h3>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
-
-<span class="pl-k">var</span> client <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">client</span>();
-
-<span class="pl-c">// GET request</span>
-<span class="pl-smi">client</span>.<span class="pl-c1">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response status: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">response</span>.<span class="pl-c1">status</span>);
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">body</span>.<span class="pl-c1">toString</span>());
-});
-
-<span class="pl-c">// POST request</span>
-<span class="pl-smi">client</span>.<span class="pl-en">post</span>(<span class="pl-s"><span class="pl-pds">'</span>/send<span class="pl-pds">'</span></span>).<span class="pl-c1">send</span>(<span class="pl-c">/* data */</span>).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>response<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>) {
-    <span class="pl-c">// Do something with the response</span>
-}).<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>body<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">response</span>, <span class="pl-smi">body</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Response body: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">body</span>.<span class="pl-c1">toString</span>());
-});</pre></div>
-
-<h3>
-<a id="virtual-hosting" class="anchor" href="#virtual-hosting" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Virtual Hosting</h3>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> host0 <span class="pl-k">=</span> server; <span class="pl-c">// The server is in the same time the main host</span>
-<span class="pl-k">var</span> host1 <span class="pl-k">=</span> <span class="pl-smi">server</span>.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example.com<span class="pl-pds">'</span></span>); <span class="pl-c">// Other hosts</span>
-<span class="pl-k">var</span> host2 <span class="pl-k">=</span> <span class="pl-smi">server</span>.<span class="pl-c1">host</span>(<span class="pl-s"><span class="pl-pds">'</span>example2.com<span class="pl-pds">'</span></span>);
-
-<span class="pl-c">// Now for each host you can apply individual routing</span>
-<span class="pl-smi">host0</span>.<span class="pl-c1">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Main Host<span class="pl-pds">'</span></span>);
-});
-
-<span class="pl-smi">host1</span>.<span class="pl-c1">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Host 1<span class="pl-pds">'</span></span>);
-});
-
-<span class="pl-smi">host2</span>.<span class="pl-c1">get</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-    <span class="pl-smi">connection</span>.<span class="pl-en">end</span>(<span class="pl-s"><span class="pl-pds">'</span>Host 2<span class="pl-pds">'</span></span>);
-});</pre></div>
-
-<h3>
-<a id="websocket" class="anchor" href="#websocket" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>WebSocket</h3>
-
-<p>Let's create an echo WebSocket server:</p>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-smi">server</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, {
-    limit<span class="pl-k">:</span> <span class="pl-c1">1024</span>, <span class="pl-c">// The maximum size of a message</span>
-    mode<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>text<span class="pl-pds">'</span></span>, <span class="pl-c">// Set connection mode, see docs for more info</span>
-    origins<span class="pl-k">:</span> [<span class="pl-s"><span class="pl-pds">'</span>null<span class="pl-pds">'</span></span>] <span class="pl-c">// Set accepted origins, "null" for localhost</span>
-}, <span class="pl-k">function</span> (<span class="pl-smi">connection</span>) {
-
-    <span class="pl-c">// Log the new connection</span>
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>New connection<span class="pl-pds">'</span></span>);
-
-    <span class="pl-c">// Listen for messages to send them back</span>
-    <span class="pl-smi">connection</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-        <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Message: <span class="pl-pds">'</span></span> <span class="pl-k">+</span> <span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
-        <span class="pl-smi">connection</span>.<span class="pl-c1">send</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
-    });
-
-    <span class="pl-c">// Log connection close</span>
-    <span class="pl-smi">connection</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>close<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> () {
-        <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-s"><span class="pl-pds">'</span>Connection closed<span class="pl-pds">'</span></span>);
-    });
-});</pre></div>
-
-<p>Access the server from the browser built-in WebSocket API:</p>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> socket <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">WebSocket</span>(<span class="pl-s"><span class="pl-pds">'</span>ws://localhost/<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>);
-
-<span class="pl-c">// Listen for messages</span>
-<span class="pl-smi">socket</span>.<span class="pl-en">onmessage</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-c1">event</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-c1">event</span>.<span class="pl-c1">data</span>);
-};
-
-<span class="pl-c">// Send the first message</span>
-<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
-
-<p>Access the server from the browser simpleS WebSocket API:</p>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> socket <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>, [<span class="pl-s"><span class="pl-pds">'</span>echo<span class="pl-pds">'</span></span>]);
-
-<span class="pl-c">// Listen for messages</span>
-<span class="pl-smi">socket</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
-});
-
-<span class="pl-c">// Send the first message</span>
-<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
-
-<p>Access the server from server-side simpleS client WebSocket API:</p>
-
-<div class="highlight highlight-source-js"><pre><span class="pl-k">var</span> simples <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>simples<span class="pl-pds">'</span></span>);
-
-<span class="pl-k">var</span> client <span class="pl-k">=</span> <span class="pl-smi">simples</span>.<span class="pl-en">client</span>();
-
-<span class="pl-k">var</span> socket <span class="pl-k">=</span> <span class="pl-smi">client</span>.<span class="pl-en">ws</span>(<span class="pl-s"><span class="pl-pds">'</span>/<span class="pl-pds">'</span></span>);
-
-<span class="pl-c">// Listen for messages</span>
-<span class="pl-smi">socket</span>.<span class="pl-en">on</span>(<span class="pl-s"><span class="pl-pds">'</span>message<span class="pl-pds">'</span></span>, <span class="pl-k">function</span> (<span class="pl-smi">message</span>) {
-    <span class="pl-en">console</span>.<span class="pl-c1">log</span>(<span class="pl-smi">message</span>.<span class="pl-c1">data</span>);
-});
-
-<span class="pl-c">// Send the first message</span>
-<span class="pl-smi">socket</span>.<span class="pl-c1">send</span>(<span class="pl-s"><span class="pl-pds">'</span>ECHO<span class="pl-pds">'</span></span>);</pre></div>
-        </section>
-
-        <aside id="sidebar">
-          <a href="https://github.com/micnic/simpleS/zipball/master" class="button">
-            <small>Download</small>
-            .zip file
-          </a>
-          <a href="https://github.com/micnic/simpleS/tarball/master" class="button">
-            <small>Download</small>
-            .tar.gz file
-          </a>
-
-          <p class="repo-owner"><a href="https://github.com/micnic/simpleS"></a> is maintained by <a href="https://github.com/micnic">micnic</a>.</p>
-
-          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
-        </aside>
-      </div>
-    </div>
-
-  
-  </body>
-</html>
+</span></div></div><div class="blockImage"><img src="/simplesimg/logo-square.svg"/></div></div></div></div></div><div class="container paddingBottom paddingTop"><div class="wrapper"><div class="gridBlock"><div class="blockElement imageAlignSide imageAlignLeft twoByGridBlock"><div class="blockImage"><img src="/simplesimg/learn.svg"/></div><div class="blockContent"><h2><div><span><p>Learn How</p>
+</span></div></h2><div><span><p>Read docs, follow tutorial, create apps!</p>
+</span></div></div></div></div></div></div></div></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/simples" class="nav-home"><img src="/simplesimg/logo-square.svg" alt="simpleS" width="66" height="58"/></a><div><h5>Docs</h5><a href="/simplesdocs/index">Index</a><a href="/simplesdocs/start">Get Started</a></div><div><h5>More</h5><a href="https://npmjs.org/package/simples">npm</a><a href="https://github.com/micnic/simpleS">GitHub</a><a class="github-button" href="https://github.com/micnic/simples" data-icon="octicon-star" data-count-href="/micnic/simples/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2012 - 2019 Nicu Micleușanu</section></footer></div></body></html>

@@ -1,0 +1,411 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Router · simpleS</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="A Simple Web Framework for Node.js"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Router · simpleS"/><meta property="og:type" content="website"/><meta property="og:url" content="https://micnic.github.io/simplesindex.html"/><meta property="og:description" content="A Simple Web Framework for Node.js"/><meta property="og:image" content="https://micnic.github.io/simples/img/logo.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://micnic.github.io/simples/img/logo.svg"/><link rel="shortcut icon" href="/simplesimg/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/foundation.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/simplescss/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/simples"><img class="logo" src="/simplesimg/logo-white.svg" alt="simpleS"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/simplesdocs/" target="_self">Docs</a></li><li class=""><a href="https://npmjs.org/package/simples" target="_self">npm</a></li><li class=""><a href="https://github.com/micnic/simpleS" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Reference</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Docs</h3><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/">Index</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/start">Get Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Reference</h3><ul><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">General</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/server">Server</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/mirror">Mirror</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/store">Store</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">HTTP</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/http-host">HTTPHost</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/simplesdocs/router">Router</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/http-connection">HTTPConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">WS</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-host">WSHost</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-channel">WSChannel</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/ws-connection">WSConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Client</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/client">Client</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/client-request">ClientRequest</a></li><li class="navListItem"><a class="navItem" href="/simplesdocs/client-connection">ClientConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Info</h4><ul><li class="navListItem"><a class="navItem" href="/simplesdocs/logging">Logging</a></li></ul></div></ul></div></div></section></div><script>
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              const headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                  document.body.classList.remove('tocActive');
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Router</h1></header><article><div><span><p><code>simpleS</code> is easy to use with complex routing structures.</p>
+<pre><code class="hljs css language-js"><span class="hljs-keyword">const</span> simples = <span class="hljs-built_in">require</span>(<span class="hljs-string">'simples'</span>);
+
+<span class="hljs-keyword">const</span> server = simples();
+
+<span class="hljs-keyword">const</span> router = server.router(<span class="hljs-string">'/path/to/router'</span>);
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="router-instance"></a><a href="#router-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Instance</h2>
+<pre><code class="hljs css language-js">router.router(location[, options])
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>location</code></td><td><code>string</code></td><td>N/A, required</td></tr>
+<tr><td style="text-align:center"><code>options</code></td><td><code>simples.RouterOptions</code></td><td><code>null</code></td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>location</code> argument specifies the relative path of the router to the parent
+router.</p>
+<p><code>options</code> argument specifies router configuration which will be applied to the
+routes and child routers by default. If it is not defined default router options
+are used. Their structure is explained <a href="#router-options">below</a>.</p>
+<hr>
+<p>Router class is designed for advanced routing hierarchy, it allows the creation
+of chains of routers and routes for splitting any application in smaller,
+controllable parts. Server and HTTPHost classes inherit from the Router class,
+they are the main routers in their contexts. Any option configured in the upper
+level of the routing chain is inherited down to child routers.</p>
+<h2><a class="anchor" aria-hidden="true" id="router-options"></a><a href="#router-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Options</h2>
+<p>Router options allows configuring the compression, CORS, logging, sessions,
+static files and connections timeout. These options are applied to the current
+router routes, child routers will inherit this configuration if it is not
+overwritten in their configuration.</p>
+<pre><code class="hljs css language-js">{
+    <span class="hljs-comment">// Compression options</span>
+    compression: {
+
+        <span class="hljs-comment">// Activate the compression, by default the compression is disabled</span>
+        enabled: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// Compression configuration</span>
+        <span class="hljs-comment">// See more on https://nodejs.org/api/zlib.html#zlib_class_options</span>
+        options: <span class="hljs-literal">null</span>,
+
+        <span class="hljs-comment">// The preferred compression type, can be 'deflate' or 'gzip'</span>
+        <span class="hljs-comment">// Default is 'deflate'</span>
+        preferred: <span class="hljs-string">'deflate'</span>
+    },
+
+    <span class="hljs-comment">// CORS options</span>
+    cors: {
+
+        <span class="hljs-comment">// Allow HTTP credentials, by default credentials are disabled</span>
+        credentials: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// Set of accepted headers</span>
+        headers: [],
+
+        <span class="hljs-comment">// Set of accepted methods</span>
+        <span class="hljs-comment">// By default 'DELETE', 'GET', 'HEAD', 'POST', 'PUT' are accepted</span>
+        methods: [<span class="hljs-string">'DELETE'</span>, <span class="hljs-string">'GET'</span>, <span class="hljs-string">'HEAD'</span>, <span class="hljs-string">'POST'</span>, <span class="hljs-string">'PUT'</span>],
+
+        <span class="hljs-comment">// Set the origins accepted by the host</span>
+        origins: []
+    },
+
+    <span class="hljs-comment">// Logger options</span>
+    logger: {
+
+        <span class="hljs-comment">// Activate the logger, by default the logger is disabled</span>
+        enabled: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// Logger format</span>
+        format: <span class="hljs-string">''</span>,
+
+        <span class="hljs-comment">// Log function</span>
+        log: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>,
+
+        <span class="hljs-comment">// Tokens function</span>
+        tokens: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>
+    },
+
+    <span class="hljs-comment">// Session options</span>
+    session: {
+
+        <span class="hljs-comment">// Activate the session, by default sessions are disabled</span>
+        enabled: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// Session store</span>
+        <span class="hljs-comment">// Default is simples memcached store (not for production use)</span>
+        store: simples.store(),
+
+        <span class="hljs-comment">// Timeout for session expiration in seconds, by default 1 hour</span>
+        timeout: <span class="hljs-number">3600</span>
+    },
+
+    <span class="hljs-comment">// Static files options</span>
+    <span class="hljs-keyword">static</span>: {
+
+        <span class="hljs-comment">// Activate the static files, by default they are disabled</span>
+        enabled: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// List of accepted files as indexes for directories</span>
+        <span class="hljs-comment">// By default only 'index.html' is served as index</span>
+        index: [<span class="hljs-string">'index.html'</span>],
+
+        <span class="hljs-comment">// Location of the root directory that will serve the static files</span>
+        location: <span class="hljs-string">''</span>
+    },
+
+    <span class="hljs-comment">// Connection keep alive timeout option</span>
+    timeout: {
+
+        <span class="hljs-comment">// Activate the connection keep alive timeout, by default it is disabled</span>
+        enabled: <span class="hljs-literal">false</span>,
+
+        <span class="hljs-comment">// Value for connection keep alive timeout, by default no value is set</span>
+        value: <span class="hljs-number">0</span>
+    }
+}
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="router-configuration"></a><a href="#router-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Configuration</h2>
+<p>Every property of router options has a separated method to be configured.</p>
+<h3><a class="anchor" aria-hidden="true" id="compression"></a><a href="#compression" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compression</h3>
+<p>Configure router compression options.</p>
+<pre><code class="hljs css language-js">.compression(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterCompressionOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for router compression.
+These options are:</p>
+<ul>
+<li><code>enabled</code> - option for compression activation, it can be a boolean value or a
+function for dynamic activation, this function will receive an argument which is
+the connection and should return a boolean value to enable or disable
+compression for this connection.</li>
+<li><code>options</code> - option for compression configuration, see more information in
+<a href="https://nodejs.org/api/zlib.html#zlib_class_options">Zlib class options</a>.</li>
+<li><code>preferred</code> - option to select the compression type, can be <code>deflate</code> or
+<code>gzip</code>.</li>
+</ul>
+<pre><code class="hljs css language-js">router.compression({
+
+    <span class="hljs-comment">// Activate the compression, by default the compression is disabled</span>
+    enabled: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// Compression configuration</span>
+    <span class="hljs-comment">// See more on https://nodejs.org/api/zlib.html#zlib_class_options</span>
+    options: <span class="hljs-literal">null</span>,
+
+    <span class="hljs-comment">// The preferred compression type, can be 'deflate' or 'gzip'</span>
+    <span class="hljs-comment">// Default is 'deflate'</span>
+    preferred: <span class="hljs-string">'deflate'</span>
+});
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="cors"></a><a href="#cors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CORS</h3>
+<p>Configure router CORS options.</p>
+<pre><code class="hljs css language-js">.cors(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterCORSOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for CORS requests.
+These options are:</p>
+<ul>
+<li><code>credentials</code> - option for enabling of sending of credentials on CORS
+requests. By default no credentials are sent.</li>
+<li><code>headers</code> - option for accepted headers of CORS requests. No accepted headers
+are defined by default.</li>
+<li><code>methods</code> - option for accepted methods of CORS requests. By default <code>DELETE</code>,
+<code>GET</code>, <code>HEAD</code>, <code>POST</code>, <code>PUT</code> are accepted.</li>
+<li><code>origins</code> - option for accepted origins of CORS requests. By default, the
+server will accept requests only from the current host. To accept requests from
+any origin use <code>'*'</code>, if this parameter is used as the first parameter then all
+next origins are rejected. <code>'null'</code> is used for local file system origin
+(localhost), use it on your own risk. These limitations will be applied on all
+requests using CORS. The current host should not be added in the list, it is
+accepted anyway. Examples of use:</li>
+</ul>
+<pre><code class="hljs css language-js"><span class="hljs-comment">// Will accept requests only from these 3 hosts</span>
+[<span class="hljs-string">'null'</span>, <span class="hljs-string">'localhost'</span>, <span class="hljs-string">'example.com'</span>]
+
+<span class="hljs-comment">// Will accept requests from all hosts except 'example.com'</span>
+[<span class="hljs-string">'*'</span>, <span class="hljs-string">'example.com'</span>]
+</code></pre>
+<pre><code class="hljs css language-js">router.cors({
+
+    <span class="hljs-comment">// Allow HTTP credentials, by default credentials are disabled</span>
+    credentials: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// Set of accepted headers</span>
+    headers: [],
+
+    <span class="hljs-comment">// Set of accepted methods</span>
+    <span class="hljs-comment">// By default 'DELETE', 'GET', 'HEAD', 'POST', 'PUT' are accepted</span>
+    methods: [<span class="hljs-string">'DELETE'</span>, <span class="hljs-string">'GET'</span>, <span class="hljs-string">'HEAD'</span>, <span class="hljs-string">'POST'</span>, <span class="hljs-string">'PUT'</span>],
+
+    <span class="hljs-comment">// Set the origins accepted by the host</span>
+    origins: []
+});
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="logger"></a><a href="#logger" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Logger</h3>
+<p>Configure router logger options.</p>
+<pre><code class="hljs css language-js">.logger(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterLoggerOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for router logger.
+These options are:</p>
+<ul>
+<li><code>enabled</code> - option for logger activation, it can be a boolean value or a
+function for dynamic activation, this function will receive an argument which is
+the connection and should return a boolean value to enable or disable logger for
+this connection.</li>
+<li><code>format</code> - option for logger format, see <a href="/simplesdocs/logging">logging</a> for more information.</li>
+<li><code>log</code> - option for logger function, see <a href="/simplesdocs/logging">logging</a> for more information.</li>
+<li><code>tokens</code> - option for logger tokens, see <a href="/simplesdocs/logging">logging</a> for more information.</li>
+</ul>
+<pre><code class="hljs css language-js">router.logger({
+
+    <span class="hljs-comment">// Activate the logger, by default the logger is disabled</span>
+    enabled: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// Logger format</span>
+    format: <span class="hljs-string">''</span>,
+
+    <span class="hljs-comment">// Log function</span>
+    log: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>,
+
+    <span class="hljs-comment">// Tokens function</span>
+    tokens: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>
+});
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="session"></a><a href="#session" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Session</h3>
+<p>Configure router session options</p>
+<pre><code class="hljs css language-js">.session(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterSessionOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for router session. These
+options are:</p>
+<ul>
+<li><code>enabled</code> - option for session activation, it can be a boolean value or a
+function for dynamic activation, this function will receive an argument which is
+the connection and should return a boolean value to enable or disable session
+for this connection.</li>
+<li><code>store</code> - option for session store container, by default it uses simpleS
+memcached store which is not recommended for production use as it does not scale
+and is not persistent. See <a href="/simplesdocs/store#store-implementation">store implementation</a> for more information.</li>
+<li><code>timeout</code> - option for session timeout, by default it is one hour.</li>
+</ul>
+<pre><code class="hljs css language-js">router.session({
+
+    <span class="hljs-comment">// Activate the session, by default sessions are disabled</span>
+    enabled: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// Session store</span>
+    <span class="hljs-comment">// Default is simpleS memcached store (not for production use)</span>
+    store: simples.store(),
+
+    <span class="hljs-comment">// Timeout for session expiration in seconds, by default 1 hour</span>
+    timeout: <span class="hljs-number">3600</span>
+});
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="static"></a><a href="#static" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Static</h3>
+<p>Configure router static files options.</p>
+<pre><code class="hljs css language-js">.static(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterStaticOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for router static files.
+These options are:</p>
+<ul>
+<li><code>enabled</code> - option for static files activation, it can be a boolean value or a
+function for dynamic activation, this function will receive an argument which is
+the connection and should return a boolean value to enable or disable static
+files for this connection.</li>
+<li><code>index</code> - option for accepted index files, it is an array of strings which
+represent the file names, by default only <code>index.html</code> is used as index files
+for directories.</li>
+<li><code>location</code> - option for location of root directory that will serve the static
+files, by default no location is provided.</li>
+</ul>
+<pre><code class="hljs css language-js">router.static({
+
+    <span class="hljs-comment">// Activate the static files, by default static files are disabled</span>
+    enabled: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// List of accepted files as indexes for directories</span>
+    <span class="hljs-comment">// By default only 'index.html' is served as index</span>
+    index: [<span class="hljs-string">'index.html'</span>],
+
+    <span class="hljs-comment">// Location of the root directory that will serve the static files</span>
+    location: <span class="hljs-string">''</span>
+});
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="timeout"></a><a href="#timeout" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Timeout</h3>
+<p>Configure router connections keep alive timeout options.</p>
+<pre><code class="hljs css language-js">.timeout(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterTimeoutOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies the configuration options for connections keep alive
+timeout. These options are:</p>
+<ul>
+<li><code>enabled</code> - option for connections keep alive timeout activation, it can be a
+boolean value or a function for dynamic activation, this function will receive
+an argument which is the connection and should return a boolean value to enable
+or disable static files for this connection.</li>
+<li><code>value</code> - option for timeout value in milliseconds, by default no timeout
+value is set.</li>
+</ul>
+<pre><code class="hljs css language-js">router.timeout({
+
+    <span class="hljs-comment">// Activate the connection keep alive timeout, by default it is disabled</span>
+    enabled: <span class="hljs-literal">false</span>,
+
+    <span class="hljs-comment">// Value for connection keep alive timeout, by default no value is set</span>
+    value: <span class="hljs-number">0</span>
+});
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="routing"></a><a href="#routing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Routing</h2>
+<p>Requests are handled based on their HTTP method and path. To create a route use
+any of the following methods depending on the application needs.</p>
+<p><code>.get(route, listener[, importer])</code> - listen for <code>GET</code> method requests</p>
+<p><code>.post(route, listener[, importer])</code> - listen for <code>POST</code> method requests</p>
+<p><code>.patch(route, listener[, importer])</code> - listen for <code>PATCH</code> method requests</p>
+<p><code>.put(route, listener[, importer])</code> - listen for <code>PUT</code> method requests</p>
+<p><code>.delete(route, listener[, importer])</code> - listen for <code>DELETE</code> method requests</p>
+<p><code>.all(route, listener[, importer])</code> - listen for any kind of accepted requests,
+for defining more generic behavior</p>
+<p><code>.error(code, listener[, importer])</code> - listen for client (4XX) and server (5XX)
+errors, as first parameter a number should be provided as a the HTTP error code.</p>
+<p>These methods listen for requests and uses a callback function with connection
+as parameter or a string for view rendering (see <code>Connection.render()</code>). The
+<code>importer</code> parameter is used only if the listener is a string and define the
+data for the view, as a function, the <code>callback</code> should provide an object as
+parameter to be imported in the view. Returns current instance, so calls can be
+chained.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/simplesdocs/http-host"><span class="arrow-prev">← </span><span>HTTPHost</span></a><a class="docs-next button" href="/simplesdocs/http-connection"><span>HTTPConnection</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#router-instance">Router Instance</a></li><li><a href="#router-options">Router Options</a></li><li><a href="#router-configuration">Router Configuration</a><ul class="toc-headings"><li><a href="#compression">Compression</a></li><li><a href="#cors">CORS</a></li><li><a href="#logger">Logger</a></li><li><a href="#session">Session</a></li><li><a href="#static">Static</a></li><li><a href="#timeout">Timeout</a></li></ul></li><li><a href="#routing">Routing</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/simples" class="nav-home"><img src="/simplesimg/logo-square.svg" alt="simpleS" width="66" height="58"/></a><div><h5>Docs</h5><a href="/simplesdocs/en/index">Index</a><a href="/simplesdocs/en/start">Get Started</a></div><div><h5>More</h5><a href="https://npmjs.org/package/simples">npm</a><a href="https://github.com/micnic/simpleS">GitHub</a><a class="github-button" href="https://github.com/micnic/simples" data-icon="octicon-star" data-count-href="/micnic/simples/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2012 - 2019 Nicu Micleușanu</section></footer></div></body></html>
