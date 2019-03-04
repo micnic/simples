@@ -325,15 +325,14 @@ const host = server.host('example.com', {
 
 Each simpleS host has a `.data` property which represents an object container to store any data which is necessary for the host or the application in general.
 
-#### <a name="server-host-config"/> Host Configuration
+#### <a name="server-router-config"/> Router Configuration
 
-Change the configuration of the host. Returns current instance, so calls can be chained. Possible attributes for the configuration:
+Change the configuration of the router. Possible attributes for the configuration:
 
 ##### Compression configuration:
 ```js
 compression: {
     enabled: false,         // Activate the compression, by default the compression is disabled
-    filter: () => true,     // Filter for compressed content, by default all the server responses will be compressed
     options: null,          // Compression options, see more on https://nodejs.org/api/zlib.html#zlib_class_options
     preferred: 'deflate'    // The preferred compression type, can be 'deflate' or 'gzip', by default is `deflate`
 }
@@ -358,11 +357,20 @@ By default, the server will accept requests only from the current host. To accep
 ['*', 'example.com']                    // Will accept requests from all hosts except 'example.com'
 ```
 
+##### Logger configuration:
+```js
+logger: {
+    enabled: false,
+    format: '',
+    log: () => null,
+    tokens: () => null
+}
+```
+
 ##### Session configuration:
 ```js
 session: {
     enabled: false,             // Activate the session, by default sessions are disabled
-    filter: () => true,         // Filter for routes with session, by default all routes will have session
     store: simples.store(),     // Session store, the default is simples memcached store (not for production use)
     timeout: 3600               // Timeout for session expiration in seconds, by default 1 hour
 }

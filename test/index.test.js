@@ -28,12 +28,12 @@ tap.test('simpleS exports', (test) => {
 			logger: {},
 			session: {},
 			static: {},
-			timeout: 5000
+			timeout: {}
 		});
 		t.match(hosts, MapContainer.dynamic());
 		t.match(meta, {
 			backlog: null,
-			busy: false,
+			busy: true,
 			hostname: '',
 			https: null,
 			instance: http.Server,

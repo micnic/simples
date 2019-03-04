@@ -19,7 +19,7 @@ tap.test('Router.optionsContainer()', (test) => {
 		cors: {},
 		logger: {},
 		session: {},
-		timeout: 5000
+		timeout: {}
 	});
 
 	test.match(Router.optionsContainer({}), {
@@ -27,7 +27,7 @@ tap.test('Router.optionsContainer()', (test) => {
 		cors: {},
 		logger: {},
 		session: {},
-		timeout: 5000
+		timeout: {}
 	});
 
 	test.match(Router.optionsContainer({}, {}), {
@@ -35,7 +35,7 @@ tap.test('Router.optionsContainer()', (test) => {
 		cors: {},
 		logger: {},
 		session: {},
-		timeout: 5000
+		timeout: {}
 	});
 
 	test.end();

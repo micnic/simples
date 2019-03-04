@@ -16,11 +16,11 @@ tap.test('Mirror.prototype.start()', (test) => {
 
 	const result = mirror.start((m) => {
 		test.equal(m, mirror);
+
+		test.end();
 	});
 
 	test.equal(result, mirror);
-
-	test.end();
 });
 
 tap.test('Mirror.prototype.stop()', (test) => {
@@ -29,11 +29,10 @@ tap.test('Mirror.prototype.stop()', (test) => {
 
 	const result = mirror.stop((m) => {
 		test.equal(m, mirror);
+		test.end();
 	});
 
 	test.equal(result, mirror);
-
-	test.end();
 });
 
 tap.test('Mirror.create()', (test) => {
@@ -49,7 +48,7 @@ tap.test('Mirror.create()', (test) => {
 	});
 	test.match(mirrorMeta, {
 		backlog: null,
-		busy: false,
+		busy: true,
 		hostname: '',
 		https: null,
 		instance: http.Server,

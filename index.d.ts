@@ -95,18 +95,24 @@ type RouterOptions<S> = {
 	logger?: RouterLoggerOptions;
 	session?: RouterSessionOptions<S>;
 	static?: RouterStaticOptions;
-	timeout?: number;
+	timeout?: RouterTimeoutOptions;
 };
 
 type RouterSessionOptions<S> = {
 	enabled?: Enabled;
 	store?: Store<S>;
+	timeout?: number;
 };
 
 type RouterStaticOptions = {
 	enabled?: Enabled;
 	index?: string[];
 	location?: string;
+};
+
+type RouterTimeoutOptions = {
+	enabled?: Enabled;
+	value?: number;
 };
 
 type ServerCallback<T> = (server: Server<T>) => void;

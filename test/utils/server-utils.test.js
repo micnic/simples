@@ -1,10 +1,9 @@
 'use strict';
 
-const fs = require('fs');
+const http = require('http');
 const https = require('https');
 const tap = require('tap');
 
-const ErrorEmitter = require('simples/lib/utils/error-emitter');
 const Server = require('simples/lib/server');
 const ServerUtils = require('simples/lib/utils/server-utils');
 const TestUtils = require('simples/test/test-utils');
@@ -48,17 +47,6 @@ tap.test('ServerUtils.getTlsOptions()', (test) => {
 			t.end();
 		});
 	});
-
-	test.end();
-});
-
-tap.test('ServerUtils.getArgs()', (test) => {
-
-	const noop = () => null;
-
-	const result = ServerUtils.getArgs(['boolean', 'function'], noop);
-
-	test.match(result, [null, noop]);
 
 	test.end();
 });
@@ -153,73 +141,77 @@ tap.test('ServerUtils.runFunction()', (test) => {
 
 tap.test('ServerUtils.listenPort()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
-	server._hostname = 'hostname';
-	server._backlog = 100;
+	ServerUtils.setServerMeta(server);
 
-	server._instance = {
-		listen(port, hostname, backlog, callback) {
-			test.ok(port === 80);
-			test.ok(hostname === 'hostname');
-			test.ok(backlog === 100);
-			callback();
-		}
-	};
+	const meta = ServerUtils.getServerMeta(server);
 
-	server.on('start', (serv) => {
-		test.ok(serv === server);
-	}).on('release', () => {
+	meta.instance = http.Server();
 
-		test.end();
+	ServerUtils.listenPort(server, 80, (s) => {
+		test.ok(s === server);
+		test.ok(!meta.busy);
+
+		server.on('start', (arg) => {
+			test.ok(arg === server);
+		}).on('release', () => {
+			test.end();
+		});
 	});
 
-	ServerUtils.listenPort(server, 80, () => {});
+	test.ok(meta.busy);
+	test.ok(meta.port === 80);
+	test.ok(meta.started);
 });
 
 tap.test('ServerUtils.stopServer()', (test) => {
 
-	test.test('Inactive server', (t) => {
+	test.test('Busy started server', (t) => {
 
 		const server = Server.create();
+		const meta = ServerUtils.getServerMeta(server);
 
-		ServerUtils.stopServer(server, (serv) => {
+		ServerUtils.stopServer(server, (s) => {
 
-			t.ok(serv === server);
+			t.ok(s === server);
+			t.ok(!meta.busy);
+			t.ok(!meta.started);
 
-			t.end();
+			server.on('stop', (arg) => {
+				t.ok(arg === server);
+			}).on('release', () => {
+				t.end();
+			});
 		});
 	});
 
-	test.test('Started server', (t) => {
+	test.test('Released started server', (t) => {
 
 		const server = Server.create();
+		const meta = ServerUtils.getServerMeta(server);
 
+		server.once('release', () => {
 
-		server.on('stop', (serv) => {
-			t.ok(serv === server);
-		}).on('release', () => {
+			ServerUtils.stopServer(server, (s) => {
 
-			t.end();
+				t.ok(s === server);
+				t.ok(!meta.busy);
+				t.ok(!meta.started);
+			});
+
+			t.ok(meta.busy);
+			t.ok(!meta.started);
+
+			ServerUtils.stopServer(server, (s) => {
+
+				t.ok(s === server);
+				t.ok(!meta.busy);
+				t.ok(!meta.started);
+
+				t.end();
+			});
 		});
-
-		ServerUtils.stopServer(server, (serv) => {
-			t.ok(serv === server);
-		});
-	});
-
-	test.test('Busy server', (t) => {
-
-		const server = Server.create();
-
-		ServerUtils.stopServer(server, (serv) => {
-
-			t.ok(serv === server);
-
-			t.end();
-		});
-
-		server.emit('release');
 	});
 
 	test.end();
@@ -229,49 +221,51 @@ tap.test('ServerUtils.startServer()', (test) => {
 
 	test.test('No port provided and uninitialized server', (t) => {
 
-		const server = Server.create();
+		const server = new Server();
 
-		ServerUtils.startServer(server);
+		ServerUtils.setServerMeta(server);
 
-		t.end();
+		const meta = ServerUtils.getServerMeta(server);
+
+		meta.instance = http.Server();
+
+		ServerUtils.startServer(server, (s) => {
+
+			t.ok(s === server);
+
+			t.end();
+		});
+
+		t.ok(meta.busy);
+		t.ok(meta.started);
 	});
 
-	test.test('Invalid port number provided and uninitialized server', (t) => {
+	test.test('Port provided and busy started server', (t) => {
 
-		const server = Server.create();
+		const server = new Server();
 
-		ServerUtils.startServer(server, -1);
+		ServerUtils.setServerMeta(server);
 
-		t.end();
-	});
+		const meta = ServerUtils.getServerMeta(server);
 
-	test.test('Port provided and busy server', (t) => {
+		meta.instance = http.Server();
+		meta.busy = true;
+		meta.started = true;
 
-		const server = Server.create();
+		ServerUtils.startServer(server, 80, (s) => {
 
-		ServerUtils.startServer(server, 80);
+			t.ok(s === server);
+		});
 
+		meta.busy = false;
 		server.emit('release');
 
-		t.end();
-	});
+		ServerUtils.startServer(server, 80, (s) => {
 
-	test.test('Same server port provided and started server', (t) => {
+			t.ok(s === server);
 
-		const server = Server.create();
-
-		ServerUtils.startServer(server, 80);
-
-		t.end();
-	});
-
-	test.test('Restart server', (t) => {
-
-		const server = Server.create();
-
-		ServerUtils.startServer(server, 12345);
-
-		t.end();
+			t.end();
+		});
 	});
 
 	test.end();
@@ -279,91 +273,103 @@ tap.test('ServerUtils.startServer()', (test) => {
 
 tap.test('ServerUtils.setupServer()', (test) => {
 
-	const server = Server.create();
-	const noop = () => null;
+	const server = new Server();
+
+	ServerUtils.setServerMeta(server);
+
+	const meta = ServerUtils.getServerMeta(server);
 	const someError = Error('Some error');
+
+	meta.instance = http.Server();
+	meta.requestListener = () => null;
+	meta.upgradeListener = () => null;
 
 	server.on('error', (error) => {
 		test.ok(error === someError);
-		test.ok(server._busy === false);
-		test.ok(server._started === false);
+		test.ok(!meta.busy);
+		test.ok(!meta.started);
 	});
 
-	ServerUtils.setupServer(server, noop);
+	ServerUtils.setupServer(server, (s) => {
 
-	test.end();
+		meta.instance.emit('error', someError);
+
+		test.ok(s === server);
+		test.ok(meta.instance.listenerCount('request') === 1);
+		test.ok(meta.instance.listeners('request')[0] === meta.requestListener);
+		test.ok(meta.instance.listenerCount('upgrade') === 1);
+		test.ok(meta.instance.listeners('upgrade')[0] === meta.upgradeListener);
+		test.end();
+	});
 });
 
 tap.test('ServerUtils.initServer()', (test) => {
 
 	test.test('HTTP server', (t) => {
 
-		const fakeServer = Server.create();
-		const noop = () => null;
+		const server = new Server();
 
-		ServerUtils.initServer(fakeServer, {
-			backlog: 'backlog',
-			hostname: 'hostname',
-			port: 80
-		}, noop);
+		ServerUtils.setServerMeta(server);
 
-		t.end();
+		const meta = ServerUtils.getServerMeta(server);
+
+		meta.requestListener = () => null;
+		meta.upgradeListener = () => null;
+
+		ServerUtils.initServer(server, (s) => {
+			t.ok(s === server);
+			t.ok(meta.instance instanceof http.Server);
+			t.end();
+		});
+
+		t.ok(meta.busy);
 	});
 
 	test.test('HTTPS server', (t) => {
 
-		const fakeServer = Server.create();
-		const httpsOptions = {};
+		const server = new Server();
 
-		const callback = () => {
-			t.ok(fakeServer._backlog === 'backlog');
-			t.ok(fakeServer._busy === false);
-			t.ok(fakeServer._hostname === 'hostname');
-			t.ok(fakeServer._instance instanceof https.Server);
-			t.ok(fakeServer._port === 443);
-			t.ok(fakeServer._started === false);
-		};
+		ServerUtils.setServerMeta(server);
 
-		ServerUtils.initServer(fakeServer, {
-			backlog: 'backlog',
-			hostname: 'hostname',
-			https: httpsOptions,
-			port: 443
-		}, callback);
+		const meta = ServerUtils.getServerMeta(server);
 
-		t.end();
+		meta.https = {};
+		meta.requestListener = () => null;
+		meta.upgradeListener = () => null;
+
+		ServerUtils.initServer(server, (s) => {
+			t.ok(s === server);
+			t.ok(meta.instance instanceof https.Server);
+			t.end();
+		});
+
+		t.ok(meta.busy);
 	});
 
 	test.test('HTTPS server with error', (t) => {
 
-		const fakeServer = Server.create();
-		const httpsOptions = {};
-		const someError = Error('Some error');
+		const server = new Server();
 
-		const callback = (server) => {
-			t.ok(fakeServer._backlog === 'backlog');
-			t.ok(fakeServer._busy === true);
-			t.ok(fakeServer._hostname === 'hostname');
-			t.ok(fakeServer._port === 443);
-			t.ok(fakeServer._started === false);
+		ServerUtils.setServerMeta(server);
 
-			server.on('error', (error) => {
-				t.ok(error === someError);
+		const meta = ServerUtils.getServerMeta(server);
 
-				t.ok(ErrorEmitter.emit.calledOnce);
-
-
-			});
+		meta.https = {
+			cert: 'cert'
 		};
+		meta.requestListener = () => null;
+		meta.upgradeListener = () => null;
 
-		ServerUtils.initServer(fakeServer, {
-			backlog: 'backlog',
-			hostname: 'hostname',
-			https: httpsOptions,
-			port: 443
-		}, callback);
+		server.on('error', () => {
+			t.end();
+		});
 
-		t.end();
+		ServerUtils.initServer(server, (s) => {
+			t.ok(s === server);
+			t.ok(meta.instance === null);
+		});
+
+		t.ok(meta.busy);
 	});
 
 	test.end();

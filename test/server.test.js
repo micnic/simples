@@ -57,11 +57,11 @@ tap.test('Server.prototype.start()', (test) => {
 
 	const result = server.start((s) => {
 		test.equal(s, server);
+
+		test.end();
 	});
 
 	test.equal(result, server);
-
-	test.end();
 });
 
 tap.test('Server.prototype.stop()', (test) => {
@@ -70,11 +70,11 @@ tap.test('Server.prototype.stop()', (test) => {
 
 	const result = server.stop((s) => {
 		test.equal(s, server);
+
+		test.end();
 	});
 
 	test.equal(result, server);
-
-	test.end();
 });
 
 tap.test('Server.create()', (test) => {
@@ -90,12 +90,12 @@ tap.test('Server.create()', (test) => {
 		logger: {},
 		session: {},
 		static: {},
-		timeout: 5000
+		timeout: {}
 	});
 	test.match(hosts, MapContainer.dynamic());
 	test.match(meta, {
 		backlog: null,
-		busy: false,
+		busy: true,
 		hostname: '',
 		https: null,
 		instance: http.Server,
