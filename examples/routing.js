@@ -67,7 +67,7 @@ module.exports = (server) => {
 
 			limit: 1024,
 
-			json: () => {
+			json() {
 				form.on('end', () => {
 					connection.send(form.result);
 				}).on('error', (error) => {
@@ -75,7 +75,7 @@ module.exports = (server) => {
 				});
 			},
 
-			multipart: (form) => {
+			multipart(form) {
 				form.on('field', (field) => {
 					connection.write(field.name + '\n');
 					field.on('readable', () => {
@@ -92,7 +92,7 @@ module.exports = (server) => {
 				});
 			},
 
-			plain: (form) => {
+			plain(form) {
 				form.on('readable', () => {
 					connection.write((form.read() || Buffer(0)).slice(0, 32).toString('hex'));
 				}).on('end', () => {
@@ -102,7 +102,7 @@ module.exports = (server) => {
 				});
 			},
 
-			urlencoded: (form) => {
+			urlencoded(form) {
 				form.on('end', () => {
 					connection.send(form.result, null, '    ');
 				}).on('error', (error) => {
