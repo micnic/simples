@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url> <loc>https://micnic.github.io/index</loc> <changefreq>weekly</changefreq> <priority>0.5</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/en/index" /> </url>
-<url> <loc>https://micnic.github.io/docs/client-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/client-connection" /> </url>
-<url> <loc>https://micnic.github.io/docs/client-request</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/client-request" /> </url>
-<url> <loc>https://micnic.github.io/docs/client</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/client" /> </url>
-<url> <loc>https://micnic.github.io/docs/http-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/http-connection" /> </url>
-<url> <loc>https://micnic.github.io/docs/http-host</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/http-host" /> </url>
-<url> <loc>https://micnic.github.io/docs/</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/" /> </url>
-<url> <loc>https://micnic.github.io/docs/logging</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/logging" /> </url>
-<url> <loc>https://micnic.github.io/docs/mirror</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/mirror" /> </url>
-<url> <loc>https://micnic.github.io/docs/router</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/router" /> </url>
-<url> <loc>https://micnic.github.io/docs/server</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/server" /> </url>
-<url> <loc>https://micnic.github.io/docs/start</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/start" /> </url>
-<url> <loc>https://micnic.github.io/docs/store</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/store" /> </url>
-<url> <loc>https://micnic.github.io/docs/ws-channel</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/ws-channel" /> </url>
-<url> <loc>https://micnic.github.io/docs/ws-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/ws-connection" /> </url>
-<url> <loc>https://micnic.github.io/docs/ws-host</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://micnic.github.io/docs/ws-host" /> </url>
+<url> <loc>https://simples.js.org/index</loc> <changefreq>weekly</changefreq> <priority>0.5</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/en/index" /> </url>
+<url> <loc>https://simples.js.org/docs/client-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/client-connection" /> </url>
+<url> <loc>https://simples.js.org/docs/client-request</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/client-request" /> </url>
+<url> <loc>https://simples.js.org/docs/client</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/client" /> </url>
+<url> <loc>https://simples.js.org/docs/http-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/http-connection" /> </url>
+<url> <loc>https://simples.js.org/docs/http-host</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/http-host" /> </url>
+<url> <loc>https://simples.js.org/docs/</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/" /> </url>
+<url> <loc>https://simples.js.org/docs/logging</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/logging" /> </url>
+<url> <loc>https://simples.js.org/docs/mirror</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/mirror" /> </url>
+<url> <loc>https://simples.js.org/docs/router</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/router" /> </url>
+<url> <loc>https://simples.js.org/docs/server</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/server" /> </url>
+<url> <loc>https://simples.js.org/docs/start</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/start" /> </url>
+<url> <loc>https://simples.js.org/docs/store</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/store" /> </url>
+<url> <loc>https://simples.js.org/docs/ws-channel</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/ws-channel" /> </url>
+<url> <loc>https://simples.js.org/docs/ws-connection</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/ws-connection" /> </url>
+<url> <loc>https://simples.js.org/docs/ws-host</loc> <changefreq>hourly</changefreq> <priority>1.0</priority> <xhtml:link rel="alternate" hreflang="en" href="https://simples.js.org/docs/ws-host" /> </url>
 </urlset>
