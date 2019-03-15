@@ -12,6 +12,20 @@ class TestUtils {
 		});
 	}
 
+	static mockConsoleError(fn, callback) {
+
+		// eslint-disable-next-line
+		const consoleError = console.error;
+
+		// eslint-disable-next-line
+		console.error = fn;
+
+		callback();
+
+		// eslint-disable-next-line
+		console.error = consoleError;
+	}
+
 	static mockFSReadFile(error, content) {
 		fs.readFile = (...args) => {
 			TestUtils.callAsync(args[1], error, content);

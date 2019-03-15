@@ -2,11 +2,11 @@
 
 const tap = require('tap');
 
-const WSFrame = require('simples/lib/ws/frame');
+const Frame = require('simples/lib/ws/frame');
 
-tap.test('WSFrame.create', (test) => {
+tap.test('Frame.prototype.constructor()', (test) => {
 
-	const frame = WSFrame.create(Buffer.from([0xFF, 0xFF]));
+	const frame = new Frame(Buffer.from([0xFF, 0xFF]));
 
 	test.match(frame, {
 		data: Buffer.alloc(0),
@@ -21,7 +21,7 @@ tap.test('WSFrame.create', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.xor', (test) => {
+tap.test('Frame.xor', (test) => {
 
 	const randomByte = () => Math.round(Math.random() * 255);
 	const initial = Buffer.from([randomByte(), randomByte(), randomByte(), randomByte()]);
@@ -30,7 +30,7 @@ tap.test('WSFrame.xor', (test) => {
 
 	initial.copy(buffer);
 
-	WSFrame.xor(buffer, mask, 0);
+	Frame.xor(buffer, mask, 0);
 
 	for (let index = 0; index < 4; index++) {
 		test.ok(buffer[index] ^ mask[index] === initial[index]);
@@ -39,9 +39,9 @@ tap.test('WSFrame.xor', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.prototype.appendData()', (test) => {
+tap.test('Frame.prototype.appendData()', (test) => {
 
-	const frame = WSFrame.create(Buffer.from([0x00, 0x82]));
+	const frame = new Frame(Buffer.from([0x00, 0x82]));
 
 	frame.appendData(Buffer.from([0x01]));
 
@@ -58,9 +58,9 @@ tap.test('WSFrame.prototype.appendData()', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.buffer', (test) => {
+tap.test('Frame.buffer', (test) => {
 
-	let buffer = WSFrame.buffer({
+	let buffer = Frame.buffer({
 		fin: true,
 		masked: false,
 		opcode: 0
@@ -71,7 +71,7 @@ tap.test('WSFrame.buffer', (test) => {
 
 	// --------------------
 
-	buffer = WSFrame.buffer({
+	buffer = Frame.buffer({
 		fin: true,
 		masked: true,
 		opcode: 0
@@ -83,23 +83,23 @@ tap.test('WSFrame.buffer', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.close', (test) => {
+tap.test('Frame.close', (test) => {
 
-	let buffer = WSFrame.close(0, false);
-
-	test.ok(Buffer.isBuffer(buffer));
-	test.ok(buffer.length === 4);
-
-	// --------------------
-
-	buffer = WSFrame.close(1000, false);
+	let buffer = Frame.close(0, false);
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 4);
 
 	// --------------------
 
-	buffer = WSFrame.close(2000, false);
+	buffer = Frame.close(1000, false);
+
+	test.ok(Buffer.isBuffer(buffer));
+	test.ok(buffer.length === 4);
+
+	// --------------------
+
+	buffer = Frame.close(2000, false);
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 4);
@@ -107,9 +107,9 @@ tap.test('WSFrame.close', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.ping', (test) => {
+tap.test('Frame.ping', (test) => {
 
-	const buffer = WSFrame.ping();
+	const buffer = Frame.ping();
 
 	test.ok(Buffer.isBuffer(buffer));
 	test.ok(buffer.length === 2);
@@ -117,9 +117,9 @@ tap.test('WSFrame.ping', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.pong', (test) => {
+tap.test('Frame.pong', (test) => {
 
-	const buffer = WSFrame.pong({
+	const buffer = Frame.pong({
 		data: Buffer.alloc(0)
 	}, false);
 
@@ -129,21 +129,21 @@ tap.test('WSFrame.pong', (test) => {
 	test.end();
 });
 
-tap.test('WSFrame.wrap', (test) => {
+tap.test('Frame.wrap', (test) => {
 
-	WSFrame.wrap(Buffer.alloc(200000), true, () => {
+	Frame.wrap(Buffer.alloc(200000), true, () => {
 		test.pass('Callback function was called');
 	});
 
 	// --------------------
 
-	WSFrame.wrap('', true, () => {
+	Frame.wrap('', true, () => {
 		test.pass('Callback function was called');
 	});
 
 	// --------------------
 
-	WSFrame.wrap({}, true, () => {
+	Frame.wrap({}, true, () => {
 		test.pass('Callback function was called');
 	});
 

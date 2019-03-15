@@ -1,6 +1,5 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
 const MemoryStore = require('simples/lib/store/memory-store');
@@ -12,8 +11,6 @@ const sessionId = 'sessionId';
 const fakeSession = {};
 
 const someError = Error('Some error');
-
-const sandbox = sinon.createSandbox();
 
 tap.test('Store.optionsContainer()', (test) => {
 
@@ -43,33 +40,26 @@ tap.test('Store.optionsContainer()', (test) => {
 	test.end();
 });
 
-tap.test('Store.create()', (test) => {
+tap.test('Store.prototype.constructor()', (test) => {
 
 	const emptyConfig = {};
 
-	sandbox.spy(MemoryStore, 'createConfig');
-	sandbox.spy(Store, 'optionsContainer');
-
 	test.test('Memory store', (t) => {
 
-		const memoryStore = Store.create();
+		const memoryStore = new Store();
 
 		t.ok(memoryStore instanceof Store);
-		t.ok(MemoryStore.createConfig.calledOnce);
-		t.ok(Store.optionsContainer.calledOnce);
 		t.end();
 	});
 
 	test.test('Empty store', (t) => {
 
-		const emptyStore = Store.create(emptyConfig);
+		const emptyStore = new Store(emptyConfig);
 
 		t.ok(emptyStore instanceof Store);
 		t.match(emptyStore._options, emptyConfig);
 		t.end();
 	});
-
-	sandbox.restore();
 
 	test.end();
 });
@@ -77,7 +67,7 @@ tap.test('Store.create()', (test) => {
 tap.test('Store.prototype.get()', (test) => {
 
 	test.test('Not implemented', (t) => {
-		Store.create({}).get(sessionId).then(() => {
+		new Store({}).get(sessionId).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
@@ -87,7 +77,7 @@ tap.test('Store.prototype.get()', (test) => {
 	});
 
 	test.test('Implemented, normal execution', (t) => {
-		Store.create({
+		new Store({
 			get(id) {
 				t.equal(id, sessionId);
 
@@ -102,7 +92,7 @@ tap.test('Store.prototype.get()', (test) => {
 	});
 
 	test.test('Implemented, throws error', (t) => {
-		Store.create({
+		new Store({
 			get(id) {
 				t.equal(id, sessionId);
 
@@ -117,7 +107,7 @@ tap.test('Store.prototype.get()', (test) => {
 	});
 
 	test.test('Implemented, rejects with error', (t) => {
-		Store.create({
+		new Store({
 			get(id) {
 				t.equal(id, sessionId);
 
@@ -137,7 +127,7 @@ tap.test('Store.prototype.get()', (test) => {
 tap.test('Store.prototype.set()', (test) => {
 
 	test.test('Not implemented', (t) => {
-		Store.create({}).set(sessionId, fakeSession).then(() => {
+		new Store({}).set(sessionId, fakeSession).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
@@ -147,7 +137,7 @@ tap.test('Store.prototype.set()', (test) => {
 	});
 
 	test.test('Implemented', (t) => {
-		Store.create({
+		new Store({
 			set(id, session) {
 				t.equal(id, sessionId);
 				t.equal(session, fakeSession);
@@ -162,7 +152,7 @@ tap.test('Store.prototype.set()', (test) => {
 	});
 
 	test.test('Implemented, throws error', (t) => {
-		Store.create({
+		new Store({
 			set(id, session) {
 				t.equal(id, sessionId);
 				t.equal(session, fakeSession);
@@ -178,7 +168,7 @@ tap.test('Store.prototype.set()', (test) => {
 	});
 
 	test.test('Implemented, rejects with error', (t) => {
-		Store.create({
+		new Store({
 			set(id, session) {
 				t.equal(id, sessionId);
 				t.equal(session, fakeSession);
@@ -199,7 +189,7 @@ tap.test('Store.prototype.set()', (test) => {
 tap.test('Store.prototype.unset()', (test) => {
 
 	test.test('Not implemented', (t) => {
-		Store.create({}).unset(sessionId).then(() => {
+		new Store({}).unset(sessionId).then(() => {
 			t.fail('This function should not be called');
 		}).catch((error) => {
 			t.ok(error instanceof Error);
@@ -209,7 +199,7 @@ tap.test('Store.prototype.unset()', (test) => {
 	});
 
 	test.test('Implemented', (t) => {
-		Store.create({
+		new Store({
 			unset(id) {
 				t.equal(id, sessionId);
 
@@ -223,7 +213,7 @@ tap.test('Store.prototype.unset()', (test) => {
 	});
 
 	test.test('Implemented, throws error', (t) => {
-		Store.create({
+		new Store({
 			unset(id) {
 				t.equal(id, sessionId);
 
@@ -238,7 +228,7 @@ tap.test('Store.prototype.unset()', (test) => {
 	});
 
 	test.test('Implemented, rejects with error', (t) => {
-		Store.create({
+		new Store({
 			unset(id) {
 				t.equal(id, sessionId);
 

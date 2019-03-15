@@ -12,7 +12,7 @@ TestUtils.mockHTTPServer();
 
 tap.test('Mirror.prototype.start()', (test) => {
 
-	const mirror = Mirror.create(Server.create());
+	const mirror = new Mirror(new Server());
 
 	const result = mirror.start((m) => {
 		test.equal(m, mirror);
@@ -25,7 +25,7 @@ tap.test('Mirror.prototype.start()', (test) => {
 
 tap.test('Mirror.prototype.stop()', (test) => {
 
-	const mirror = Mirror.create(Server.create());
+	const mirror = new Mirror(new Server());
 
 	const result = mirror.stop((m) => {
 		test.equal(m, mirror);
@@ -35,10 +35,10 @@ tap.test('Mirror.prototype.stop()', (test) => {
 	test.equal(result, mirror);
 });
 
-tap.test('Mirror.create()', (test) => {
+tap.test('Mirror.prototype.constructor()', (test) => {
 
-	const server = Server.create();
-	const mirror = Mirror.create(server);
+	const server = new Server();
+	const mirror = new Mirror(server);
 	const serverMeta = ServerUtils.getServerMeta(server);
 	const mirrorMeta = ServerUtils.getServerMeta(mirror);
 

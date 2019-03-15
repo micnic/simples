@@ -3,7 +3,7 @@
 const tap = require('tap');
 
 const HTTPHost = require('simples/lib/http/host');
-const WSChannel = require('simples/lib/ws/channel');
+const Channel = require('simples/lib/ws/channel');
 const WSConnection = require('simples/lib/ws/connection');
 const WSHost = require('simples/lib/ws/host');
 
@@ -19,14 +19,14 @@ tap.test('WSHost.optionsContainer()', (test) => {
 	test.end();
 });
 
-tap.test('WSHost.create()', (test) => {
+tap.test('WSHost.prototype.constructor()', (test) => {
 
 	test.test('Fixed host', (t) => {
 
-		const httpHost = HTTPHost.create('hostname');
+		const httpHost = new HTTPHost('hostname');
 		const noopListener = () => null;
 
-		const wsHost = WSHost.create(httpHost, '/', null, noopListener);
+		const wsHost = new WSHost(httpHost, '/', null, noopListener);
 
 		t.ok(httpHost._routes.ws.fixed.size === 1);
 		t.ok(httpHost._routes.ws.fixed.get('/') === wsHost);
@@ -44,10 +44,10 @@ tap.test('WSHost.create()', (test) => {
 
 	test.test('Dynamic host', (t) => {
 
-		const httpHost = HTTPHost.create('hostname');
+		const httpHost = new HTTPHost('hostname');
 		const noopListener = () => null;
 
-		const wsHost = WSHost.create(httpHost, '/*', null, noopListener);
+		const wsHost = new WSHost(httpHost, '/*', null, noopListener);
 
 		t.ok(httpHost._routes.ws.dynamic.size === 1);
 		t.ok(httpHost._routes.ws.dynamic.get('/*') === wsHost);
@@ -70,7 +70,8 @@ tap.test('WSHost.create()', (test) => {
 
 tap.test('WSHost.prototype.broadcast()', (test) => {
 
-	const host = new WSHost();
+	const httpHost = new HTTPHost('hostname');
+	const host = new WSHost(httpHost);
 
 	test.ok(host.broadcast('data') === host);
 
@@ -79,7 +80,8 @@ tap.test('WSHost.prototype.broadcast()', (test) => {
 
 tap.test('WSHost.prototype.channel()', (test) => {
 
-	const host = new WSHost();
+	const httpHost = new HTTPHost('hostname');
+	const host = new WSHost(httpHost);
 
 	let newChannel = null;
 
@@ -96,7 +98,7 @@ tap.test('WSHost.prototype.channel()', (test) => {
 
 		t.ok(host._channels.size === 1);
 		t.ok(host._channels.get('name') === newChannel);
-		t.ok(newChannel instanceof WSChannel);
+		t.ok(newChannel instanceof Channel);
 
 		t.end();
 	});

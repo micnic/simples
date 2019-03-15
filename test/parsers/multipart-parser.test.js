@@ -41,12 +41,12 @@ tap.test('MultipartParser.getBoundary()', (test) => {
 	test.end();
 });
 
-tap.test('MultipartParser.create()', (test) => {
+tap.test('MultipartParser.prototype.constructor()', (test) => {
 
 	test.test('Empty header', (t) => {
 
 		try {
-			MultipartParser.create('');
+			new MultipartParser('');
 		} catch (error) {
 			t.ok(error instanceof Error);
 		}
@@ -56,7 +56,7 @@ tap.test('MultipartParser.create()', (test) => {
 
 	test.test('Full header', (t) => {
 
-		const parser = MultipartParser.create(boundary);
+		const parser = new MultipartParser(boundary);
 
 		t.ok(parser instanceof MultipartParser);
 		t.ok(parser instanceof Transform);
@@ -82,7 +82,7 @@ tap.test('MultipartParser.create()', (test) => {
 tap.test('MultipartParser.prototype.skipFirstBoundary()', (test) => {
 
 	const data = Buffer.from(`--${boundary}\r\nHEADER`);
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 	const boundaryLength = boundary.length + 2;
 
 	let index = 0;
@@ -127,7 +127,7 @@ tap.test('MultipartParser.prototype.skipFirstBoundary()', (test) => {
 
 tap.test('MultipartParser.prototype.newPart()', (test) => {
 
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -163,7 +163,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 	test.test('With disposition', (t) => {
 
-		const parser = MultipartParser.create(boundary);
+		const parser = new MultipartParser(boundary);
 
 		parser.header = `${dispositionHeader}: ${dispositionValue}`;
 
@@ -189,7 +189,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 	test.test('With header and field', (t) => {
 
-		const parser = MultipartParser.create(boundary);
+		const parser = new MultipartParser(boundary);
 
 		parser.field = new MultipartParser.MultipartField(name);
 		parser.header = 'Content-Type: text/plain';
@@ -208,7 +208,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 	test.test('Without header', (t) => {
 
-		const parser = MultipartParser.create(boundary);
+		const parser = new MultipartParser(boundary);
 
 		parser.parseHeader((error) => {
 			t.ok(error instanceof Error);
@@ -221,7 +221,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 	test.test('With header only', (t) => {
 
-		const parser = MultipartParser.create(boundary);
+		const parser = new MultipartParser(boundary);
 
 		parser.field = null;
 		parser.header = 'Content-Type: text/plain';
@@ -240,7 +240,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 tap.test('MultipartParser.prototype.getHeader()', (test) => {
 
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 	const data = Buffer.from('H: V\r\n\r\n');
 
 	let index = 0;
@@ -347,7 +347,7 @@ tap.test('MultipartParser.prototype.endPartData()', (test) => {
 
 	const data = Buffer.from('  data  ');
 	const expect = Symbol('expect');
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -375,7 +375,7 @@ tap.test('MultipartParser.prototype.endPartData()', (test) => {
 
 tap.test('MultipartParser.prototype.getData()', (test) => {
 
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 
 	let data = Buffer.from(`data\r\n--${boundary}\r\n`);
 	let index = 0;
@@ -645,7 +645,7 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 
 tap.test('MultipartParser.prototype.endParsing()', (test) => {
 
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 	const lineFeed = 10;
 	const carriageReturn = 13;
 
@@ -676,7 +676,7 @@ tap.test('MultipartParser.prototype.parseByte()', (test) => {
 
 	const byte = 0;
 	const index = 1;
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 	const someBuffer = Buffer.alloc(0);
 	const someCallback = () => {};
 
@@ -714,7 +714,7 @@ tap.test('MultipartParser.prototype.parseByte()', (test) => {
 tap.test('MultipartParser.prototype.write()', (test) => {
 
 	const byte = 45;
-	const parser = MultipartParser.create(boundary);
+	const parser = new MultipartParser(boundary);
 
 	parser.on('error', (error) => {
 		test.ok(error instanceof Error);
@@ -731,7 +731,7 @@ tap.test('MultipartParser.prototype.write()', (test) => {
 
 tap.test('MultipartParser.prototype.end()', (test) => {
 
-	let parser = MultipartParser.create(boundary);
+	let parser = new MultipartParser(boundary);
 
 	parser.expect = symbols.parsingFinished;
 
@@ -743,7 +743,7 @@ tap.test('MultipartParser.prototype.end()', (test) => {
 
 	// --------------------
 
-	parser = MultipartParser.create(boundary);
+	parser = new MultipartParser(boundary);
 
 	parser.on('error', (error) => {
 		test.ok(error instanceof Error);

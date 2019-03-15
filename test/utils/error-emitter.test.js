@@ -1,10 +1,10 @@
 'use strict';
 
-const sinon = require('sinon');
 const tap = require('tap');
 
 const ErrorEmitter = require('simples/lib/utils/error-emitter');
 const { EventEmitter } = require('events');
+const TestUtils = require('simples/test/test-utils');
 
 tap.test('ErrorEmitter.emit()', (test) => {
 
@@ -27,13 +27,11 @@ tap.test('ErrorEmitter.emit()', (test) => {
 
 		const emitter = new EventEmitter();
 
-		sinon.stub(console, 'error');
-
-		ErrorEmitter.emit(emitter, someError);
-
-		t.ok(console.error.calledOnce);
-
-		console.error.restore();
+		TestUtils.mockConsoleError((errorMessage) => {
+			t.equal(errorMessage, `\n${someError.stack}\n`);
+		}, () => {
+			ErrorEmitter.emit(emitter, someError);
+		});
 
 		t.end();
 	});

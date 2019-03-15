@@ -3,14 +3,14 @@
 const tap = require('tap');
 
 const symbols = require('simples/lib/utils/symbols');
-const WSFrame = require('simples/lib/ws/frame');
+const Frame = require('simples/lib/ws/frame');
 const WSParser = require('simples/lib/parsers/ws-parser');
 
 const { Writable } = require('stream');
 
-tap.test('WSParser.create', (test) => {
+tap.test('WSParser.prototype.constructor', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	test.ok(parser instanceof WSParser);
 	test.ok(parser instanceof Writable);
@@ -27,9 +27,9 @@ tap.test('WSParser.create', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#readyBuffer', (test) => {
+tap.test('WSParser.prototype.readyBuffer', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	let result = parser.readyBuffer(2, 0x00);
 
@@ -52,9 +52,9 @@ tap.test('WSParser#readyBuffer', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#resetBuffer', (test) => {
+tap.test('WSParser.prototype.resetBuffer', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.buffer = Buffer.alloc(1);
 	parser.bufferBytes = 1;
@@ -69,9 +69,9 @@ tap.test('WSParser#resetBuffer', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#validateFrame', (test) => {
+tap.test('WSParser.prototype.validateFrame', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {};
 
@@ -162,9 +162,9 @@ tap.test('WSParser#validateFrame', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#emitMessage', (test) => {
+tap.test('WSParser.prototype.emitMessage', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 	const fakeMessage = {};
 
 	parser.on('message', (message) => {
@@ -211,9 +211,9 @@ tap.test('WSParser#emitMessage', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#joinMessageData', (test) => {
+tap.test('WSParser.prototype.joinMessageData', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 	const fakeMessage = {};
 
 	parser.on('message', (message) => {
@@ -258,9 +258,9 @@ tap.test('WSParser#joinMessageData', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#createMessage', (test) => {
+tap.test('WSParser.prototype.createMessage', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -292,9 +292,9 @@ tap.test('WSParser#createMessage', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#emitControlFrame', (test) => {
+tap.test('WSParser.prototype.emitControlFrame', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 	const fakeFrame = {};
 
 	fakeFrame.opcode = 10;
@@ -339,9 +339,9 @@ tap.test('WSParser#emitControlFrame', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#endFrameProcessing', (test) => {
+tap.test('WSParser.prototype.endFrameProcessing', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -412,9 +412,9 @@ tap.test('WSParser#endFrameProcessing', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#parseHeader', (test) => {
+tap.test('WSParser.prototype.parseHeader', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.parseHeader(0x81, () => {
 		test.fail('Callback function should not be called');
@@ -520,9 +520,9 @@ tap.test('WSParser#parseHeader', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#parse16BitLength', (test) => {
+tap.test('WSParser.prototype.parse16BitLength', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {};
 
@@ -566,9 +566,9 @@ tap.test('WSParser#parse16BitLength', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#parse64BitLength', (test) => {
+tap.test('WSParser.prototype.parse64BitLength', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {};
 
@@ -689,9 +689,9 @@ tap.test('WSParser#parse64BitLength', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#parseMask', (test) => {
+tap.test('WSParser.prototype.parseMask', (test) => {
 
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.frame = {};
 
@@ -758,10 +758,10 @@ tap.test('WSParser#parseMask', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#parseByte', (test) => {
+tap.test('WSParser.prototype.parseByte', (test) => {
 
 	const byte = 0x00;
-	const parser = WSParser.create(0, true);
+	const parser = new WSParser(0, true);
 
 	parser.parseByte(byte, () => {
 		test.fail('Callback function should not be called');
@@ -795,15 +795,15 @@ tap.test('WSParser#parseByte', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#getData', (test) => {
+tap.test('WSParser.prototype.getData', (test) => {
 
-	const parser = WSParser.create(1024, true);
+	const parser = new WSParser(1024, true);
 
 	const callback = () => {
 		test.fail('Callback function should not be called');
 	};
 
-	parser.frame = WSFrame.create(Buffer.alloc(2));
+	parser.frame = new Frame(Buffer.alloc(2));
 	parser.message = {
 		data: Buffer.alloc(0),
 		type: 'text'
@@ -813,7 +813,7 @@ tap.test('WSParser#getData', (test) => {
 
 	// --------------------
 
-	parser.frame = WSFrame.create(Buffer.alloc(2));
+	parser.frame = new Frame(Buffer.alloc(2));
 	parser.frame.data = Buffer.alloc(1);
 
 	parser.getData(Buffer.alloc(0), 0, callback);
@@ -821,9 +821,9 @@ tap.test('WSParser#getData', (test) => {
 	test.end();
 });
 
-tap.test('WSParser#write', (test) => {
+tap.test('WSParser.prototype.write', (test) => {
 
-	const parser = WSParser.create(1024, true);
+	const parser = new WSParser(1024, true);
 
 	parser.on('error', (error) => {
 		test.ok(error instanceof Error);
@@ -834,7 +834,7 @@ tap.test('WSParser#write', (test) => {
 	// --------------------
 
 	parser.expect = symbols.expectData;
-	parser.frame = WSFrame.create(Buffer.alloc(2));
+	parser.frame = new Frame(Buffer.alloc(2));
 	parser.message = {
 		data: Buffer.alloc(0),
 		type: 'text'

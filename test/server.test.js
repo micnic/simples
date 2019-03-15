@@ -15,7 +15,7 @@ TestUtils.mockHTTPServer();
 
 tap.test('Server.prototype.host()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
 	test.test('No host name provided', (t) => {
 		t.equal(server.host(), null);
@@ -45,7 +45,7 @@ tap.test('Server.prototype.host()', (test) => {
 
 tap.test('Server.prototype.mirror()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
 	test.ok(server.mirror() instanceof Mirror);
 	test.end();
@@ -53,7 +53,7 @@ tap.test('Server.prototype.mirror()', (test) => {
 
 tap.test('Server.prototype.start()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
 	const result = server.start((s) => {
 		test.equal(s, server);
@@ -66,7 +66,7 @@ tap.test('Server.prototype.start()', (test) => {
 
 tap.test('Server.prototype.stop()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
 	const result = server.stop((s) => {
 		test.equal(s, server);
@@ -77,9 +77,9 @@ tap.test('Server.prototype.stop()', (test) => {
 	test.equal(result, server);
 });
 
-tap.test('Server.create()', (test) => {
+tap.test('new Server()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 	const hosts = Server.getHTTPHosts(server);
 	const meta = ServerUtils.getServerMeta(server);
 
@@ -157,7 +157,7 @@ tap.test('Server.getHTTPHost()', (test) => {
 			headers: {}
 		};
 
-		const server = Server.create();
+		const server = new Server();
 
 		Server.setHTTPHosts(server);
 
@@ -176,11 +176,11 @@ tap.test('Server.getHTTPHost()', (test) => {
 			}
 		};
 
-		const server = Server.create();
+		const server = new Server();
 
 		Server.setHTTPHosts(server);
 
-		const localHost = HTTPHost.create('localhost');
+		const localHost = new HTTPHost('localhost');
 
 		Server.getHTTPHosts(server).fixed.set('localhost', localHost);
 
@@ -204,7 +204,7 @@ tap.test('Server.getHTTPHostName()', (test) => {
 
 tap.test('Server.getHTTPHosts() / Server.setHTTPHosts()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 
 	Server.setHTTPHosts(server);
 
@@ -263,7 +263,7 @@ tap.test('Server.getWSHost()', (test) => {
 	const request = {
 		headers: {}
 	};
-	const server = Server.create();
+	const server = new Server();
 	const fakeWSHost = {};
 
 	server._routes.ws.fixed.set('/', fakeWSHost);
@@ -277,7 +277,7 @@ tap.test('Server.getWSHost()', (test) => {
 
 tap.test('Server.requestListener()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 	const requestListener = Server.requestListener(server);
 
 	server.get('/', (connection) => {
@@ -311,7 +311,7 @@ tap.test('Server.requestListener()', (test) => {
 
 tap.test('Server.upgradeListener()', (test) => {
 
-	const server = Server.create();
+	const server = new Server();
 	const upgradeListener = Server.upgradeListener(server);
 
 	server.ws('/', (connection) => {

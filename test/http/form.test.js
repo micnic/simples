@@ -2,10 +2,10 @@
 
 const tap = require('tap');
 
-const HTTPForm = require('simples/lib/http/form');
+const Form = require('simples/lib/http/form');
 const { PassThrough } = require('stream');
 
-tap.test('HTTPForm.parse()', (test) => {
+tap.test('Form.parse()', (test) => {
 
 	test.test('No content type', (t) => {
 
@@ -13,7 +13,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.headers = {};
 
-		HTTPForm.parse(fakeRequest, {});
+		Form.parse(fakeRequest, {});
 
 		t.end();
 	});
@@ -26,7 +26,7 @@ tap.test('HTTPForm.parse()', (test) => {
 			'content-type': 'Invalid Type'
 		};
 
-		HTTPForm.parse(fakeRequest, {});
+		Form.parse(fakeRequest, {});
 
 		t.end();
 	});
@@ -39,7 +39,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('data');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			plain(form) {
 				form.on('data', (data) => {
 					t.ok(String(data) === 'data');
@@ -57,7 +57,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.headers = {};
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			plain(form) {
 				form.on('error', (error) => {
 					t.ok(error === someError);
@@ -77,7 +77,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('data');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			limit: 4,
 			plain(form) {
 				form.on('data', (data) => {
@@ -99,7 +99,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('data');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			limit: 1,
 			plain(form) {
 				form.on('error', (error) => {
@@ -118,7 +118,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('data');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			limit: 0,
 			plain(form) {
 				form.on('data', (data) => {
@@ -140,7 +140,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('{}');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			json(error, result) {
 				t.ok(error === null);
 				t.match(result, {});
@@ -159,7 +159,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('{');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			json(error, result) {
 				t.ok(error instanceof Error);
 				t.ok(result === null);
@@ -178,7 +178,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('a=1');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			urlencoded(error, result) {
 				t.ok(error === null);
 				t.match(result, {
@@ -199,7 +199,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--\r\n');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			multipart(form) {
 				form.on('field', (field) => {
 					field.on('data', (data) => {
@@ -222,7 +222,7 @@ tap.test('HTTPForm.parse()', (test) => {
 
 		fakeRequest.end('--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--\r\n');
 
-		HTTPForm.parse(fakeRequest, {
+		Form.parse(fakeRequest, {
 			multipart(form) {
 				form.on('end', () => {
 					t.end();

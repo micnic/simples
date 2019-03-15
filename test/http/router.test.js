@@ -6,6 +6,7 @@ const TestUtils = require('simples/test/test-utils');
 const HTTPHost = require('simples/lib/http/host');
 const Router = require('simples/lib/http/router');
 const Route = require('simples/lib/route');
+const Store = require('simples/lib/store/store');
 const WSHost = require('simples/lib/ws/host');
 
 const { EventEmitter } = require('events');
@@ -41,10 +42,31 @@ tap.test('Router.optionsContainer()', (test) => {
 	test.end();
 });
 
-tap.test('Router.isDynamic()', (test) => {
+tap.test('Router.getListener', (test) => {
 
-	test.ok(Router.isDynamic('/path/*'));
-	test.ok(!Router.isDynamic('/path/to'));
+	const noop = () => null;
+	const empty = {};
+
+	const fakeConnection = {
+		render(view, importer) {
+			test.equal(view, 'view');
+			test.equal(importer, empty);
+		}
+	};
+
+	let listener = Router.getListener(noop);
+
+	test.ok(listener === noop);
+
+	listener = Router.getListener('view', empty);
+
+	listener(fakeConnection);
+
+	listener = Router.getListener('view', (connection, callback) => {
+		callback(empty);
+	});
+
+	listener(fakeConnection);
 
 	test.end();
 });
@@ -65,11 +87,11 @@ tap.test('Router.getPattern()', (test) => {
 	test.end();
 });
 
-tap.test('Router.create()', (test) => {
+tap.test('Router.prototype.constructor()', (test) => {
 
-	const host = HTTPHost.create('hostname');
+	const host = new HTTPHost('hostname');
 
-	let router = Router.create(host, '', null);
+	let router = new Router(host, '', null);
 
 	test.ok(router instanceof Router);
 	test.ok(router instanceof EventEmitter);
@@ -79,7 +101,7 @@ tap.test('Router.create()', (test) => {
 
 	const parentRouter = router;
 
-	router = Router.create(parentRouter, '*', null);
+	router = new Router(parentRouter, '*', null);
 
 	test.ok(router instanceof Router);
 	test.ok(router instanceof EventEmitter);
@@ -90,10 +112,76 @@ tap.test('Router.create()', (test) => {
 	test.end();
 });
 
+tap.test('Router.prototype.compression()', (test) => {
+
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
+
+	router.compression();
+
+	test.match(router._options.compression, {
+		enabled: false,
+		options: null,
+		preferred: 'deflate'
+	});
+
+	test.end();
+});
+
+tap.test('Router.prototype.cors()', (test) => {
+
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
+
+	router.cors();
+
+	test.match(router._options.cors, {
+		credentials: false,
+		headers: [],
+		methods: ['DELETE', 'GET', 'HEAD', 'PATCH', 'POST', 'PUT'],
+		origins: []
+	});
+
+	test.end();
+});
+
+tap.test('Router.prototype.logger()', (test) => {
+
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
+
+	router.logger();
+
+	test.match(router._options.logger, {
+		enabled: false,
+		format: '',
+		log: null,
+		tokens: null
+	});
+
+	test.end();
+});
+
+tap.test('Router.prototype.session()', (test) => {
+
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
+
+	router.session();
+
+	test.match(router._options.session, {
+		enabled: false,
+		store: Store,
+		timeout: 3600
+	});
+
+	test.end();
+});
+
 tap.test('Router.setRoute()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '', null);
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '', null);
 
 	Router.setRoute(router);
 
@@ -131,8 +219,8 @@ tap.test('Router.isValidErrorCode()', (test) => {
 
 tap.test('Router.prototype.all()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -147,8 +235,8 @@ tap.test('Router.prototype.all()', (test) => {
 
 tap.test('Router.prototype.delete()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -163,8 +251,8 @@ tap.test('Router.prototype.delete()', (test) => {
 
 tap.test('Router.prototype.get()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -179,8 +267,8 @@ tap.test('Router.prototype.get()', (test) => {
 
 tap.test('Router.prototype.patch()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -195,8 +283,8 @@ tap.test('Router.prototype.patch()', (test) => {
 
 tap.test('Router.prototype.post()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -211,8 +299,8 @@ tap.test('Router.prototype.post()', (test) => {
 
 tap.test('Router.prototype.put()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -227,11 +315,11 @@ tap.test('Router.prototype.put()', (test) => {
 
 tap.test('Router.prototype.error()', (test) => {
 
-	const host = HTTPHost.create('hostname');
+	const host = new HTTPHost('hostname');
 	const fakeListener = () => {};
 	const invalidListener = null;
 
-	const router = Router.create(host, '');
+	const router = new Router(host, '');
 
 	router.error(0);
 
@@ -247,8 +335,8 @@ tap.test('Router.prototype.engine()', (test) => {
 
 	test.test('Invalid engine', (t) => {
 
-		const host = HTTPHost.create('hostname');
-		const router = Router.create(host, '');
+		const host = new HTTPHost('hostname');
+		const router = new Router(host, '');
 
 		router.engine({});
 
@@ -259,8 +347,8 @@ tap.test('Router.prototype.engine()', (test) => {
 
 	test.test('Valid engine', (t) => {
 
-		const host = HTTPHost.create('hostname');
-		const router = Router.create(host, '');
+		const host = new HTTPHost('hostname');
+		const router = new Router(host, '');
 
 		const fakeEngine = {
 			render() {
@@ -282,8 +370,8 @@ tap.test('Router.prototype.use()', (test) => {
 
 	test.test('Invalid middleware', (t) => {
 
-		const host = HTTPHost.create('hostname');
-		const router = Router.create(host, '');
+		const host = new HTTPHost('hostname');
+		const router = new Router(host, '');
 
 		router.use(null);
 
@@ -294,8 +382,8 @@ tap.test('Router.prototype.use()', (test) => {
 
 	test.test('Valid middleware', (t) => {
 
-		const host = HTTPHost.create('hostname');
-		const router = Router.create(host, '');
+		const host = new HTTPHost('hostname');
+		const router = new Router(host, '');
 
 		router.use(() => null);
 
@@ -309,16 +397,25 @@ tap.test('Router.prototype.use()', (test) => {
 
 tap.test('Router.prototype.router()', (test) => {
 
-	const host = HTTPHost.create('hostname');
+	const host = new HTTPHost('hostname');
 
 	test.test('Empty input', (t) => {
 
-		host.on('error', (error) => {
+		t.equal(host.router(), null);
 
-			t.ok(error instanceof TypeError);
-		});
+		t.end();
+	});
 
-		host.router();
+	test.test('Fixed router', (t) => {
+
+		t.ok(host.router('fixed') instanceof Router);
+
+		t.end();
+	});
+
+	test.test('Dynamic router', (t) => {
+
+		t.ok(host.router('*') instanceof Router);
 
 		t.end();
 	});
@@ -328,30 +425,39 @@ tap.test('Router.prototype.router()', (test) => {
 
 tap.test('Router.prototype.static()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
 	router.static();
+
+	test.match(router._options.static, {
+		enabled: false,
+		index: ['index.html'],
+		location: ''
+	});
 
 	test.end();
 });
 
 tap.test('Router.prototype.timeout()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '');
 
-	router.timeout(0);
+	router.timeout();
 
-	test.equal(router._options.timeout, 0);
+	test.match(router._options.timeout, {
+		enabled: false,
+		value: null
+	});
 
 	test.end();
 });
 
 tap.test('Router.prototype.ws()', (test) => {
 
-	const host = HTTPHost.create('hostname');
-	const router = Router.create(host, '/path/');
+	const host = new HTTPHost('hostname');
+	const router = new Router(host, '/path/');
 
 	test.test('Empty input', (t) => {
 		t.ok(router.ws() === null);

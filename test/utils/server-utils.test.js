@@ -169,7 +169,7 @@ tap.test('ServerUtils.stopServer()', (test) => {
 
 	test.test('Busy started server', (t) => {
 
-		const server = Server.create();
+		const server = new Server();
 		const meta = ServerUtils.getServerMeta(server);
 
 		ServerUtils.stopServer(server, (s) => {
@@ -188,7 +188,7 @@ tap.test('ServerUtils.stopServer()', (test) => {
 
 	test.test('Released started server', (t) => {
 
-		const server = Server.create();
+		const server = new Server();
 		const meta = ServerUtils.getServerMeta(server);
 
 		server.once('release', () => {

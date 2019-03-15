@@ -3,19 +3,18 @@
 const tap = require('tap');
 
 const { EventEmitter } = require('events');
-const WSChannel = require('simples/lib/ws/channel');
+const Channel = require('simples/lib/ws/channel');
 const WSConnection = require('simples/lib/ws/connection');
-const WSFormatter = require('simples/lib/utils/ws-formatter');
 
-tap.test('WSChannel.create()', (test) => {
+tap.test('Channel.prototype.constructor()', (test) => {
 
 	const fakeParentHost = {
 		_advanced: false
 	};
 
-	const channel = WSChannel.create(fakeParentHost, 'name');
+	const channel = new Channel(fakeParentHost, 'name');
 
-	test.ok(channel instanceof WSChannel);
+	test.ok(channel instanceof Channel);
 	test.ok(channel instanceof EventEmitter);
 	test.ok(channel.connections instanceof Set);
 	test.ok(channel._advanced === false);
@@ -25,7 +24,7 @@ tap.test('WSChannel.create()', (test) => {
 	test.end();
 });
 
-tap.test('WSChannel.prototype.bind()', (test) => {
+tap.test('Channel.prototype.bind()', (test) => {
 
 	const fakeParentHost = {
 		_options: {
@@ -33,7 +32,7 @@ tap.test('WSChannel.prototype.bind()', (test) => {
 		}
 	};
 
-	const channel = new WSChannel(fakeParentHost);
+	const channel = new Channel(fakeParentHost);
 
 	test.test('Empty input', (t) => {
 		channel.bind();
@@ -72,7 +71,7 @@ tap.test('WSChannel.prototype.bind()', (test) => {
 	test.end();
 });
 
-tap.test('WSChannel.prototype.bind()', (test) => {
+tap.test('Channel.prototype.bind()', (test) => {
 
 	const fakeParentHost = {
 		_options: {
@@ -80,7 +79,7 @@ tap.test('WSChannel.prototype.bind()', (test) => {
 		}
 	};
 
-	const channel = new WSChannel(fakeParentHost);
+	const channel = new Channel(fakeParentHost);
 
 	test.test('Empty input', (t) => {
 		channel.unbind();
@@ -119,7 +118,7 @@ tap.test('WSChannel.prototype.bind()', (test) => {
 	test.end();
 });
 
-tap.test('WSChannel.prototype.close()', (test) => {
+tap.test('Channel.prototype.close()', (test) => {
 
 	const fakeParentHost = {
 		_channels: new Map(),
@@ -136,7 +135,7 @@ tap.test('WSChannel.prototype.close()', (test) => {
 		headers: []
 	};
 
-	const channel = new WSChannel(fakeParentHost, 'name');
+	const channel = new Channel(fakeParentHost, 'name');
 	const connection = new WSConnection(fakeParentHost, fakeLocation, fakeRequest);
 
 	fakeParentHost._channels.set('name', channel);
@@ -153,14 +152,14 @@ tap.test('WSChannel.prototype.close()', (test) => {
 	test.end();
 });
 
-tap.test('WSChannel.prototype.broadcast()', (test) => {
+tap.test('Channel.prototype.broadcast()', (test) => {
 
 	const fakeParentHost = {
 		_advanced: false,
 		_channels: new Map()
 	};
 
-	const channel = new WSChannel(fakeParentHost, 'name');
+	const channel = new Channel(fakeParentHost, 'name');
 
 	test.ok(channel.broadcast('data') === channel);
 

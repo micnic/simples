@@ -15,7 +15,7 @@ type Callback = () => void;
 
 type ClientOptions = {};
 
-type ClientRequestCallback = (response: ServerResponse, body: Buffer) => void;
+type RequestCallback = (response: ServerResponse, body: Buffer) => void;
 
 type Container<T> = {
 	[key: string]: T;
@@ -35,7 +35,7 @@ type DataImporter<D, S, T> = (connection: HTTPConnection<D, S>, callback: DataCa
 type Enabled = boolean | EnabledFunction;
 type EnabledFunction = () => boolean;
 type ErrorCallback = (error: Error) => void;
-type FormCallback = (form: HTTPForm) => void;
+type FormCallback = (form: Form) => void;
 
 type IpAddress = {
 	port: number;
@@ -159,7 +159,7 @@ interface StoreInterface<S> {
 	unset(id: string): Promise<null>;
 };
 
-declare abstract class Connection<D, S> extends Transform {
+abstract class Connection<D, S> extends Transform {
 
 	cookies: StringContainer;
 	data: D;
@@ -183,15 +183,23 @@ declare abstract class Connection<D, S> extends Transform {
 	log(format?: string | Buffer, logger?: StringCallback, tokens?: Tokens): Connection<D, S>;
 }
 
+abstract class Broadcaster<D, S> extends EventEmitter {
+
+	connections: Set<WSConnection<D, S>>;
+
+	broadcast<T>(event: string, data: T, filter?: WSFilterCallback<D, S>): Broadcaster<D, S>;
+	broadcast<T>(data: T, filter?: WSFilterCallback<D, S>): Broadcaster<D, S>;
+}
+
 declare class Client extends EventEmitter {
 
-	delete(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	head(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	get(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	patch(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	post(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	put(location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
-	request(method: string, location: string, options: RequestOptions, callback: ClientRequestCallback): ClientRequest;
+	delete(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	head(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	get(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	patch(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	post(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	put(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	request(method: string, location: string, options: RequestOptions, callback: RequestCallback): Request;
 	ws(location: string, mode: string, options): ClientConnection;
 }
 
@@ -204,7 +212,7 @@ declare class ClientConnection extends Transform {
 	send<D, R>(event: string, data: D, callback?: DataCallback<R>): void;
 }
 
-declare class ClientRequest extends Transform {
+declare class Request extends Transform {
 
 	send<D>(data: D, callback: Callback): void;
 	stream(destination: Writable, options?: PipeOptions): void;
@@ -238,7 +246,7 @@ declare class HTTPConnection<D, S> extends Connection<D, S> {
 	type(type: string, override?: boolean): HTTPConnection<D, S>;
 }
 
-declare class HTTPForm extends PassThrough {
+declare class Form extends PassThrough {
 
 	type: string;
 }
@@ -486,17 +494,18 @@ declare class Server<D> extends HTTPHost<D> {
 	stop(callback?: ServerCallback<D>): Server<D>;
 }
 
-declare class Store<S> implements StoreInterface<S> {}
+declare class Store<S> implements StoreInterface<S> {
 
-declare class WSChannel<D, S> extends EventEmitter {
+	get(id: string): Promise<SessionContainer<S>>;
+	set(id: string, session: SessionContainer<S>): Promise<null>;
+	unset(id: string): Promise<null>;
+}
 
-	connections: Set<WSConnection<D, S>>;
+declare class Channel<D, S> extends Broadcaster<D, S> {
 
-	bind(connection: WSConnection<D, S>): WSChannel<D, S>;
-	broadcast<T>(event: string, data: T, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
-	broadcast<T>(data: T, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
+	bind(connection: WSConnection<D, S>): Channel<D, S>;
 	close(): void;
-	unbind(connection: WSConnection<D, S>): WSChannel<D, S>;
+	unbind(connection: WSConnection<D, S>): Channel<D, S>;
 }
 
 declare class WSConnection<D, S> extends Connection<D, S> {
@@ -509,13 +518,9 @@ declare class WSConnection<D, S> extends Connection<D, S> {
 	send<T>(data: T): void;
 }
 
-declare class WSHost<D, S> extends EventEmitter {
+declare class WSHost<D, S> extends Broadcaster<D, S> {
 
-	connections: Set<WSConnection<D, S>>;
-
-	broadcast<T>(event: string, data: T, filter?: WSFilterCallback<D, S>): WSHost<D, S>;
-	broadcast<T>(data: T, filter?: WSFilterCallback<D, S>): WSHost<D, S>;
-	channel(name: string, filter?: WSFilterCallback<D, S>): WSChannel<D, S>;
+	channel(name: string, filter?: WSFilterCallback<D, S>): Channel<D, S>;
 }
 
 /**

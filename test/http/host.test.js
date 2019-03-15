@@ -34,9 +34,9 @@ tap.test('HTTPHost.routesContainer()', (test) => {
 	test.end();
 });
 
-tap.test('HTTPHost.create()', (test) => {
+tap.test('HTTPHost.prototype.constructor()', (test) => {
 
-	const host = HTTPHost.create('hostname');
+	const host = new HTTPHost('hostname');
 
 	test.ok(host instanceof HTTPHost);
 	test.match(host._routers, {
