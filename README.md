@@ -1,6 +1,6 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
 
-# 0.9.0-alpha-6
+# 0.9.0-alpha-8
 
 simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
 

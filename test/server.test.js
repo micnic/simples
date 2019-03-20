@@ -198,6 +198,8 @@ tap.test('Server.getHTTPHostName()', (test) => {
 
 	test.equal(Server.getHTTPHostName('localhost'), 'localhost');
 	test.equal(Server.getHTTPHostName('localhost:8080'), 'localhost');
+	test.equal(Server.getHTTPHostName('[::1]'), '[::1]');
+	test.equal(Server.getHTTPHostName('[::1]:8080'), '[::1]');
 
 	test.end();
 });
@@ -220,11 +222,11 @@ tap.test('Server.getRequestLocation()', (test) => {
 	test.test('No host provided, not secured socket', (t) => {
 
 		const request = {
-			connection: {
+			headers: {},
+			socket: {
 				encrypted: false,
 				localAddress: '127.0.0.1'
 			},
-			headers: {},
 			url: '/'
 		};
 
@@ -238,12 +240,12 @@ tap.test('Server.getRequestLocation()', (test) => {
 	test.test('Host provided, secured socket', (t) => {
 
 		const request = {
-			connection: {
-				encrypted: true,
-				localAddress: '127.0.0.1'
-			},
 			headers: {
 				host: 'localhost'
+			},
+			socket: {
+				encrypted: true,
+				localAddress: '127.0.0.1'
 			},
 			url: '/'
 		};
@@ -288,13 +290,14 @@ tap.test('Server.requestListener()', (test) => {
 	test.equal(requestListener.length, 2);
 
 	const fakeRequest = {
-		connection: {
-			destroy: () => null,
-			localAddress: '127.0.0.1',
-			setTimeout: () => null
-		},
 		headers: {},
 		method: 'GET',
+		socket: {
+			destroy: () => null,
+			localAddress: '127.0.0.1',
+			on: () => null,
+			setTimeout: () => null
+		},
 		url: '/'
 	};
 	const fakeResponse = {
@@ -335,13 +338,13 @@ tap.test('Server.upgradeListener()', (test) => {
 			write: () => null
 		};
 		const fakeRequest = {
-			connection: fakeSocket,
 			headers: {
 				'host': 'localhost',
 				'sec-websocket-key': 'true',
 				'sec-websocket-version': '13',
 				'upgrade': 'websocket'
 			},
+			socket: fakeSocket,
 			url: '/'
 		};
 
@@ -354,10 +357,10 @@ tap.test('Server.upgradeListener()', (test) => {
 			destroy: () => t.end()
 		};
 		const fakeRequest = {
-			connection: fakeSocket,
 			headers: {
 				host: 'localhost'
 			},
+			socket: fakeSocket,
 			url: ''
 		};
 
