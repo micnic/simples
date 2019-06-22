@@ -3,8 +3,25 @@
 const tap = require('tap');
 
 const HTTPHost = require('simples/lib/http/host');
+const Router = require('simples/lib/http/router');
 const HTTPUtils = require('simples/lib/utils/http-utils');
-const constants = require('simples/lib/utils/constants');
+
+tap.test('HTTPHost.prototype.constructor()', (test) => {
+
+	const host = new HTTPHost('hostname');
+
+	test.ok(host instanceof Router);
+	test.match(host._routers, {
+		dynamic: new Map(),
+		fixed: new Map()
+	});
+	test.match(host._routes, HTTPHost.routesContainer());
+	test.ok(host._errors.get(500) === HTTPUtils.internalServerError);
+	test.ok(host._errors.get(405) === HTTPUtils.methodNotAllowed);
+	test.ok(host._errors.get(404) === HTTPUtils.notFound);
+
+	test.end();
+});
 
 tap.test('HTTPHost.routesContainer()', (test) => {
 
@@ -30,23 +47,6 @@ tap.test('HTTPHost.routesContainer()', (test) => {
 			fixed: new Map()
 		}
 	});
-
-	test.end();
-});
-
-tap.test('HTTPHost.prototype.constructor()', (test) => {
-
-	const host = new HTTPHost('hostname');
-
-	test.ok(host instanceof HTTPHost);
-	test.match(host._routers, {
-		dynamic: new Map(),
-		fixed: new Map()
-	});
-	test.match(host._routes, HTTPHost.routesContainer());
-	test.ok(host._errors.get(constants.internalServerErrorStatusCode) === HTTPUtils.internalServerError);
-	test.ok(host._errors.get(constants.methodNotAllowedStatusCode) === HTTPUtils.methodNotAllowed);
-	test.ok(host._errors.get(constants.notFoundStatusCode) === HTTPUtils.notFound);
 
 	test.end();
 });

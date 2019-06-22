@@ -1,23 +1,26 @@
 <img src="https://raw.github.com/micnic/simpleS/master/logo.png"/>
 
-# 0.9.0-alpha-8
+# 0.9.0-alpha-9
 
-simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers and clients with some special features:
+simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers
+and clients with WebSocket support and other special features:
 
 - High performance and simple structure with minimum configuration
 - Advanced routing for http requests, static files and errors
 - Unique interface for requests and responses (named as connection)
-- Response compression (deflate and gzip, disabled by default)
-- Virtual Hosting
-- CORS support
-- Sessions (disabled by default)
-- Template engine support
 - WebSocket implementation (RFC 6455)
-- Client API for HTTP requests and WebSocket connections
-- Browser simple API for AJAX and WebSocket
+- Server mirroring
+- Virtual Hosting
+- Response compression (deflate and gzip)
+- CORS support
+- Sessions
+- Logging
+- Middlewares
+- Template engine support
+- Node.js client API for HTTP requests and WebSocket connections
 
-#### Works with node.js 6.0+!
 #### Any feedback is welcome!
+#### Works with node.js 8.0+!
 
 #### More simple modules:
 - [recache](https://www.npmjs.com/package/recache)
@@ -30,10 +33,6 @@ simpleS is a simple web framework for Node.JS designed to create HTTP(S) servers
 ## Installation
 
     npm install simples@alpha
-
-## Examples
-
-See the folder `examples/` in the module directory, it contains examples that cover most simpleS features.
 
 ## Usage
 
@@ -117,10 +116,16 @@ socket.onmessage = (event) => {
 socket.send('ECHO');
 ```
 
-Access the server from the browser simpleS WebSocket API:
+Access the server using [simples-ws](https://www.npmjs.com/package/simples-ws):
 
 ```js
-const socket = simples.ws('/', ['echo']);
+import ws from 'simples-ws';
+
+const socket = ws('/', {
+    protocols: [
+        'echo'
+    ]
+});
 
 // Listen for messages
 socket.on('message', (message) => {

@@ -2,23 +2,29 @@
 
 const tap = require('tap');
 
-const symbols = require('simples/lib/utils/symbols');
 const Frame = require('simples/lib/ws/frame');
 const WSParser = require('simples/lib/parsers/ws-parser');
-
 const { Writable } = require('stream');
 
-tap.test('WSParser.prototype.constructor', (test) => {
+const { states: {
+	expect16BitLength,
+	expect64BitLength,
+	expectData,
+	expectHeader,
+	expectMask,
+	parsingFailed
+} } = WSParser;
 
-	const parser = new WSParser(0, true);
+tap.test('WSParser.prototype.constructor()', (test) => {
 
-	test.ok(parser instanceof WSParser);
+	const parser = new WSParser(0, false);
+
 	test.ok(parser instanceof Writable);
 	test.match(parser, {
 		buffer: null,
 		bufferBytes: 0,
-		client: true,
-		expect: symbols.expectHeader,
+		client: false,
+		expect: expectHeader,
 		frame: null,
 		limit: 0,
 		message: null
@@ -27,37 +33,32 @@ tap.test('WSParser.prototype.constructor', (test) => {
 	test.end();
 });
 
-tap.test('WSParser.prototype.readyBuffer', (test) => {
+tap.test('WSParser.prototype.readyBuffer()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(0, false);
 
-	let result = parser.readyBuffer(2, 0x00);
+	test.equal(parser.readyBuffer(2, 0xFF), false);
 
-	test.ok(result === false);
 	test.match(parser, {
-		buffer: Buffer.alloc(2),
+		buffer: Buffer.from([0xFF, 0x00]),
 		bufferBytes: 1
 	});
 
-	// --------------------
+	test.equal(parser.readyBuffer(2, 0xFF), true);
 
-	result = parser.readyBuffer(2, 0x00);
-
-	test.ok(result);
 	test.match(parser, {
-		buffer: Buffer.alloc(2),
+		buffer: Buffer.from([0xFF, 0xFF]),
 		bufferBytes: 2
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.resetBuffer', (test) => {
+tap.test('WSParser.prototype.resetBuffer()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(0, false);
 
-	parser.buffer = Buffer.alloc(1);
-	parser.bufferBytes = 1;
+	parser.readyBuffer(1, 0x00);
 
 	parser.resetBuffer();
 
@@ -69,203 +70,382 @@ tap.test('WSParser.prototype.resetBuffer', (test) => {
 	test.end();
 });
 
-tap.test('WSParser.prototype.validateFrame', (test) => {
+tap.test('WSParser.prototype.validateFrame()', (test) => {
 
-	const parser = new WSParser(0, true);
+	test.test('Valid frame', (t) => {
 
-	parser.frame = {};
+		const parser = new WSParser(0, false);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 1
+		}, Buffer.alloc(0));
 
-	parser.validateFrame(() => {
-		test.fail('Callback function should not be called');
+		parser.frame = new Frame(buffer);
+
+		t.ok(parser.validateFrame(() => {
+			t.fail('Callback should not be called');
+		}));
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Frame with extensions flag set', (t) => {
 
-	parser.frame.extension = true;
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 1
+		}, Buffer.alloc(0));
 
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
+		let errorEmitted = false;
+
+		buffer[0] |= 0x70;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Invalid continuation frame', (t) => {
 
-	parser.frame.extension = false;
-	parser.frame.opcode = 0;
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 0
+		}, Buffer.alloc(0));
 
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Continuation frame expected', (t) => {
 
-	parser.frame.opcode = 1;
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 1
+		}, Buffer.alloc(0));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		parser.message = {
+			data: Buffer.alloc(0),
+			type: 'text'
+		};
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.test('Unknown frame type', (t) => {
+
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 3
+		}, Buffer.alloc(0));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.test('Invalid control frame with extended length', (t) => {
+
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 8
+		}, Buffer.alloc(126));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.test('Invalid control frame without fin flag', (t) => {
+
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: false,
+			masked: true,
+			opcode: 8
+		}, Buffer.alloc(0));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.test('Masked frame received from the server', (t) => {
+
+		const parser = new WSParser(0, true);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: true,
+			opcode: 1
+		}, Buffer.alloc(0));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.test('Unmasked frame received from the client', (t) => {
+
+		const parser = new WSParser(0, false);
+		const buffer = Frame.buffer({
+			fin: true,
+			masked: false,
+			opcode: 1
+		}, Buffer.alloc(0));
+
+		let errorEmitted = false;
+
+		parser.frame = new Frame(buffer);
+
+		t.ok(!parser.validateFrame((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		}));
+
+		t.ok(errorEmitted);
+
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.end();
+});
+
+tap.test('WSParser.prototype.emitMessage()', (test) => {
+
+	test.test('Binary message', (t) => {
+
+		const parser = new WSParser(0, false);
+
+		const message = parser.message = {
+			data: Buffer.from([0]),
+			type: 'binary'
+		};
+
+		let messageEmitted = false;
+
+		parser.once('message', (m) => {
+			t.equal(m, message);
+			messageEmitted = true;
+		});
+
+		parser.emitMessage(() => {
+			t.fail('Callback should not be called');
+		});
+
+		t.equal(parser.message, null);
+		t.ok(messageEmitted);
+
+		t.end();
+	});
+
+	test.test('Text message', (t) => {
+
+		const parser = new WSParser(0, false);
+
+		const message = parser.message = {
+			data: Buffer.from([32]),
+			type: 'text'
+		};
+
+		let messageEmitted = false;
+
+		parser.once('message', (m) => {
+			t.equal(m, message);
+			t.equal(m.data, ' ');
+			messageEmitted = true;
+		});
+
+		parser.emitMessage(() => {
+			t.fail('Callback should not be called');
+		});
+
+		t.equal(parser.message, null);
+		t.ok(messageEmitted);
+
+		t.end();
+	});
+
+	test.test('Text message with invalid UTF8 data', (t) => {
+
+		const parser = new WSParser(0, false);
+
+		let errorEmitted = false;
+
+		parser.message = {
+			data: Buffer.from([128]),
+			type: 'text'
+		};
+
+		parser.once('message', () => {
+			t.fail('Message should not be emitted');
+		});
+
+		parser.emitMessage((error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		});
+
+		t.ok(errorEmitted);
+		t.equal(parser.message, null);
+		t.equal(parser.expect, parsingFailed);
+
+		t.end();
+	});
+
+	test.end();
+});
+
+tap.test('WSParser.prototype.joinMessageData()', (test) => {
+
+	const parser = new WSParser(0, false);
+
+	let messageEmitted = false;
+
+	let data = Buffer.from([0]);
+
+	parser.frame = new Frame(Frame.buffer({
+		fin: false,
+		masked: false,
+		opcode: 2
+	}, data));
+
 	parser.message = {
-		data: Buffer.alloc(0)
+		data: Buffer.alloc(0),
+		type: 'binary'
 	};
 
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	// --------------------
-
-	parser.frame.opcode = 3;
-
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	// --------------------
-
-	parser.frame.opcode = 8;
-
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	// --------------------
-
-	parser.frame.opcode = 0;
-	parser.frame.masked = true;
-
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	// --------------------
-
-	parser.frame.masked = false;
-	parser.client = false;
-
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	// --------------------
-
-	parser.limit = 1;
-	parser.frame.masked = true;
-	parser.frame.length = 2;
-
-	parser.validateFrame((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	test.end();
-});
-
-tap.test('WSParser.prototype.emitMessage', (test) => {
-
-	const parser = new WSParser(0, true);
-	const fakeMessage = {};
+	parser.frame.appendData(data);
 
 	parser.on('message', (message) => {
-		test.ok(message === fakeMessage);
-
-		if (message.type === 'text') {
-			test.ok(message.data === '');
-		}
+		test.ok(message === parser.message);
+		test.match(message.data, Buffer.from([0, 1]));
+		messageEmitted = true;
 	});
 
-	parser.message = fakeMessage;
-
-	parser.emitMessage(() => {
-		test.fail('Callback function should not be called');
+	parser.joinMessageData(() => {
+		test.fail('Callback should not be called');
 	});
 
-	test.ok(parser.message === null);
+	test.match(parser.message.data, Buffer.from([0]));
 
-	// --------------------
+	data = Buffer.from([1]);
 
-	fakeMessage.type = 'text';
-	fakeMessage.data = Buffer.alloc(0);
-	parser.message = fakeMessage;
+	parser.frame = new Frame(Frame.buffer({
+		fin: true,
+		masked: false,
+		opcode: 2
+	}, data));
 
-	parser.emitMessage(() => {
-		test.fail('Callback function should not be called');
+	parser.frame.appendData(data);
+
+	parser.joinMessageData(() => {
+		test.fail('Callback should not be called');
 	});
 
-	test.ok(parser.message === null);
-
-	// --------------------
-
-	fakeMessage.type = 'text';
-	fakeMessage.data = Buffer.from([0x80]);
-	parser.message = fakeMessage;
-
-	parser.emitMessage((error) => {
-		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
-	});
-
-	test.ok(parser.message === null);
+	test.ok(messageEmitted);
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.joinMessageData', (test) => {
+tap.test('WSParser.prototype.createMessage()', (test) => {
 
-	const parser = new WSParser(0, true);
-	const fakeMessage = {};
+	const parser = new WSParser(0, false);
 
-	parser.on('message', (message) => {
-		test.ok(message === fakeMessage);
-	});
-
-	parser.frame = {
-		data: Buffer.alloc(0),
-		mask: Buffer.alloc(4)
-	};
-
-	fakeMessage.data = Buffer.alloc(0);
-
-	parser.message = fakeMessage;
-
-	parser.joinMessageData(() => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.match(parser.message.data, Buffer.alloc(0));
-
-	// --------------------
-
-	parser.client = false;
-
-	parser.joinMessageData(() => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.match(parser.message.data, Buffer.alloc(0));
-
-	// --------------------
-
-	parser.frame.fin = true;
-
-	parser.joinMessageData(() => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.ok(parser.message === null);
-
-	test.end();
-});
-
-tap.test('WSParser.prototype.createMessage', (test) => {
-
-	const parser = new WSParser(0, true);
-
-	parser.frame = {
-		data: Buffer.alloc(0),
+	parser.frame = new Frame(Frame.buffer({
+		fin: false,
+		masked: false,
 		opcode: 1
-	};
+	}, Buffer.alloc(0)));
 
 	parser.createMessage(() => {
 		test.fail('Callback function should not be called');
@@ -275,8 +455,6 @@ tap.test('WSParser.prototype.createMessage', (test) => {
 		data: Buffer.alloc(0),
 		type: 'text'
 	});
-
-	// --------------------
 
 	parser.frame.opcode = 2;
 
@@ -292,56 +470,64 @@ tap.test('WSParser.prototype.createMessage', (test) => {
 	test.end();
 });
 
-tap.test('WSParser.prototype.emitControlFrame', (test) => {
+tap.test('WSParser.prototype.emitControlFrame()', (test) => {
 
-	const parser = new WSParser(0, true);
-	const fakeFrame = {};
+	const parser = new WSParser(0, false);
 
-	fakeFrame.opcode = 10;
+	let controlEmitted = 0;
+	let errorEmitted = false;
 
-	parser.frame = fakeFrame;
+	parser.frame = new Frame(Frame.ping());
 
 	parser.on('control', (frame) => {
-		test.ok(frame === fakeFrame);
+		test.ok(frame === parser.frame);
+		controlEmitted++;
 	});
 
 	parser.emitControlFrame(() => {
 		test.fail('Callback function should not be called');
 	});
 
-	// --------------------
+	let data = Buffer.alloc(0);
 
-	fakeFrame.opcode = 9;
+	parser.frame = new Frame(Frame.buffer({
+		fin: false,
+		masked: false,
+		opcode: 8
+	}, data));
 
-	parser.emitControlFrame(() => {
-		test.fail('Callback function should not be called');
-	});
-
-	// --------------------
-
-	fakeFrame.data = Buffer.alloc(0);
-	fakeFrame.opcode = 8;
+	parser.frame.appendData(data);
 
 	parser.emitControlFrame(() => {
 		test.fail('Callback function should not be called');
 	});
 
-	// --------------------
+	data = Buffer.from([0x03, 0xE8, 0x80]);
 
-	fakeFrame.data = Buffer.from([0, 0, 0x80]);
-	fakeFrame.opcode = 8;
+	parser.frame = new Frame(Frame.buffer({
+		fin: false,
+		masked: false,
+		opcode: 8
+	}, data));
+
+	parser.frame.appendData(data);
 
 	parser.emitControlFrame((error) => {
 		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
+		errorEmitted = true;
 	});
+
+	test.equal(controlEmitted, 2);
+	test.ok(errorEmitted);
+
+	test.equal(parser.expect, parsingFailed);
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.endFrameProcessing', (test) => {
+tap.test('WSParser.prototype.endFrameProcessing()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(0, false);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -353,7 +539,7 @@ tap.test('WSParser.prototype.endFrameProcessing', (test) => {
 	});
 
 	test.match(parser, {
-		expect: symbols.expectHeader,
+		expect: expectHeader,
 		frame: null,
 		message: {
 			data: Buffer.alloc(0),
@@ -373,7 +559,7 @@ tap.test('WSParser.prototype.endFrameProcessing', (test) => {
 	});
 
 	test.match(parser, {
-		expect: symbols.expectHeader,
+		expect: expectHeader,
 		frame: null,
 		message: {
 			data: Buffer.alloc(0),
@@ -393,7 +579,7 @@ tap.test('WSParser.prototype.endFrameProcessing', (test) => {
 	});
 
 	test.match(parser, {
-		expect: symbols.expectHeader,
+		expect: expectHeader,
 		frame: null
 	});
 
@@ -406,121 +592,181 @@ tap.test('WSParser.prototype.endFrameProcessing', (test) => {
 
 	parser.endFrameProcessing((error) => {
 		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
+	});
+
+	test.match(parser, {
+		expect: parsingFailed,
+		frame: null
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.parseHeader', (test) => {
+tap.test('WSParser.prototype.parseHeader()', (test) => {
 
-	const parser = new WSParser(0, true);
+	test.test('Invalid header', (t) => {
 
-	parser.parseHeader(0x81, () => {
-		test.fail('Callback function should not be called');
+		const parser = new WSParser(0, false);
+
+		let errorEmitted = false;
+
+		parser.parseHeader(0x00, () => {
+			t.fail('Callback function should not be called');
+		});
+
+		t.match(parser, {
+			buffer: Buffer.from([0x00, 0x00]),
+			bufferBytes: 1
+		});
+
+		parser.parseHeader(0x00, (error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		});
+
+		t.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.ok(errorEmitted);
+
+		t.end();
 	});
 
-	test.match(parser, {
-		buffer: Buffer.from([0x81, 0x00]),
-		bufferBytes: 1
+	test.test('Too long message', (t) => {
+
+		const parser = new WSParser(1, false);
+
+		let errorEmitted = false;
+
+		parser.message = {
+			data: Buffer.alloc(0)
+		};
+
+		parser.parseHeader(0x80, () => {
+			t.fail('Callback function should not be called');
+		});
+
+		parser.parseHeader(0x82, (error) => {
+			t.ok(error instanceof Error);
+			errorEmitted = true;
+		});
+
+		t.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.ok(errorEmitted);
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Header that expects mask after', (t) => {
 
-	parser.parseHeader(0x81, (error) => {
-		test.ok(error instanceof Error);
+		const parser = new WSParser(0, false);
+
+		parser.parseHeader(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		parser.parseHeader(0x80, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		test.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.end();
 	});
 
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.parsingFailed
+	test.test('Header that expects 16bit length after', (t) => {
+
+		const parser = new WSParser(0, false);
+
+		parser.parseHeader(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		parser.parseHeader(0xFE, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		test.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Header that expects 64bit length after', (t) => {
 
-	parser.buffer = Buffer.from([0x81, 0x00]);
-	parser.bufferBytes = 1;
-	parser.expect = symbols.expectHeader;
+		const parser = new WSParser(0, false);
 
-	parser.parseHeader(0x7E, () => {
-		test.fail('Callback function should not be called');
+		parser.parseHeader(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		parser.parseHeader(0xFF, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		test.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.end();
 	});
 
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expect16BitLength
+	test.test('Header of frame without content in client', (t) => {
+
+		const parser = new WSParser(0, true);
+
+		parser.parseHeader(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		parser.parseHeader(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		test.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Header of frame with content in client', (t) => {
 
-	parser.buffer = Buffer.from([0x81, 0x00]);
-	parser.bufferBytes = 1;
-	parser.expect = symbols.expectHeader;
+		const parser = new WSParser(0, true);
 
-	parser.parseHeader(0x7F, () => {
-		test.fail('Callback function should not be called');
-	});
+		parser.parseHeader(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
 
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expect64BitLength
-	});
+		parser.parseHeader(0x01, () => {
+			test.fail('Callback function should not be called');
+		});
 
-	// --------------------
+		test.match(parser, {
+			buffer: null,
+			bufferBytes: 0
+		});
 
-	parser.buffer = Buffer.from([0x81, 0x00]);
-	parser.bufferBytes = 1;
-	parser.expect = symbols.expectHeader;
-
-	parser.parseHeader(0x7D, () => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectData
-	});
-
-	// --------------------
-
-	parser.buffer = Buffer.from([0x81, 0x00]);
-	parser.bufferBytes = 1;
-	parser.expect = symbols.expectHeader;
-
-	parser.parseHeader(0x00, () => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectHeader
-	});
-
-	// --------------------
-
-	parser.buffer = Buffer.from([0x81, 0x00]);
-	parser.bufferBytes = 1;
-	parser.client = false;
-
-	parser.parseHeader(0x80, () => {
-		test.fail('Callback function should not be called');
-	});
-
-	test.match(parser, {
-		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectMask
+		t.end();
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.parse16BitLength', (test) => {
+tap.test('WSParser.prototype.parse16BitLength()', (test) => {
 
 	const parser = new WSParser(0, true);
 
@@ -540,7 +786,6 @@ tap.test('WSParser.prototype.parse16BitLength', (test) => {
 	test.match(parser, {
 		buffer: null,
 		bufferBytes: 0,
-		expect: symbols.expectData,
 		frame: {
 			length: 257
 		}
@@ -557,7 +802,6 @@ tap.test('WSParser.prototype.parse16BitLength', (test) => {
 	test.match(parser, {
 		buffer: null,
 		bufferBytes: 0,
-		expect: symbols.expectMask,
 		frame: {
 			length: 257
 		}
@@ -566,7 +810,7 @@ tap.test('WSParser.prototype.parse16BitLength', (test) => {
 	test.end();
 });
 
-tap.test('WSParser.prototype.parse64BitLength', (test) => {
+tap.test('WSParser.prototype.parse64BitLength()', (test) => {
 
 	const parser = new WSParser(0, true);
 
@@ -653,8 +897,6 @@ tap.test('WSParser.prototype.parse64BitLength', (test) => {
 		test.ok(error instanceof Error);
 	});
 
-	test.ok(parser.expect === symbols.parsingFailed);
-
 	// --------------------
 
 	parser.buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x00]);
@@ -666,8 +908,7 @@ tap.test('WSParser.prototype.parse64BitLength', (test) => {
 
 	test.match(parser, {
 		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectData
+		bufferBytes: 0
 	});
 
 	// --------------------
@@ -682,14 +923,13 @@ tap.test('WSParser.prototype.parse64BitLength', (test) => {
 
 	test.match(parser, {
 		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectMask
+		bufferBytes: 0
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.parseMask', (test) => {
+tap.test('WSParser.prototype.parseMask()', (test) => {
 
 	const parser = new WSParser(0, true);
 
@@ -751,51 +991,140 @@ tap.test('WSParser.prototype.parseMask', (test) => {
 
 	test.match(parser, {
 		buffer: null,
-		bufferBytes: 0,
-		expect: symbols.expectData
+		bufferBytes: 0
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.parseByte', (test) => {
+tap.test('WSParser.prototype.parseByte()', (test) => {
 
-	const byte = 0x00;
-	const parser = new WSParser(0, true);
+	test.test('Parse masked 16bit length frame', (t) => {
 
-	parser.parseByte(byte, () => {
-		test.fail('Callback function should not be called');
+		const parser = new WSParser(0, false);
+
+		parser.parseByte(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectHeader);
+
+		parser.parseByte(0xFE, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect16BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect16BitLength);
+
+		parser.parseByte(0xFF, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectMask);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectMask);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectMask);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectMask);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectData);
+
+		t.end();
 	});
 
-	// --------------------
+	test.test('Parse unmasked 64bit length frame', (t) => {
 
-	parser.expect = symbols.expect16BitLength;
-	parser.frame = {};
+		const parser = new WSParser(0, true);
 
-	parser.parseByte(byte, () => {
-		test.fail('Callback function should not be called');
-	});
+		parser.parseByte(0x81, () => {
+			test.fail('Callback function should not be called');
+		});
 
-	// --------------------
+		t.equal(parser.expect, expectHeader);
 
-	parser.expect = symbols.expect64BitLength;
+		parser.parseByte(0x7F, () => {
+			test.fail('Callback function should not be called');
+		});
 
-	parser.parseByte(byte, () => {
-		test.fail('Callback function should not be called');
-	});
+		t.equal(parser.expect, expect64BitLength);
 
-	// --------------------
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
 
-	parser.expect = symbols.expectMask;
+		t.equal(parser.expect, expect64BitLength);
 
-	parser.parseByte(byte, () => {
-		test.fail('Callback function should not be called');
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0x00, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expect64BitLength);
+
+		parser.parseByte(0xFF, () => {
+			test.fail('Callback function should not be called');
+		});
+
+		t.equal(parser.expect, expectData);
+
+		t.end();
 	});
 
 	test.end();
 });
 
-tap.test('WSParser.prototype.getData', (test) => {
+tap.test('WSParser.prototype.getData()', (test) => {
 
 	const parser = new WSParser(1024, true);
 
@@ -821,34 +1150,34 @@ tap.test('WSParser.prototype.getData', (test) => {
 	test.end();
 });
 
-tap.test('WSParser.prototype.write', (test) => {
+tap.test('WSParser.prototype.write()', (test) => {
 
-	const parser = new WSParser(1024, true);
+	const parser = new WSParser(0, false);
 
-	parser.on('error', (error) => {
+	let errorEmitted = false;
+	let messageEmitted = false;
+
+	parser.on('message', (message) => {
+		test.match(message, {
+			data: 'data',
+			type: 'text'
+		});
+		messageEmitted = true;
+	}).on('error', (error) => {
 		test.ok(error instanceof Error);
+		errorEmitted = true;
 	});
 
-	parser.write(Buffer.alloc(1));
+	parser.write(Frame.buffer({
+		fin: true,
+		masked: true,
+		opcode: 1,
+	}, Buffer.from('data')));
 
-	// --------------------
+	parser.write(Buffer.from([0x80, 0x80]));
 
-	parser.expect = symbols.expectData;
-	parser.frame = new Frame(Buffer.alloc(2));
-	parser.message = {
-		data: Buffer.alloc(0),
-		type: 'text'
-	};
-
-	parser.write(Buffer.alloc(1));
-
-	// --------------------
-
-	parser.expect = symbols.expectHeader;
-
-	parser.write(Buffer.from([0xFF, 0xFF]));
-
-	test.ok(parser.expect === symbols.parsingFailed);
+	test.ok(messageEmitted);
+	test.ok(errorEmitted);
 
 	test.end();
 });

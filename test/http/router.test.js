@@ -6,12 +6,35 @@ const TestUtils = require('simples/test/test-utils');
 const HTTPHost = require('simples/lib/http/host');
 const Router = require('simples/lib/http/router');
 const Route = require('simples/lib/route');
-const Store = require('simples/lib/store/store');
+const Store = require('simples/lib/session/store');
 const WSHost = require('simples/lib/ws/host');
 
 const { EventEmitter } = require('events');
 
 TestUtils.mockHTTPServer();
+
+tap.test('Router.prototype.constructor()', (test) => {
+
+	const host = new HTTPHost('hostname');
+
+	let router = new Router(host, '', null);
+
+	test.ok(router instanceof EventEmitter);
+	test.match(router, {
+		data: {}
+	});
+
+	const parentRouter = router;
+
+	router = new Router(parentRouter, '*', null);
+
+	test.ok(router instanceof EventEmitter);
+	test.match(router, {
+		data: {}
+	});
+
+	test.end();
+});
 
 tap.test('Router.optionsContainer()', (test) => {
 
@@ -87,31 +110,6 @@ tap.test('Router.getPattern()', (test) => {
 	test.end();
 });
 
-tap.test('Router.prototype.constructor()', (test) => {
-
-	const host = new HTTPHost('hostname');
-
-	let router = new Router(host, '', null);
-
-	test.ok(router instanceof Router);
-	test.ok(router instanceof EventEmitter);
-	test.match(router, {
-		data: {}
-	});
-
-	const parentRouter = router;
-
-	router = new Router(parentRouter, '*', null);
-
-	test.ok(router instanceof Router);
-	test.ok(router instanceof EventEmitter);
-	test.match(router, {
-		data: {}
-	});
-
-	test.end();
-});
-
 tap.test('Router.prototype.compression()', (test) => {
 
 	const host = new HTTPHost('hostname');
@@ -172,7 +170,7 @@ tap.test('Router.prototype.session()', (test) => {
 	test.match(router._options.session, {
 		enabled: false,
 		store: Store,
-		timeout: 3600
+		timeout: 3600000
 	});
 
 	test.end();

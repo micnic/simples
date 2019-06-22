@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
@@ -12,24 +13,51 @@ class TestUtils {
 		});
 	}
 
-	static mockConsoleError(fn, callback) {
+	static mock(object, method, mock, callback) {
 
-		// eslint-disable-next-line
-		const consoleError = console.error;
+		const objectMethod = object[method];
 
-		// eslint-disable-next-line
-		console.error = fn;
+		const restore = () => {
+			object[method] = objectMethod;
+		};
 
-		callback();
+		object[method] = mock;
 
-		// eslint-disable-next-line
-		console.error = consoleError;
+		if (callback.length) {
+			callback(restore);
+		} else {
+			callback();
+			restore();
+		}
 	}
 
-	static mockFSReadFile(error, content) {
-		fs.readFile = (...args) => {
+	static mockBufferAllocUnsafe(callback) {
+
+		const mock = (size) => Buffer.alloc(size);
+
+		TestUtils.mock(Buffer, 'allocUnsafe', mock, callback);
+	}
+
+	static mockCryptoRandomBytes(error,	buffer, callback) {
+
+		const mock = (...args) => {
+			TestUtils.callAsync(args[1], error, buffer);
+		};
+
+		TestUtils.mock(crypto, 'randomBytes', mock, callback);
+	}
+
+	static mockProcessSTDERRWrite(mock, callback) {
+		TestUtils.mock(process.stderr, 'write', mock, callback);
+	}
+
+	static mockFSReadFile(error, content, callback) {
+
+		const mock = (...args) => {
 			TestUtils.callAsync(args[1], error, content);
 		};
+
+		TestUtils.mock(fs, 'readFile', mock, callback);
 	}
 
 	static mockHTTPServer() {
@@ -44,18 +72,6 @@ class TestUtils {
 		};
 		https.Server.prototype.listen = (...args) => {
 			TestUtils.callAsync(args[3]);
-		};
-	}
-
-	static mockSetInterval() {
-		global.setInterval = (...args) => {
-			TestUtils.callAsync(args[0], ...args.slice(2));
-
-			return {
-				unref() {
-					return null;
-				}
-			};
 		};
 	}
 }

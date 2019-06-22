@@ -2,7 +2,7 @@
 
 const http = require('http');
 const tap = require('tap');
-const url = require('url');
+const { URL } = require('url');
 
 const HTTPHost = require('simples/lib/http/host');
 const MapContainer = require('simples/lib/utils/map-container');
@@ -12,6 +12,36 @@ const ServerUtils = require('simples/lib/utils/server-utils');
 const TestUtils = require('simples/test/test-utils');
 
 TestUtils.mockHTTPServer();
+
+tap.test('Server.prototype.constructor()', (test) => {
+
+	const server = new Server();
+	const hosts = Server.getHTTPHosts(server);
+	const meta = ServerUtils.getServerMeta(server);
+
+	test.ok(server instanceof HTTPHost);
+	test.match(server._options, {
+		compression: {},
+		cors: {},
+		logger: {},
+		session: {},
+		static: {},
+		timeout: {}
+	});
+	test.match(hosts, MapContainer.dynamic());
+	test.match(meta, {
+		backlog: null,
+		busy: true,
+		hostname: '',
+		https: null,
+		instance: http.Server,
+		port: 80,
+		requestListener: Function,
+		started: true,
+		upgradeListener: Function
+	});
+	test.end();
+});
 
 tap.test('Server.prototype.host()', (test) => {
 
@@ -75,36 +105,6 @@ tap.test('Server.prototype.stop()', (test) => {
 	});
 
 	test.equal(result, server);
-});
-
-tap.test('new Server()', (test) => {
-
-	const server = new Server();
-	const hosts = Server.getHTTPHosts(server);
-	const meta = ServerUtils.getServerMeta(server);
-
-	test.ok(server instanceof Server);
-	test.match(server._options, {
-		compression: {},
-		cors: {},
-		logger: {},
-		session: {},
-		static: {},
-		timeout: {}
-	});
-	test.match(hosts, MapContainer.dynamic());
-	test.match(meta, {
-		backlog: null,
-		busy: true,
-		hostname: '',
-		https: null,
-		instance: http.Server,
-		port: 80,
-		requestListener: Function,
-		started: true,
-		upgradeListener: Function
-	});
-	test.end();
 });
 
 tap.test('Server.getHost()', (test) => {
@@ -232,7 +232,7 @@ tap.test('Server.getRequestLocation()', (test) => {
 
 		const location = Server.getRequestLocation(request, 'http');
 
-		t.match(location, url.parse('http://127.0.0.1/'));
+		t.match(location, new URL('http://127.0.0.1/'));
 
 		t.end();
 	});
@@ -252,7 +252,7 @@ tap.test('Server.getRequestLocation()', (test) => {
 
 		const location = Server.getRequestLocation(request, 'http');
 
-		t.match(location, url.parse('https://localhost/'));
+		t.match(location, new URL('https://localhost/'));
 
 		t.end();
 	});
@@ -317,11 +317,15 @@ tap.test('Server.upgradeListener()', (test) => {
 	const server = new Server();
 	const upgradeListener = Server.upgradeListener(server);
 
+	server.on('error', (error) => {
+		test.ok(error instanceof Error)
+	});
+
 	server.ws('/', (connection) => {
 		connection.end();
 	});
 
-	test.ok(typeof upgradeListener === 'function');
+	test.equal(typeof upgradeListener, 'function');
 	test.equal(upgradeListener.length, 2);
 
 	test.test('WS host found', (t) => {
@@ -361,7 +365,7 @@ tap.test('Server.upgradeListener()', (test) => {
 				host: 'localhost'
 			},
 			socket: fakeSocket,
-			url: ''
+			url: '/no-ws-host'
 		};
 
 		upgradeListener(fakeRequest, fakeSocket);

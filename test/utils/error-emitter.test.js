@@ -27,22 +27,11 @@ tap.test('ErrorEmitter.emit()', (test) => {
 
 		const emitter = new EventEmitter();
 
-		TestUtils.mockConsoleError((errorMessage) => {
+		TestUtils.mockProcessSTDERRWrite((errorMessage) => {
 			t.equal(errorMessage, `\n${someError.stack}\n`);
 		}, () => {
 			ErrorEmitter.emit(emitter, someError);
 		});
-
-		t.end();
-	});
-
-	test.test('Non-TTY stderr', (t) => {
-
-		const emitter = new EventEmitter();
-
-		process.stderr.isTTY = false;
-
-		ErrorEmitter.emit(emitter, someError);
 
 		t.end();
 	});

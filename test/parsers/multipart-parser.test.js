@@ -1,10 +1,19 @@
 'use strict';
 
-const { PassThrough, Transform } = require('stream');
 const tap = require('tap');
 
 const MultipartParser = require('simples/lib/parsers/multipart-parser');
-const symbols = require('simples/lib/utils/symbols');
+const MultipartField = require('simples/lib/parsers/multipart-field');
+const { PassThrough, Transform } = require('stream');
+
+const { states: {
+	expectData,
+	expectFirstBoundary,
+	expectHeader,
+	expectRequestEnd,
+	parsingFailed,
+	parsingFinished
+} } = MultipartParser;
 
 const boundary = '--------boundary';
 const dispositionHeader = 'Content-Disposition';
@@ -65,7 +74,7 @@ tap.test('MultipartParser.prototype.constructor()', (test) => {
 			boundaryIndex: 2,
 			boundaryLength: parser.boundary.length,
 			buffer: Buffer.alloc(0),
-			expect: symbols.expectFirstBoundary,
+			expect: expectFirstBoundary,
 			field: null,
 			header: '',
 			prev: 0,
@@ -111,7 +120,7 @@ tap.test('MultipartParser.prototype.skipFirstBoundary()', (test) => {
 
 	test.match(parser, {
 		boundaryIndex: 0,
-		expect: symbols.expectHeader,
+		expect: expectHeader,
 		prev: 0
 	});
 
@@ -119,7 +128,7 @@ tap.test('MultipartParser.prototype.skipFirstBoundary()', (test) => {
 
 	parser.skipFirstBoundary(data[index], (error) => {
 		test.ok(error instanceof Error);
-		test.ok(parser.expect === symbols.parsingFailed);
+		test.ok(parser.expect === parsingFailed);
 	});
 
 	test.end();
@@ -133,7 +142,7 @@ tap.test('MultipartParser.prototype.newPart()', (test) => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.field instanceof MultipartParser.MultipartField);
+	test.ok(parser.field instanceof MultipartField);
 	test.ok(parser.field instanceof PassThrough);
 	test.match(parser.field, {
 		headers: {},
@@ -144,7 +153,7 @@ tap.test('MultipartParser.prototype.newPart()', (test) => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.field instanceof MultipartParser.MultipartField);
+	test.ok(parser.field instanceof MultipartField);
 	test.ok(parser.field instanceof PassThrough);
 	test.match(parser.field, {
 		filename,
@@ -171,7 +180,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 			t.fail('Callback function should not be called');
 		});
 
-		t.ok(parser.field instanceof MultipartParser.MultipartField);
+		t.ok(parser.field instanceof MultipartField);
 		t.ok(parser.field instanceof PassThrough);
 		t.match(parser, {
 			field: {
@@ -191,7 +200,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 
 		const parser = new MultipartParser(boundary);
 
-		parser.field = new MultipartParser.MultipartField(name);
+		parser.field = new MultipartField(name);
 		parser.header = 'Content-Type: text/plain';
 
 		parser.parseHeader(() => {
@@ -213,7 +222,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 		parser.parseHeader((error) => {
 			t.ok(error instanceof Error);
 			t.ok(error.message === 'No header name delimiter found');
-			t.ok(parser.expect === symbols.parsingFailed);
+			t.ok(parser.expect === parsingFailed);
 		});
 
 		t.end();
@@ -229,7 +238,7 @@ tap.test('MultipartParser.prototype.parseHeader()', (test) => {
 		parser.parseHeader((error) => {
 			t.ok(error instanceof Error);
 			t.ok(error.message === 'Invalid header received');
-			t.ok(parser.expect === symbols.parsingFailed);
+			t.ok(parser.expect === parsingFailed);
 		});
 
 		t.end();
@@ -327,7 +336,7 @@ tap.test('MultipartParser.prototype.getHeader()', (test) => {
 
 	parser.on('field', (field) => {
 		test.match(parser, {
-			expect: symbols.expectData,
+			expect: expectData,
 			field,
 			startIndex: index + 1,
 			stopIndex: index + 1
@@ -428,14 +437,14 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 		index++;
 	}
 
-	test.ok(parser.expect === symbols.expectHeader);
+	test.ok(parser.expect === expectHeader);
 
 	// --------------------
 
 	data = Buffer.from(`data\r\n--${boundary}--`);
 	index = end;
 
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -467,14 +476,14 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 		index++;
 	}
 
-	test.ok(parser.expect === symbols.expectRequestEnd);
+	test.ok(parser.expect === expectRequestEnd);
 
 	// --------------------
 
 	data = Buffer.from(`data\r\n--${boundary}+`);
 	index = end;
 
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -501,7 +510,7 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 		index++;
 	}
 
-	test.ok(parser.expect === symbols.parsingFailed);
+	test.ok(parser.expect === parsingFailed);
 
 	// --------------------
 
@@ -509,7 +518,7 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 	index = end;
 
 	parser.boundaryIndex = 0;
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -536,7 +545,7 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 		index++;
 	}
 
-	test.ok(parser.expect === symbols.parsingFailed);
+	test.ok(parser.expect === parsingFailed);
 
 	// --------------------
 
@@ -544,7 +553,7 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 	index = 0;
 
 	parser.boundaryIndex = 1;
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 	parser.stopIndex = 0;
 
 	parser.newPart('form-data; name="name"', () => {
@@ -604,14 +613,14 @@ tap.test('MultipartParser.prototype.getData()', (test) => {
 		index++;
 	}
 
-	test.ok(parser.expect === symbols.expectRequestEnd);
+	test.ok(parser.expect === expectRequestEnd);
 
 	// --------------------
 
 	data = Buffer.from('data');
 	index = 0;
 
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 
 	parser.newPart('form-data; name="name"', () => {
 		test.fail('Callback function should not be called');
@@ -661,7 +670,7 @@ tap.test('MultipartParser.prototype.endParsing()', (test) => {
 		test.fail('Callback function should not be called');
 	});
 
-	test.ok(parser.expect === symbols.parsingFinished);
+	test.ok(parser.expect === parsingFinished);
 
 	// --------------------
 
@@ -684,25 +693,25 @@ tap.test('MultipartParser.prototype.parseByte()', (test) => {
 
 	// --------------------
 
-	parser.expect = symbols.expectHeader;
+	parser.expect = expectHeader;
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
 
 	// --------------------
 
-	parser.expect = symbols.expectData;
+	parser.expect = expectData;
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
 
 	// --------------------
 
-	parser.expect = symbols.expectRequestEnd;
+	parser.expect = expectRequestEnd;
 
 	parser.parseByte(someBuffer, byte, index, someCallback);
 
 	// --------------------
 
-	parser.expect = symbols.parsingFinished;
+	parser.expect = parsingFinished;
 
 	parser.parseByte(someBuffer, byte, index, (error) => {
 		test.ok(error instanceof Error);
@@ -733,7 +742,7 @@ tap.test('MultipartParser.prototype.end()', (test) => {
 
 	let parser = new MultipartParser(boundary);
 
-	parser.expect = symbols.parsingFinished;
+	parser.expect = parsingFinished;
 
 	parser.on('finish', () => {
 		test.pass('Parsing ended');

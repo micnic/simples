@@ -3,9 +3,9 @@
 const tap = require('tap');
 
 const simples = require('simples');
-const Client = require('simples/lib/client/client');
+const Client = require('simples/lib/client');
 const Server = require('simples/lib/server');
-const Store = require('simples/lib/store/store');
+const Store = require('simples/lib/session/store');
 const TestUtils = require('simples/test/test-utils');
 
 TestUtils.mockHTTPServer();

@@ -1,8 +1,12 @@
 ## 0.9.0-alpha (in progress)
 - Full rewrite using ES6 syntax and new language feature
+- Support Node 8+
 - Use MIT licence
 - General performance improvements and bug fixes
 - Removed `recache` dependency
+- Moved browser client to `simples-ws` package
+- Changed `connection.session` API to use Map methods
+- Changed connection parsing API to use `.form()` and `.body()` methods
 - Added improved hierarchic router
 - Removed `host.config()`
 - Removed possibility to unuse middlewares

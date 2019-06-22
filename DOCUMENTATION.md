@@ -114,11 +114,6 @@
 
 >##### [WS Connection](#client-api-ws)
 
-### [Browser Simple API](#browser-api)
->##### [Event Emitter](#browser-api-ee)
-
->##### [WS (WebSocket)](#browser-api-ws)
-
 ```js
 const simples = require('simples');
 ```
@@ -1391,99 +1386,4 @@ connection.on('open', () => {
 }).on('message', (message) => {
     // Application logic
 });
-```
-
-## <a name="browser-api"/> Browser Simple API
-
-To have access to the simpleS client-side API it is necessary to add
-
-```html
-<script src="/simples.js"></script>
-```
-
-in the HTML code, this JavaScript file will provide a simple API for WebSocket connections, also a simplified implementation of Node.JS event emitter, which is used mostly internally but is also available to use in the result applications.
-
-### <a name="browser-api-ee"/> EE (Event Emitter)
-
-`simples.ee()`
-
-`simples.ee()` is a simplified and a slightly modified implementation of Node.JS event emitter in the browser, which would be useful to create new objects or to inherit in object constructors. See [`events`](http://nodejs.org/api/events.html) core module for more details. Implemented methods:
-
-`.emit(event[, data, ...])` - triggers an event with some specific data.
-
-`.addListener(event, listener)`, `.on(event, listener)`, `.once(event, listener)` - create listeners for the events, `.once()` creates one time listener, emit `newListener` event.
-
-`.removeListener(event, listener)` - remove a specific listener for an event, emit `removeListener` event.
-
-`.removeAllListeners([event])` - remove all the listeners for a specific event or remove all the listeners for all the events.
-
-### <a name="browser-api-ws"/> WS (WebSocket)
-
-`simples.ws(url[, options])`
-
-url: string
-
-options: object
-
-`simples.ws()` will return an object which will create an WebSocket connection to the provided url using the needed protocols, will switch automatically to `ws` or `wss` (secured) WebSocket protocols depending on the HTTP protocol used, secured or not. In the `options` parameter can be set the communication mode and the used protocols, the configuration must match on the client and the server to ensure correct data processing. `simples.ws()` is an event emitter and has the necessary methods to handle the listeners like Node.JS does, but on the client-side, note that `.emit()` method does not send data it just triggers the event, this is useful to instantly execute some actions on the client or for debugging the behavior of the WebSocket connection.
-
-```js
-const socket = simples.ws('/', {
-    advanced: false,
-    protocols: ['echo'],
-}).on('message', (message) => {
-    socket.send('Hello World');
-});
-```
-
-#### <a name="browser-api-ws-management"/> Socket Management
-
-`simples.ws()` has 2 methods for starting/restarting or closing the WebSocket connection:
-
-`.open()` - opens the WebSocket connection when needed, this method is automatically called with `simples.ws()` or when the connection is lost.
-
-`.close()` - closes the WebSocket connection.
-
-##### <a name="browser-api-ws-events"/> Events
-
-`message` - default event received in `binary` and `text` mode or in `object` mode if the incoming message could not be parsed, the callback function has one parameter, the received data.
-
-`error` - triggered when an error appears, the callback function has one parameter, the message of the error.
-
-`open` - triggered when the WebSocket connection is opened, the callback function has no parameters. All data which will be sent before this event will be stashed and sent when the connection is ready.
-
-`close` - triggered when the WebSocket connection is closed, the callback function has no parameters.
-
-#### <a name="browser-api-ws-modes"/> Data Management
-
-Based on the third parameter in `simples.ws()` the communication with the server can be made in `binary`, `text` or `object` mode, `.send()` method is very robust, it will send data even if the connection is down, it will try to create a new connection to the server and send the message, below are examples of receiving and sending data in these modes:
-
-##### Receiving data in `binary` or `text` mode
-
-```js
-socket.on('message', (message) => {
-    // Application logic
-    // use message.data and message.type
-});
-```
-
-##### Receiving data in `object` mode
-
-```js
-socket.on('event', (data) => {
-    // Application logic
-    // use data
-});
-```
-
-##### Sending data in `binary` or `text` mode
-
-```js
-socket.send(data);
-```
-
-##### Sending data in `object` mode
-
-```js
-socket.send(event, data);
 ```

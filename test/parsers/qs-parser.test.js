@@ -2,245 +2,108 @@
 
 const tap = require('tap');
 
-const ConcatStream = require('simples/lib/parsers/concat-stream');
 const QSParser = require('simples/lib/parsers/qs-parser');
-const symbols = require('simples/lib/utils/symbols');
 
-const { Transform } = require('stream');
+tap.test('QSParser.addEntry()', (test) => {
 
-tap.test('QsParser.addData(emptyResult, key, value, notArrayFormat)', (test) => {
+	const result = Object.create(null);
 
-	const result = {};
+	test.test('Empty key', (t) => {
 
-	QSParser.addData(result, 'key', 'value', false);
+		QSParser.addEntry(result, '', '', 0);
 
-	test.match(result, {
-		key: 'value'
+		t.equal(Object.keys(result).length, 0);
+
+		t.end();
+	});
+
+	test.test('First key', (t) => {
+
+		QSParser.addEntry(result, 'a', 'a', 0);
+
+		t.equal(result['a'], 'a');
+
+		t.end();
+	});
+
+	test.test('Key with array notation', (t) => {
+
+		QSParser.addEntry(result, 'b[]', 'b', 0);
+
+		t.match(result['b'], ['b']);
+
+		t.end();
+	});
+
+	test.test('Existing array key', (t) => {
+
+		QSParser.addEntry(result, 'b', 'b', 0);
+
+		t.match(result['b'], ['b', 'b']);
+
+		t.end();
+	});
+
+	test.test('Existing string key', (t) => {
+
+		QSParser.addEntry(result, 'a', 'a', 0);
+
+		t.match(result['a'], ['a', 'a']);
+
+		t.end();
+	});
+
+	test.test('Escaped value', (t) => {
+
+		QSParser.addEntry(result, 'c', '%63', 1);
+
+		t.match(result['c'], 'c');
+
+		t.end();
+	});
+
+	test.test('Escaped key', (t) => {
+
+		QSParser.addEntry(result, '%64', 'd', 2);
+
+		t.match(result['d'], 'd');
+
+		t.end();
+	});
+
+	test.test('Escaped key and value', (t) => {
+
+		QSParser.addEntry(result, '%65', '%65', 3);
+
+		t.match(result['e'], 'e');
+
+		t.end();
 	});
 
 	test.end();
 });
 
-tap.test('QsParser.addData(emptyResult, key, value, arrayFormat)', (test) => {
+tap.test('QSParser.parse()', (test) => {
 
-	const result = {};
+	test.test('Parse null', (t) => {
 
-	QSParser.addData(result, 'key', 'value', true);
+		t.match(QSParser.parse(null), {});
 
-	test.match(result, {
-		key: [
-			'value'
-		]
+		t.end();
 	});
 
-	test.end();
-});
+	test.test('Parse empty string', (t) => {
 
-tap.test('QsParser.addData(resultWithThisKey, key, value, notArrayFormat)', (test) => {
+		t.match(QSParser.parse(''), {});
 
-	const result = {
-		key: 'value'
-	};
-
-	QSParser.addData(result, 'key', 'value', false);
-
-	test.match(result, {
-		key: [
-			'value',
-			'value'
-		]
+		t.end();
 	});
 
-	test.end();
-});
+	test.test('Parse string that covers all cases', (t) => {
 
-tap.test('QsParser.addData(resultWithThisKeyInArray, key, value, notArrayFormat)', (test) => {
+		t.match(QSParser.parse('a+%61=a+%61&'), {});
 
-	const result = {
-		key: [
-			'value'
-		]
-	};
-
-	QSParser.addData(result, 'key', 'value', false);
-
-	test.match(result, {
-		key: [
-			'value',
-			'value'
-		]
-	});
-
-	test.end();
-});
-
-tap.test('QsParser.prototype.constructor()', (test) => {
-
-	const parser = new QSParser();
-
-	test.ok(parser instanceof QSParser);
-	test.ok(parser instanceof ConcatStream);
-	test.ok(parser instanceof Transform);
-
-	test.end();
-});
-
-tap.test('QsParser.parse', (test) => {
-
-	let result = QSParser.parse('key=value');
-
-	test.match(result, {
-		key: 'value'
-	});
-
-	// --------------------
-
-	result = QSParser.parse();
-
-	test.match(result, {});
-
-	// --------------------
-
-	result = QSParser.parse(null);
-
-	test.match(result, {});
-
-	test.end();
-});
-
-tap.test('QsParser.parseChar', (test) => {
-
-	let result = {};
-
-	let state = {
-		expect: symbols.expectValue,
-		key: 'key',
-		value: 'value'
-	};
-
-	QSParser.parseChar('&', result, state);
-
-	test.match(result, {
-		key: 'value'
-	});
-	test.match(state, {
-		expect: symbols.expectKey,
-		key: '',
-		value: ''
-	});
-
-	// --------------------
-
-	result = {};
-
-	state = {
-		expect: symbols.expectValue,
-		key: 'key',
-		value: 'valu'
-	};
-
-	QSParser.parseChar('e', result, state);
-
-	test.match(result, {});
-	test.match(state, {
-		expect: symbols.expectValue,
-		key: 'key',
-		value: 'value'
-	});
-
-	// --------------------
-
-	result = {};
-
-	state = {
-		expect: symbols.expectKey,
-		key: '',
-		value: ''
-	};
-
-	QSParser.parseChar('=', result, state);
-
-	test.match(result, {});
-	test.match(state, {
-		expect: symbols.expectValue,
-		key: '',
-		value: ''
-	});
-
-	// --------------------
-
-	result = {};
-
-	state = {
-		expect: symbols.expectKey,
-		key: 'ke',
-		value: ''
-	};
-
-	QSParser.parseChar('y', result, state);
-
-	test.match(result, {});
-	test.match(state, {
-		expect: symbols.expectKey,
-		key: 'key',
-		value: ''
-	});
-
-	test.end();
-});
-
-tap.test('QsParser.prepareResult', (test) => {
-
-	let result = {};
-
-	QSParser.prepareResult(result, '', '');
-
-	test.match(result, {});
-
-	// --------------------
-
-	result = {};
-
-	QSParser.prepareResult(result, '[]', '');
-
-	test.match(result, {});
-
-	// --------------------
-
-	result = {};
-
-	QSParser.prepareResult(result, 'key', 'value');
-
-	test.match(result, {
-		key: 'value'
-	});
-
-	// --------------------
-
-	result = {};
-
-	QSParser.prepareResult(result, 'key[]', 'value');
-
-	test.match(result, {
-		key: [
-			'value'
-		]
-	});
-
-	test.end();
-});
-
-tap.test('QsParser#pushResult', (test) => {
-
-	const parser = new QSParser();
-
-	parser.on('data', (data) => {
-		test.match(data, {});
-	});
-
-	parser.pushResult((error) => {
-		test.ok(error === null);
-		test.ok(parser.buffer === '');
+		t.end();
 	});
 
 	test.end();

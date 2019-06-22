@@ -1,235 +1,78 @@
 'use strict';
 
+const { PassThrough } = require('stream');
 const tap = require('tap');
 
 const Form = require('simples/lib/http/form');
-const { PassThrough } = require('stream');
+const FormData = require('simples/lib/client/form-data');
 
-tap.test('Form.parse()', (test) => {
+const createRequest = () => {
 
-	test.test('No content type', (t) => {
+	const request = new PassThrough();
 
-		const fakeRequest = new PassThrough();
+	request.headers = {};
 
-		fakeRequest.headers = {};
+	return request;
+};
 
-		Form.parse(fakeRequest, {});
+tap.test('Form.from()', (test) => {
 
-		t.end();
-	});
+	test.test('Valid data', (t) => {
 
-	test.test('Invalid content type', (t) => {
+		const request = createRequest();
 
-		const fakeRequest = new PassThrough();
+		const formData = new FormData({
+			'name': {
+				data: 'data'
+			}
+		});
 
-		fakeRequest.headers = {
-			'content-type': 'Invalid Type'
+		request.headers = {
+			'content-type': `multipart/form-data; boundary=${formData.boundary}`
 		};
 
-		Form.parse(fakeRequest, {});
-
-		t.end();
-	});
-
-	test.test('No content type with plain handler', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {};
-
-		fakeRequest.end('data');
-
-		Form.parse(fakeRequest, {
-			plain(form) {
-				form.on('data', (data) => {
-					t.ok(String(data) === 'data');
-				}).on('end', () => {
-					t.end();
-				});
-			}
-		});
-	});
-
-	test.test('No content type with plain handler and error emitted', (t) => {
-
-		const fakeRequest = new PassThrough();
-		const someError = Error('Some error');
-
-		fakeRequest.headers = {};
-
-		Form.parse(fakeRequest, {
-			plain(form) {
-				form.on('error', (error) => {
-					t.ok(error === someError);
-					t.end();
-				});
-			}
-		});
-
-		fakeRequest.emit('error', someError);
-	});
-
-	test.test('No content type with plain handler and limit', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {};
-
-		fakeRequest.end('data');
-
-		Form.parse(fakeRequest, {
-			limit: 4,
-			plain(form) {
-				form.on('data', (data) => {
-					t.ok(String(data) === 'data');
-				}).on('end', () => {
-					t.end();
-				});
-			}
-		});
-	});
-
-	test.test('No content type with plain handler and limit exceeded', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {};
-
-		fakeRequest.destroy = () => null;
-
-		fakeRequest.end('data');
-
-		Form.parse(fakeRequest, {
-			limit: 1,
-			plain(form) {
-				form.on('error', (error) => {
-					t.ok(error instanceof Error);
-					t.end();
-				});
-			}
-		});
-	});
-
-	test.test('No content type with plain handler and infinite limit', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {};
-
-		fakeRequest.end('data');
-
-		Form.parse(fakeRequest, {
-			limit: 0,
-			plain(form) {
-				form.on('data', (data) => {
-					t.ok(String(data) === 'data');
-				}).on('end', () => {
-					t.end();
-				});
-			}
-		});
-	});
-
-	test.test('JSON data', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {
-			'content-type': 'application/json'
-		};
-
-		fakeRequest.end('{}');
-
-		Form.parse(fakeRequest, {
-			json(error, result) {
-				t.ok(error === null);
-				t.match(result, {});
+		Form.from(request).then((form) => {
+			form.on('field', (field) => {
+				t.equal(field.name, 'name');
+			}).on('end', () => {
 				t.end();
-			}
+			});
 		});
+
+		formData.pipe(request);
 	});
 
-	test.test('invalid JSON data', (t) => {
+	test.test('Invalid data', (t) => {
 
-		const fakeRequest = new PassThrough();
+		const request = createRequest();
 
-		fakeRequest.headers = {
-			'content-type': 'application/json'
+		request.headers = {
+			'content-type': `multipart/form-data; boundary=-----12345`
 		};
 
-		fakeRequest.end('{');
-
-		Form.parse(fakeRequest, {
-			json(error, result) {
+		Form.from(request).then((form) => {
+			form.on('error', (error) => {
 				t.ok(error instanceof Error);
-				t.ok(result === null);
 				t.end();
-			}
+			});
 		});
+
+		request.end();
 	});
 
-	test.test('URL encoded data', (t) => {
+	test.test('No boundary', (t) => {
 
-		const fakeRequest = new PassThrough();
+		const request = createRequest();
 
-		fakeRequest.headers = {
-			'content-type': 'application/x-www-form-urlencoded'
+		request.headers = {
+			'content-type': `multipart/form-data`
 		};
 
-		fakeRequest.end('a=1');
-
-		Form.parse(fakeRequest, {
-			urlencoded(error, result) {
-				t.ok(error === null);
-				t.match(result, {
-					a: 1
-				});
-				t.end();
-			}
-		});
-	});
-
-	test.test('Multipart form data', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {
-			'content-type': 'multipart/form-data;boundary="boundary"'
-		};
-
-		fakeRequest.end('--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--\r\n');
-
-		Form.parse(fakeRequest, {
-			multipart(form) {
-				form.on('field', (field) => {
-					field.on('data', (data) => {
-						t.ok(String(data) === 'value');
-					});
-				}).on('end', () => {
-					t.end();
-				});
-			}
-		});
-	});
-
-	test.test('Multipart form data without boundary', (t) => {
-
-		const fakeRequest = new PassThrough();
-
-		fakeRequest.headers = {
-			'content-type': 'multipart/form-data'
-		};
-
-		fakeRequest.end('--boundary\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n--boundary--\r\n');
-
-		Form.parse(fakeRequest, {
-			multipart(form) {
-				form.on('end', () => {
-					t.end();
-				}).on('error', (error) => {
-					t.ok(error instanceof Error);
-				});
-			}
+		Form.from(request).then(() => {
+			t.fail('Promise should not be resolved');
+		}).catch((error) => {
+			t.ok(error instanceof Error);
+			t.end();
 		});
 	});
 

@@ -14,20 +14,20 @@ tap.test('ServerUtils.getTlsOptions()', (test) => {
 
 	test.test('Resolved promise', (t) => {
 
-		TestUtils.mockFSReadFile(null, 'content');
+		TestUtils.mockFSReadFile(null, 'content', () => {
+			ServerUtils.getTlsOptions({
+				cert: 'cert',
+				prop: 'prop'
+			}).then((config) => {
 
-		ServerUtils.getTlsOptions({
-			cert: 'cert',
-			prop: 'prop'
-		}).then((config) => {
+				t.ok(config.cert === 'content');
+				t.ok(config.prop === 'prop');
+				t.ok(Object.keys(config).length === 2);
 
-			t.ok(config.cert === 'content');
-			t.ok(config.prop === 'prop');
-			t.ok(Object.keys(config).length === 2);
-
-			t.end();
-		}).catch(() => {
-			t.fail('The promise should not be rejected');
+				t.end();
+			}).catch(() => {
+				t.fail('The promise should not be rejected');
+			});
 		});
 	});
 
@@ -35,16 +35,16 @@ tap.test('ServerUtils.getTlsOptions()', (test) => {
 
 		const someError = Error('Some error');
 
-		TestUtils.mockFSReadFile(someError, 'content');
+		TestUtils.mockFSReadFile(someError, 'content', () => {
+			ServerUtils.getTlsOptions({
+				cert: 'cert'
+			}).then(() => {
+				t.fail('The promise should not be resolved');
+			}).catch((error) => {
+				t.ok(error === someError);
 
-		ServerUtils.getTlsOptions({
-			cert: 'cert'
-		}).then(() => {
-			t.fail('The promise should not be resolved');
-		}).catch((error) => {
-			t.ok(error === someError);
-
-			t.end();
+				t.end();
+			});
 		});
 	});
 

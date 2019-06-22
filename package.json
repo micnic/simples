@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.9.0-alpha-8",
+	"version": "0.9.0-alpha-9",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -16,10 +16,9 @@
 		"web",
 		"websocket"
 	],
-	"homepage": "http://micnic.github.io/simpleS",
+	"homepage": "https://simples.js.org/",
 	"bugs": {
-		"url": "https://github.com/micnic/simpleS/issues",
-		"email": "micnic90@gmail.com"
+		"url": "https://github.com/micnic/simpleS/issues"
 	},
 	"license": "MIT",
 	"author": {
@@ -28,33 +27,22 @@
 		"url": "https://github.com/micnic"
 	},
 	"main": "index",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/micnic/simpleS"
-	},
+	"repository": "github:micnic/simples",
 	"scripts": {
-		"build-umd": "umd simples -c lib/browser/index.js dist/simples.esnext.js",
-		"build-es5": "babel dist/simples.esnext.js -o dist/simples.js --presets=env",
-		"build-uglify": "uglifyjs dist/simples.js -o dist/simples.min.js",
-		"build-client": "npm run build-umd && npm run build-es5 && npm run build-uglify",
+		"prepublishOnly": "npm test",
 		"test": "tap -b test/*.test.js test/*/*.test.js",
-		"test-cov": "npm test -- --coverage",
-		"test-cov-html": "npm run test-cov -- --coverage-report=html"
+		"test-cov-html": "npm test -- --coverage-report=html"
 	},
 	"dependencies": {
 		"mime.json": "1.x",
 		"uv": "1.x"
 	},
 	"devDependencies": {
-		"babel-cli": "6.x",
-		"babel-preset-env": "1.x",
 		"eslint": "5.x",
 		"jsinspect": "0.12.x",
-		"tap": "12.x",
-		"uglify-js": "3.x",
-		"umd": "3.x"
+		"tap": "13.x"
 	},
 	"engines": {
-		"node": ">=6.0"
+		"node": ">=8.0"
 	}
 }

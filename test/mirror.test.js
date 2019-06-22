@@ -1,5 +1,6 @@
 'use strict';
 
+const { EventEmitter } = require('events');
 const http = require('http');
 const tap = require('tap');
 
@@ -9,6 +10,32 @@ const ServerUtils = require('simples/lib/utils/server-utils');
 const TestUtils = require('simples/test/test-utils');
 
 TestUtils.mockHTTPServer();
+
+tap.test('Mirror.prototype.constructor()', (test) => {
+
+	const server = new Server();
+	const mirror = new Mirror(server);
+	const serverMeta = ServerUtils.getServerMeta(server);
+	const mirrorMeta = ServerUtils.getServerMeta(mirror);
+
+	test.ok(mirror instanceof EventEmitter);
+	test.match(mirror, {
+		data: {}
+	});
+	test.match(mirrorMeta, {
+		backlog: null,
+		busy: true,
+		hostname: '',
+		https: null,
+		instance: http.Server,
+		port: 80,
+		requestListener: serverMeta.requestListener,
+		started: true,
+		upgradeListener: serverMeta.upgradeListener
+	});
+
+	test.end();
+});
 
 tap.test('Mirror.prototype.start()', (test) => {
 
@@ -33,30 +60,4 @@ tap.test('Mirror.prototype.stop()', (test) => {
 	});
 
 	test.equal(result, mirror);
-});
-
-tap.test('Mirror.prototype.constructor()', (test) => {
-
-	const server = new Server();
-	const mirror = new Mirror(server);
-	const serverMeta = ServerUtils.getServerMeta(server);
-	const mirrorMeta = ServerUtils.getServerMeta(mirror);
-
-	test.ok(mirror instanceof Mirror);
-	test.match(mirror, {
-		data: {}
-	});
-	test.match(mirrorMeta, {
-		backlog: null,
-		busy: true,
-		hostname: '',
-		https: null,
-		instance: http.Server,
-		port: 80,
-		requestListener: serverMeta.requestListener,
-		started: true,
-		upgradeListener: serverMeta.upgradeListener
-	});
-
-	test.end();
 });

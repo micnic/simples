@@ -4,6 +4,19 @@ const tap = require('tap');
 
 const Route = require('simples/lib/route');
 
+tap.test('Route.prototype.constructor()', (test) => {
+
+	const fakeRouter = {};
+	const location = '/index';
+	const fakeListener = () => null;
+
+	const route = new Route(fakeRouter, location, fakeListener);
+
+	test.ok(route.router === fakeRouter);
+
+	test.end();
+});
+
 tap.test('Route.normalizeLocation', (test) => {
 
 	test.ok(Route.normalizeLocation('/abc') === 'abc');
@@ -39,20 +52,6 @@ tap.test('Route.mixin', (test) => {
 		location: dynamicLocation,
 		pattern: RegExp('^\\/([^\\/]+)$')
 	});
-
-	test.end();
-});
-
-tap.test('Route.prototype.constructor()', (test) => {
-
-	const fakeRouter = {};
-	const location = '/index';
-	const fakeListener = () => null;
-
-	const route = new Route(fakeRouter, location, fakeListener);
-
-	test.ok(route instanceof Route);
-	test.ok(route.router === fakeRouter);
 
 	test.end();
 });

@@ -14,7 +14,6 @@ tap.test('Channel.prototype.constructor()', (test) => {
 
 	const channel = new Channel(fakeParentHost, 'name');
 
-	test.ok(channel instanceof Channel);
 	test.ok(channel instanceof EventEmitter);
 	test.ok(channel.connections instanceof Set);
 	test.ok(channel._advanced === false);

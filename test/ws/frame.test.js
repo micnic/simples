@@ -3,6 +3,7 @@
 const tap = require('tap');
 
 const Frame = require('simples/lib/ws/frame');
+const Random = require('simples/lib/utils/random');
 
 tap.test('Frame.prototype.constructor()', (test) => {
 
@@ -23,17 +24,94 @@ tap.test('Frame.prototype.constructor()', (test) => {
 
 tap.test('Frame.xor', (test) => {
 
-	const randomByte = () => Math.round(Math.random() * 255);
-	const initial = Buffer.from([randomByte(), randomByte(), randomByte(), randomByte()]);
-	const buffer = Buffer.alloc(4);
-	const mask = Buffer.from([randomByte(), randomByte(), randomByte(), randomByte()]);
+	const mask = Random.randomBuffer(4);
+
+	let initial = Random.randomBuffer(1);
+	let buffer = Buffer.alloc(1);
 
 	initial.copy(buffer);
 
 	Frame.xor(buffer, mask, 0);
 
-	for (let index = 0; index < 4; index++) {
+	for (let index = 0; index < buffer.length; index++) {
 		test.ok(buffer[index] ^ mask[index] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(2);
+	buffer = Buffer.alloc(2);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 0);
+
+	for (let index = 0; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[index] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(3);
+	buffer = Buffer.alloc(3);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 0);
+
+	for (let index = 0; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[index] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(4);
+	buffer = Buffer.alloc(4);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 0);
+
+	for (let index = 0; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[index] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(5);
+	buffer = Buffer.alloc(5);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 1);
+
+	for (let index = 1; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[(index - 1) % 4] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(6);
+	buffer = Buffer.alloc(6);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 1);
+
+	for (let index = 1; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[(index - 1) % 4] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(7);
+	buffer = Buffer.alloc(7);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 1);
+
+	for (let index = 1; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[(index - 1) % 4] === initial[index]);
+	}
+
+	initial = Random.randomBuffer(8);
+	buffer = Buffer.alloc(8);
+
+	initial.copy(buffer);
+
+	Frame.xor(buffer, mask, 1);
+
+	for (let index = 1; index < buffer.length; index++) {
+		test.ok(buffer[index] ^ mask[(index - 1) % 4] === initial[index]);
 	}
 
 	test.end();
