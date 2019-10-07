@@ -29,6 +29,26 @@ tap.test('WSSender.closeConnection()', (test) => {
 		});
 	});
 
+	test.test('Only status code provided', (t) => {
+
+		const connection = new Writable();
+
+		WSSender.closeConnection(connection, 1000);
+
+		t.equal(connection._status, 1000);
+
+		t.end();
+	});
+
+	test.test('No arguments provided', (t) => {
+
+		const connection = new Writable();
+
+		WSSender.closeConnection(connection);
+
+		t.end();
+	});
+
 	test.end();
 });
 

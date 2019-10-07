@@ -17,7 +17,7 @@ const { states: {
 
 tap.test('WSParser.prototype.constructor()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	test.ok(parser instanceof Writable);
 	test.match(parser, {
@@ -35,7 +35,7 @@ tap.test('WSParser.prototype.constructor()', (test) => {
 
 tap.test('WSParser.prototype.readyBuffer()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	test.equal(parser.readyBuffer(2, 0xFF), false);
 
@@ -56,7 +56,7 @@ tap.test('WSParser.prototype.readyBuffer()', (test) => {
 
 tap.test('WSParser.prototype.resetBuffer()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	parser.readyBuffer(1, 0x00);
 
@@ -74,7 +74,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Valid frame', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -92,7 +92,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Frame with extensions flag set', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -119,7 +119,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Invalid continuation frame', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -144,7 +144,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Continuation frame expected', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -174,7 +174,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Unknown frame type', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -199,7 +199,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Invalid control frame with extended length', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -224,7 +224,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Invalid control frame without fin flag', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: false,
 			masked: true,
@@ -249,7 +249,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Masked frame received from the server', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: true,
@@ -274,7 +274,7 @@ tap.test('WSParser.prototype.validateFrame()', (test) => {
 
 	test.test('Unmasked frame received from the client', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 		const buffer = Frame.buffer({
 			fin: true,
 			masked: false,
@@ -304,7 +304,7 @@ tap.test('WSParser.prototype.emitMessage()', (test) => {
 
 	test.test('Binary message', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		const message = parser.message = {
 			data: Buffer.from([0]),
@@ -330,7 +330,7 @@ tap.test('WSParser.prototype.emitMessage()', (test) => {
 
 	test.test('Text message', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		const message = parser.message = {
 			data: Buffer.from([32]),
@@ -357,7 +357,7 @@ tap.test('WSParser.prototype.emitMessage()', (test) => {
 
 	test.test('Text message with invalid UTF8 data', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, true);
 
 		let errorEmitted = false;
 
@@ -387,7 +387,7 @@ tap.test('WSParser.prototype.emitMessage()', (test) => {
 
 tap.test('WSParser.prototype.joinMessageData()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	let messageEmitted = false;
 
@@ -439,7 +439,7 @@ tap.test('WSParser.prototype.joinMessageData()', (test) => {
 
 tap.test('WSParser.prototype.createMessage()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	parser.frame = new Frame(Frame.buffer({
 		fin: false,
@@ -472,7 +472,7 @@ tap.test('WSParser.prototype.createMessage()', (test) => {
 
 tap.test('WSParser.prototype.emitControlFrame()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, true);
 
 	let controlEmitted = 0;
 	let errorEmitted = false;
@@ -527,7 +527,7 @@ tap.test('WSParser.prototype.emitControlFrame()', (test) => {
 
 tap.test('WSParser.prototype.endFrameProcessing()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, true);
 
 	parser.frame = {
 		data: Buffer.alloc(0),
@@ -606,7 +606,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Invalid header', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		let errorEmitted = false;
 
@@ -636,7 +636,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Too long message', (t) => {
 
-		const parser = new WSParser(1, false);
+		const parser = new WSParser(false, 1, false);
 
 		let errorEmitted = false;
 
@@ -665,7 +665,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Header that expects mask after', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		parser.parseHeader(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -685,7 +685,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Header that expects 16bit length after', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		parser.parseHeader(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -705,7 +705,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Header that expects 64bit length after', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		parser.parseHeader(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -725,7 +725,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Header of frame without content in client', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 
 		parser.parseHeader(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -745,7 +745,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 	test.test('Header of frame with content in client', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 
 		parser.parseHeader(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -768,7 +768,7 @@ tap.test('WSParser.prototype.parseHeader()', (test) => {
 
 tap.test('WSParser.prototype.parse16BitLength()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(true, 0, false);
 
 	parser.frame = {};
 
@@ -812,7 +812,7 @@ tap.test('WSParser.prototype.parse16BitLength()', (test) => {
 
 tap.test('WSParser.prototype.parse64BitLength()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(true, 0, false);
 
 	parser.frame = {};
 
@@ -931,7 +931,7 @@ tap.test('WSParser.prototype.parse64BitLength()', (test) => {
 
 tap.test('WSParser.prototype.parseMask()', (test) => {
 
-	const parser = new WSParser(0, true);
+	const parser = new WSParser(true, 0, false);
 
 	parser.frame = {};
 
@@ -1001,7 +1001,7 @@ tap.test('WSParser.prototype.parseByte()', (test) => {
 
 	test.test('Parse masked 16bit length frame', (t) => {
 
-		const parser = new WSParser(0, false);
+		const parser = new WSParser(false, 0, false);
 
 		parser.parseByte(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -1056,7 +1056,7 @@ tap.test('WSParser.prototype.parseByte()', (test) => {
 
 	test.test('Parse unmasked 64bit length frame', (t) => {
 
-		const parser = new WSParser(0, true);
+		const parser = new WSParser(true, 0, false);
 
 		parser.parseByte(0x81, () => {
 			test.fail('Callback function should not be called');
@@ -1126,7 +1126,7 @@ tap.test('WSParser.prototype.parseByte()', (test) => {
 
 tap.test('WSParser.prototype.getData()', (test) => {
 
-	const parser = new WSParser(1024, true);
+	const parser = new WSParser(true, 1024, false);
 
 	const callback = () => {
 		test.fail('Callback function should not be called');
@@ -1152,7 +1152,7 @@ tap.test('WSParser.prototype.getData()', (test) => {
 
 tap.test('WSParser.prototype.write()', (test) => {
 
-	const parser = new WSParser(0, false);
+	const parser = new WSParser(false, 0, false);
 
 	let errorEmitted = false;
 	let messageEmitted = false;

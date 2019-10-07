@@ -1,63 +1,53 @@
 'use strict';
 
 const { EventEmitter } = require('events');
-const http = require('http');
+const { Server } = require('http');
 const tap = require('tap');
 
-const Mirror = require('simples/lib/mirror');
-const Server = require('simples/lib/server');
-const ServerUtils = require('simples/lib/utils/server-utils');
+const simples = require('simples');
 const TestUtils = require('simples/test/test-utils');
 
 TestUtils.mockHTTPServer();
 
 tap.test('Mirror.prototype.constructor()', (test) => {
 
-	const server = new Server();
-	const mirror = new Mirror(server);
-	const serverMeta = ServerUtils.getServerMeta(server);
-	const mirrorMeta = ServerUtils.getServerMeta(mirror);
+	const server = simples();
+	const mirror = server.mirror();
 
 	test.ok(mirror instanceof EventEmitter);
-	test.match(mirror, {
-		data: {}
-	});
-	test.match(mirrorMeta, {
-		backlog: null,
-		busy: true,
-		hostname: '',
-		https: null,
-		instance: http.Server,
-		port: 80,
-		requestListener: serverMeta.requestListener,
-		started: true,
-		upgradeListener: serverMeta.upgradeListener
-	});
+	test.match(mirror.data, {});
+	test.equal(mirror._meta.backlog, null);
+	test.equal(mirror._meta.busy, true);
+	test.equal(mirror._meta.hostname, '');
+	test.match(mirror._meta.instance, Server);
+	test.equal(mirror._meta.port, 80);
+	test.equal(mirror._meta.requestListener, server._meta.requestListener);
+	test.equal(mirror._meta.started, true);
+	test.equal(mirror._meta.upgradeListener, server._meta.upgradeListener);
 
 	test.end();
 });
 
 tap.test('Mirror.prototype.start()', (test) => {
 
-	const mirror = new Mirror(new Server());
+	const mirror = simples().mirror();
 
-	const result = mirror.start((m) => {
+	test.equal(mirror.start(function (m) {
+		test.equal(this, mirror);
 		test.equal(m, mirror);
 
 		test.end();
-	});
-
-	test.equal(result, mirror);
+	}), mirror);
 });
 
 tap.test('Mirror.prototype.stop()', (test) => {
 
-	const mirror = new Mirror(new Server());
+	const mirror = simples().mirror();
 
-	const result = mirror.stop((m) => {
+	test.equal(mirror.stop(function (m) {
+		test.equal(this, mirror);
 		test.equal(m, mirror);
-		test.end();
-	});
 
-	test.equal(result, mirror);
+		test.end();
+	}), mirror);
 });

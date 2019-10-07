@@ -1,7 +1,6 @@
 'use strict';
 
 const crypto = require('crypto');
-const fs = require('fs');
 const http = require('http');
 const https = require('https');
 
@@ -49,15 +48,6 @@ class TestUtils {
 
 	static mockProcessSTDERRWrite(mock, callback) {
 		TestUtils.mock(process.stderr, 'write', mock, callback);
-	}
-
-	static mockFSReadFile(error, content, callback) {
-
-		const mock = (...args) => {
-			TestUtils.callAsync(args[1], error, content);
-		};
-
-		TestUtils.mock(fs, 'readFile', mock, callback);
 	}
 
 	static mockHTTPServer() {

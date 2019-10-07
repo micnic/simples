@@ -2,49 +2,50 @@
 
 const http = require('http');
 const https = require('https');
+const mockFS = require('mock-fs');
 const tap = require('tap');
+const { URL } = require('url');
 
 const Server = require('simples/lib/server');
+const HTTPHost = require('simples/lib/http/host');
+const MapContainer = require('simples/lib/utils/map-container');
 const ServerUtils = require('simples/lib/utils/server-utils');
 const TestUtils = require('simples/test/test-utils');
 
+mockFS({
+	'path/to/cert.pem': 'cert'
+});
+
 TestUtils.mockHTTPServer();
 
-tap.test('ServerUtils.getTlsOptions()', (test) => {
+tap.test('ServerUtils.getTLSOptions()', (test) => {
 
 	test.test('Resolved promise', (t) => {
+		ServerUtils.getTLSOptions({
+			cert: 'path/to/cert.pem',
+			prop: 'prop'
+		}).then((config) => {
 
-		TestUtils.mockFSReadFile(null, 'content', () => {
-			ServerUtils.getTlsOptions({
-				cert: 'cert',
-				prop: 'prop'
-			}).then((config) => {
+			t.ok(config.cert.toString() === 'cert');
+			t.ok(config.prop === 'prop');
+			t.ok(Object.keys(config).length === 2);
 
-				t.ok(config.cert === 'content');
-				t.ok(config.prop === 'prop');
-				t.ok(Object.keys(config).length === 2);
-
-				t.end();
-			}).catch(() => {
-				t.fail('The promise should not be rejected');
-			});
+			t.end();
+		}).catch(() => {
+			t.fail('The promise should not be rejected');
 		});
 	});
 
 	test.test('Rejected promise', (t) => {
 
-		const someError = Error('Some error');
+		ServerUtils.getTLSOptions({
+			cert: 'path/to/non-existent-cert.pem'
+		}).then(() => {
+			t.fail('The promise should not be resolved');
+		}).catch((error) => {
+			t.ok(error instanceof Error);
 
-		TestUtils.mockFSReadFile(someError, 'content', () => {
-			ServerUtils.getTlsOptions({
-				cert: 'cert'
-			}).then(() => {
-				t.fail('The promise should not be resolved');
-			}).catch((error) => {
-				t.ok(error === someError);
-
-				t.end();
-			});
+			t.end();
 		});
 	});
 
@@ -53,7 +54,47 @@ tap.test('ServerUtils.getTlsOptions()', (test) => {
 
 tap.test('ServerUtils.prepareServerArgs()', (test) => {
 
-	test.test('Port argument is a number', (t) => {
+	test.test('Port, options and callback provided', (t) => {
+
+		t.match(ServerUtils.prepareServerArgs(12345, {
+			port: 80
+		}, () => {}), {
+			callback: Function,
+			options: {
+				port: 12345
+			}
+		});
+
+		t.end();
+	});
+
+	test.test('Port and options provided', (t) => {
+
+		t.match(ServerUtils.prepareServerArgs(12345, {
+			port: 80
+		}), {
+			callback: null,
+			options: {
+				port: 12345
+			}
+		});
+
+		t.end();
+	});
+
+	test.test('Port and callback provided', (t) => {
+
+		t.match(ServerUtils.prepareServerArgs(12345, () => {}), {
+			callback: Function,
+			options: {
+				port: 12345
+			}
+		});
+
+		t.end();
+	});
+
+	test.test('Only port provided', (t) => {
 
 		t.match(ServerUtils.prepareServerArgs(12345), {
 			callback: null,
@@ -65,7 +106,19 @@ tap.test('ServerUtils.prepareServerArgs()', (test) => {
 		t.end();
 	});
 
-	test.test('Port as number is defined inside options object', (t) => {
+	test.test('Options and callback provided', (t) => {
+
+		t.match(ServerUtils.prepareServerArgs({}, () => {}), {
+			callback: Function,
+			options: {
+				port: 80
+			}
+		});
+
+		t.end();
+	});
+
+	test.test('Only options with port provided', (t) => {
 
 		t.match(ServerUtils.prepareServerArgs({
 			port: 12345
@@ -79,7 +132,7 @@ tap.test('ServerUtils.prepareServerArgs()', (test) => {
 		t.end();
 	});
 
-	test.test('HTTPS options provided', (t) => {
+	test.test('Only HTTPS options provided', (t) => {
 
 		t.match(ServerUtils.prepareServerArgs({
 			https: {}
@@ -87,6 +140,18 @@ tap.test('ServerUtils.prepareServerArgs()', (test) => {
 			callback: null,
 			options: {
 				port: 443
+			}
+		});
+
+		t.end();
+	});
+
+	test.test('Only callback provided', (t) => {
+
+		t.match(ServerUtils.prepareServerArgs(() => {}), {
+			callback: Function,
+			options: {
+				port: 80
 			}
 		});
 
@@ -143,9 +208,7 @@ tap.test('ServerUtils.listenPort()', (test) => {
 
 	const server = new Server();
 
-	ServerUtils.setServerMeta(server);
-
-	const meta = ServerUtils.getServerMeta(server);
+	const meta = server._meta;
 
 	meta.instance = http.Server();
 
@@ -170,7 +233,7 @@ tap.test('ServerUtils.stopServer()', (test) => {
 	test.test('Busy started server', (t) => {
 
 		const server = new Server();
-		const meta = ServerUtils.getServerMeta(server);
+		const meta = server._meta;
 
 		ServerUtils.stopServer(server, (s) => {
 
@@ -189,7 +252,7 @@ tap.test('ServerUtils.stopServer()', (test) => {
 	test.test('Released started server', (t) => {
 
 		const server = new Server();
-		const meta = ServerUtils.getServerMeta(server);
+		const meta = server._meta;
 
 		server.once('release', () => {
 
@@ -219,52 +282,18 @@ tap.test('ServerUtils.stopServer()', (test) => {
 
 tap.test('ServerUtils.startServer()', (test) => {
 
-	test.test('No port provided and uninitialized server', (t) => {
+	test.test('No port provided and not started server', (t) => {
 
 		const server = new Server();
 
-		ServerUtils.setServerMeta(server);
+		server.once('release', () => {
+			ServerUtils.startServer(server, 12345);
 
-		const meta = ServerUtils.getServerMeta(server);
-
-		meta.instance = http.Server();
-
-		ServerUtils.startServer(server, (s) => {
-
-			t.ok(s === server);
-
-			t.end();
-		});
-
-		t.ok(meta.busy);
-		t.ok(meta.started);
-	});
-
-	test.test('Port provided and busy started server', (t) => {
-
-		const server = new Server();
-
-		ServerUtils.setServerMeta(server);
-
-		const meta = ServerUtils.getServerMeta(server);
-
-		meta.instance = http.Server();
-		meta.busy = true;
-		meta.started = true;
-
-		ServerUtils.startServer(server, 80, (s) => {
-
-			t.ok(s === server);
-		});
-
-		meta.busy = false;
-		server.emit('release');
-
-		ServerUtils.startServer(server, 80, (s) => {
-
-			t.ok(s === server);
-
-			t.end();
+			server.once('release', () => {
+				t.ok(server._meta.busy);
+				t.ok(server._meta.started);
+				t.end();
+			});
 		});
 	});
 
@@ -275,9 +304,7 @@ tap.test('ServerUtils.setupServer()', (test) => {
 
 	const server = new Server();
 
-	ServerUtils.setServerMeta(server);
-
-	const meta = ServerUtils.getServerMeta(server);
+	const meta = server._meta;
 	const someError = Error('Some error');
 
 	meta.instance = http.Server();
@@ -309,9 +336,7 @@ tap.test('ServerUtils.initServer()', (test) => {
 
 		const server = new Server();
 
-		ServerUtils.setServerMeta(server);
-
-		const meta = ServerUtils.getServerMeta(server);
+		const meta = server._meta;
 
 		meta.requestListener = () => null;
 		meta.upgradeListener = () => null;
@@ -329,9 +354,7 @@ tap.test('ServerUtils.initServer()', (test) => {
 
 		const server = new Server();
 
-		ServerUtils.setServerMeta(server);
-
-		const meta = ServerUtils.getServerMeta(server);
+		const meta = server._meta;
 
 		meta.https = {};
 		meta.requestListener = () => null;
@@ -350,27 +373,287 @@ tap.test('ServerUtils.initServer()', (test) => {
 
 		const server = new Server();
 
-		ServerUtils.setServerMeta(server);
-
-		const meta = ServerUtils.getServerMeta(server);
+		const meta = server._meta;
 
 		meta.https = {
-			cert: 'cert'
+			cert: 'path/to/non-existent-cert.pem'
 		};
 		meta.requestListener = () => null;
 		meta.upgradeListener = () => null;
 
-		server.on('error', () => {
+		server.on('error', (error) => {
+			t.ok(error instanceof Error);
 			t.end();
 		});
 
 		ServerUtils.initServer(server, (s) => {
 			t.ok(s === server);
-			t.ok(meta.instance === null);
 		});
 
 		t.ok(meta.busy);
 	});
 
 	test.end();
+});
+
+tap.test('ServerUtils.getHost()', (test) => {
+
+	const hostsContainer = MapContainer.dynamic();
+
+	const fixedHost = {};
+	const dynamicHost = {
+		_pattern: /dynamic-host/
+	};
+
+	hostsContainer.dynamic.set('dynamic-host', dynamicHost);
+	hostsContainer.fixed.set('fixed-host', fixedHost);
+
+	test.test('Main host', (t) => {
+
+		const host = ServerUtils.getHost(hostsContainer, 'main-host', null);
+
+		t.equal(host, null);
+
+		t.end();
+	});
+
+	test.test('Fixed host', (t) => {
+
+		const host = ServerUtils.getHost(hostsContainer, 'fixed-host', null);
+
+		t.equal(host, fixedHost);
+
+		t.end();
+	});
+
+	test.test('Dynamic host', (t) => {
+
+		const host = ServerUtils.getHost(hostsContainer, 'dynamic-host', null);
+
+		t.equal(host, dynamicHost);
+
+		t.end();
+	});
+
+	test.end();
+});
+
+tap.test('ServerUtils.getHTTPHost()', (test) => {
+
+	test.test('Without host header', (t) => {
+
+		const request = {
+			headers: {}
+		};
+
+		const server = new Server();
+
+		const host = ServerUtils.getHTTPHost(server, request);
+
+		t.equal(host, server);
+
+		t.end();
+	});
+
+	test.test('With host header', (t) => {
+
+		const request = {
+			headers: {
+				host: 'localhost'
+			}
+		};
+
+		const server = new Server();
+
+		const localHost = new HTTPHost('localhost');
+
+		server._hosts.fixed.set('localhost', localHost);
+
+		const host = ServerUtils.getHTTPHost(server, request);
+
+		t.equal(host, localHost);
+
+		t.end();
+	});
+
+	test.end();
+});
+
+tap.test('ServerUtils.getHTTPHostName()', (test) => {
+
+	test.equal(ServerUtils.getHTTPHostName('localhost'), 'localhost');
+	test.equal(ServerUtils.getHTTPHostName('localhost:8080'), 'localhost');
+	test.equal(ServerUtils.getHTTPHostName('[::1]'), '[::1]');
+	test.equal(ServerUtils.getHTTPHostName('[::1]:8080'), '[::1]');
+
+	test.end();
+});
+
+tap.test('ServerUtils.getRequestLocation()', (test) => {
+
+	test.test('No host provided, not secured socket', (t) => {
+
+		const request = {
+			headers: {},
+			socket: {
+				encrypted: false,
+				localAddress: '127.0.0.1'
+			},
+			url: '/'
+		};
+
+		const location = ServerUtils.getRequestLocation(request, 'http');
+
+		t.match(location, new URL('http://127.0.0.1/'));
+
+		t.end();
+	});
+
+	test.test('Host provided, secured socket', (t) => {
+
+		const request = {
+			headers: {
+				host: 'localhost'
+			},
+			socket: {
+				encrypted: true,
+				localAddress: '127.0.0.1'
+			},
+			url: '/'
+		};
+
+		const location = ServerUtils.getRequestLocation(request, 'http');
+
+		t.match(location, new URL('https://localhost/'));
+
+		t.end();
+	});
+
+	test.end();
+});
+
+tap.test('ServerUtils.isHTTPHostNameDynamic()', (test) => {
+
+	test.notOk(ServerUtils.isHTTPHostNameDynamic('host.com'));
+	test.ok(ServerUtils.isHTTPHostNameDynamic('*.host.com'));
+
+	test.end();
+});
+
+tap.test('ServerUtils.getWSHost()', (test) => {
+
+	const request = {
+		headers: {}
+	};
+	const server = new Server();
+	const fakeWSHost = {};
+
+	server._routes.ws.fixed.set('/', fakeWSHost);
+
+	const wsHost = ServerUtils.getWSHost(server, '/', request);
+
+	test.equal(wsHost, fakeWSHost);
+
+	test.end();
+});
+
+tap.test('ServerUtils.requestListener()', (test) => {
+
+	const server = new Server();
+	const requestListener = ServerUtils.requestListener(server);
+
+	server.get('/', (connection) => {
+		connection.end();
+	});
+
+	test.ok(typeof requestListener === 'function');
+	test.equal(requestListener.length, 2);
+
+	const fakeRequest = {
+		headers: {},
+		method: 'GET',
+		socket: {
+			destroy: () => null,
+			localAddress: '127.0.0.1',
+			on: () => null,
+			setTimeout: () => null
+		},
+		url: '/'
+	};
+	const fakeResponse = {
+		emit: () => null,
+		end: () => test.end(),
+		getHeader: () => null,
+		on: () => null,
+		once: () => null,
+		setHeader: () => null
+	};
+
+	requestListener(fakeRequest, fakeResponse);
+});
+
+tap.test('ServerUtils.upgradeListener()', (test) => {
+
+	const server = new Server();
+	const upgradeListener = ServerUtils.upgradeListener(server);
+
+	server.on('error', (error) => {
+		test.ok(error instanceof Error)
+	});
+
+	server.ws('/', (connection) => {
+		connection.end();
+	});
+
+	test.equal(typeof upgradeListener, 'function');
+	test.equal(upgradeListener.length, 2);
+
+	test.test('WS host found', (t) => {
+
+		const fakeSocket = {
+			destroy: () => null,
+			emit: () => null,
+			end: () => t.end(),
+			localAddress: '127.0.0.1',
+			on: () => null,
+			once: () => null,
+			pipe: () => null,
+			setTimeout: () => null,
+			write: () => null
+		};
+		const fakeRequest = {
+			headers: {
+				'host': 'localhost',
+				'sec-websocket-key': 'true',
+				'sec-websocket-version': '13',
+				'upgrade': 'websocket'
+			},
+			socket: fakeSocket,
+			url: '/'
+		};
+
+		upgradeListener(fakeRequest, fakeSocket);
+	});
+
+	test.test('WS host not found', (t) => {
+
+		const fakeSocket = {
+			end: () => t.end()
+		};
+		const fakeRequest = {
+			headers: {
+				host: 'localhost'
+			},
+			socket: fakeSocket,
+			url: '/no-ws-host'
+		};
+
+		upgradeListener(fakeRequest, fakeSocket);
+	});
+
+	test.end();
+});
+
+tap.tearDown(() => {
+	mockFS.restore();
 });

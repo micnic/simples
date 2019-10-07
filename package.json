@@ -1,6 +1,6 @@
 {
 	"name": "simples",
-	"version": "0.9.0-alpha-9",
+	"version": "0.9.0-alpha-10",
 	"description": "Simple Web Framework",
 	"keywords": [
 		"client",
@@ -38,9 +38,10 @@
 		"uv": "1.x"
 	},
 	"devDependencies": {
-		"eslint": "5.x",
+		"eslint": "6.x",
 		"jsinspect": "0.12.x",
-		"tap": "13.x"
+		"mock-fs": "4.x",
+		"tap": "14.x"
 	},
 	"engines": {
 		"node": ">=8.0"

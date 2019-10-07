@@ -1,13 +1,13 @@
 'use strict';
 
 const tap = require('tap');
-const TestUtils = require('simples/test/test-utils');
 
-const HTTPHost = require('simples/lib/http/host');
+const simples = require('simples');
 const Router = require('simples/lib/http/router');
 const Route = require('simples/lib/route');
 const Store = require('simples/lib/session/store');
 const WSHost = require('simples/lib/ws/host');
+const TestUtils = require('simples/test/test-utils');
 
 const { EventEmitter } = require('events');
 
@@ -15,9 +15,7 @@ TestUtils.mockHTTPServer();
 
 tap.test('Router.prototype.constructor()', (test) => {
 
-	const host = new HTTPHost('hostname');
-
-	let router = new Router(host, '', null);
+	let router = simples();
 
 	test.ok(router instanceof EventEmitter);
 	test.match(router, {
@@ -31,35 +29,6 @@ tap.test('Router.prototype.constructor()', (test) => {
 	test.ok(router instanceof EventEmitter);
 	test.match(router, {
 		data: {}
-	});
-
-	test.end();
-});
-
-tap.test('Router.optionsContainer()', (test) => {
-
-	test.match(Router.optionsContainer(), {
-		compression: {},
-		cors: {},
-		logger: {},
-		session: {},
-		timeout: {}
-	});
-
-	test.match(Router.optionsContainer({}), {
-		compression: {},
-		cors: {},
-		logger: {},
-		session: {},
-		timeout: {}
-	});
-
-	test.match(Router.optionsContainer({}, {}), {
-		compression: {},
-		cors: {},
-		logger: {},
-		session: {},
-		timeout: {}
 	});
 
 	test.end();
@@ -112,8 +81,7 @@ tap.test('Router.getPattern()', (test) => {
 
 tap.test('Router.prototype.compression()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.compression();
 
@@ -123,13 +91,82 @@ tap.test('Router.prototype.compression()', (test) => {
 		preferred: 'deflate'
 	});
 
+	router.compression(true);
+
+	test.match(router._options.compression, {
+		enabled: true,
+		options: null,
+		preferred: 'deflate'
+	});
+
+	router.compression('gzip');
+
+	test.match(router._options.compression, {
+		enabled: true,
+		options: null,
+		preferred: 'gzip'
+	});
+
+	test.end();
+});
+
+tap.test('Router.prototype.config()', (test) => {
+
+	const router = simples();
+
+	router.config();
+
+	router.config({
+		compression: {
+			enabled: true
+		},
+		cors: {
+			credentials: true
+		},
+		logger: {
+			enabled: true
+		},
+		session: {
+			enabled: true
+		},
+		static: {
+			enabled: true
+		},
+		timeout: {
+			enabled: true
+		},
+		inexistent: {
+			enabled: true
+		}
+	});
+
+	test.match(router._options, {
+		compression: {
+			enabled: true
+		},
+		cors: {
+			credentials: true
+		},
+		logger: {
+			enabled: true
+		},
+		session: {
+			enabled: true
+		},
+		static: {
+			enabled: true
+		},
+		timeout: {
+			enabled: true
+		}
+	});
+
 	test.end();
 });
 
 tap.test('Router.prototype.cors()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.cors();
 
@@ -145,8 +182,7 @@ tap.test('Router.prototype.cors()', (test) => {
 
 tap.test('Router.prototype.logger()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.logger();
 
@@ -162,8 +198,7 @@ tap.test('Router.prototype.logger()', (test) => {
 
 tap.test('Router.prototype.session()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.session();
 
@@ -178,18 +213,17 @@ tap.test('Router.prototype.session()', (test) => {
 
 tap.test('Router.setRoute()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '', null);
+	const router = simples();
 
 	Router.setRoute(router);
 
 	Router.setRoute(router, 'all', '/', () => {});
 
-	test.ok(host._routes.fixed['all'].get('') instanceof Route);
+	test.ok(router._routes.fixed['all'].get('/') instanceof Route);
 
 	Router.setRoute(router, 'all', '/*', () => {});
 
-	test.ok(host._routes.dynamic['all'].get('*') instanceof Route);
+	test.ok(router._routes.dynamic['all'].get('/*') instanceof Route);
 
 	test.end();
 });
@@ -217,8 +251,7 @@ tap.test('Router.isValidErrorCode()', (test) => {
 
 tap.test('Router.prototype.all()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -233,8 +266,7 @@ tap.test('Router.prototype.all()', (test) => {
 
 tap.test('Router.prototype.delete()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -249,8 +281,7 @@ tap.test('Router.prototype.delete()', (test) => {
 
 tap.test('Router.prototype.get()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -265,8 +296,7 @@ tap.test('Router.prototype.get()', (test) => {
 
 tap.test('Router.prototype.patch()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -281,8 +311,7 @@ tap.test('Router.prototype.patch()', (test) => {
 
 tap.test('Router.prototype.post()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -297,8 +326,7 @@ tap.test('Router.prototype.post()', (test) => {
 
 tap.test('Router.prototype.put()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	const routeLocation = '';
 	const listener = () => {};
@@ -313,11 +341,10 @@ tap.test('Router.prototype.put()', (test) => {
 
 tap.test('Router.prototype.error()', (test) => {
 
-	const host = new HTTPHost('hostname');
 	const fakeListener = () => {};
 	const invalidListener = null;
 
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.error(0);
 
@@ -333,8 +360,7 @@ tap.test('Router.prototype.engine()', (test) => {
 
 	test.test('Invalid engine', (t) => {
 
-		const host = new HTTPHost('hostname');
-		const router = new Router(host, '');
+		const router = simples();
 
 		router.engine({});
 
@@ -345,8 +371,7 @@ tap.test('Router.prototype.engine()', (test) => {
 
 	test.test('Valid engine', (t) => {
 
-		const host = new HTTPHost('hostname');
-		const router = new Router(host, '');
+		const router = simples();
 
 		const fakeEngine = {
 			render() {
@@ -368,8 +393,7 @@ tap.test('Router.prototype.use()', (test) => {
 
 	test.test('Invalid middleware', (t) => {
 
-		const host = new HTTPHost('hostname');
-		const router = new Router(host, '');
+		const router = simples();
 
 		router.use(null);
 
@@ -380,8 +404,7 @@ tap.test('Router.prototype.use()', (test) => {
 
 	test.test('Valid middleware', (t) => {
 
-		const host = new HTTPHost('hostname');
-		const router = new Router(host, '');
+		const router = simples();
 
 		router.use(() => null);
 
@@ -395,25 +418,25 @@ tap.test('Router.prototype.use()', (test) => {
 
 tap.test('Router.prototype.router()', (test) => {
 
-	const host = new HTTPHost('hostname');
+	const router = simples();
 
 	test.test('Empty input', (t) => {
 
-		t.equal(host.router(), null);
+		t.equal(router.router(), null);
 
 		t.end();
 	});
 
 	test.test('Fixed router', (t) => {
 
-		t.ok(host.router('fixed') instanceof Router);
+		t.ok(router.router('fixed') instanceof Router);
 
 		t.end();
 	});
 
 	test.test('Dynamic router', (t) => {
 
-		t.ok(host.router('*') instanceof Router);
+		t.ok(router.router('*') instanceof Router);
 
 		t.end();
 	});
@@ -423,8 +446,7 @@ tap.test('Router.prototype.router()', (test) => {
 
 tap.test('Router.prototype.static()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.static();
 
@@ -434,13 +456,28 @@ tap.test('Router.prototype.static()', (test) => {
 		location: ''
 	});
 
+	router.static(true);
+
+	test.match(router._options.static, {
+		enabled: true,
+		index: ['index.html'],
+		location: ''
+	});
+
+	router.static('public');
+
+	test.match(router._options.static, {
+		enabled: true,
+		index: ['index.html'],
+		location: 'public'
+	});
+
 	test.end();
 });
 
 tap.test('Router.prototype.timeout()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '');
+	const router = simples();
 
 	router.timeout();
 
@@ -454,8 +491,7 @@ tap.test('Router.prototype.timeout()', (test) => {
 
 tap.test('Router.prototype.ws()', (test) => {
 
-	const host = new HTTPHost('hostname');
-	const router = new Router(host, '/path/');
+	const router = simples();
 
 	test.test('Empty input', (t) => {
 		t.ok(router.ws() === null);

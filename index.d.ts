@@ -3,20 +3,19 @@ import { IncomingHttpHeaders, IncomingMessage, RequestOptions, ServerResponse } 
 import { ServerOptions as HTTPSServerOptions } from 'https';
 import { Socket } from 'net';
 import { PassThrough, Readable, Transform, Writable } from 'stream';
-import { Url } from 'url';
+import { URL } from 'url';
 import { ZlibOptions } from 'zlib';
 
 type CacheConfig = {
-	type?: 'public' | 'private';
+	type?: CacheType;
 	maxAge?: number;
 	sMaxAge?: number;
 };
 
+type CacheType = 'public' | 'private';
 type Callback = () => void;
-
+type ClientConnectionOptions = {};
 type ClientOptions = {};
-
-type RequestCallback = (response: ServerResponse, body: Buffer) => void;
 
 type Container<T> = {
 	[key: string]: T;
@@ -52,15 +51,7 @@ type IPAddress = {
 };
 
 type Middleware<D, S> = (connection: HTTPConnection<D, S>, next: Callback) => void;
-
 type MirrorCallback<D> = (mirror: Mirror<D>) => void;
-
-type MirrorOptions = {
-	port?: number;
-	hostname?: string;
-	backlog?: number;
-	https?: HTTPSServerOptions;
-};
 
 type ParseConfig<J> = {
 	limit?: number;
@@ -74,13 +65,14 @@ type PipeOptions = {
 	end?: boolean;
 };
 
+type PreferredCompression = 'deflate' | 'gzip';
 type ResultCallback<R> = (error: Error, result: R) => void;
 type RouteListener<D, S> = (connection: HTTPConnection<D, S>) => void;
 
 type RouterCompressionOptions = {
 	enabled?: Enabled;
 	options?: ZlibOptions;
-	preferred?: 'deflate' | 'gzip';
+	preferred?: PreferredCompression;
 };
 
 type RouterCORSOptions = {
@@ -125,26 +117,25 @@ type RouterTimeoutOptions = {
 
 type ServerCallback<T> = (server: Server<T>) => void;
 
-type ServerOptions<S> = {
-	config?: RouterOptions<S>;
-} & MirrorOptions;
+type ServerOptions = {
+	port?: number;
+	hostname?: string;
+	backlog?: number;
+	https?: HTTPSServerOptions;
+};
 
 type StreamConfig = {
 	limit?: number
 };
 
 type StringContainer = Container<string>;
-
 type StringCallback = DataCallback<string>;
 
-type TemplateEngine<I> = {
-	render(source: string, imports: I, callback: StringCallback): void;
-};
-
 type Tokens = {
-	[key: string]: (data: string) => string;
+	[key: string]: TokenFunction
 };
 
+type TokenFunction = (data: string) => string;
 type WSFilterCallback<D, S> = (connection: WSConnection<D, S>, index: number, connections: WSConnection<D, S>[]) => void;
 type WSListener<D, S> = (connection: WSConnection<D, S>) => void;
 
@@ -152,7 +143,9 @@ type WSOptions = {
 	advanced: boolean;
 	limit: number;
 	origins: string[];
+	session: Enabled;
 	timeout: number;
+	validation: boolean;
 };
 
 interface StoreInterface<S> {
@@ -163,14 +156,27 @@ interface StoreInterface<S> {
 	get(id: string): Promise<Session<S>>;
 
 	/**
-	 * Save session data to the store
-	 */
-	set(id: string, session: Session<S>): Promise<void>;
-
-	/**
 	 * Remove session data from the store
 	 */
-	unset(id: string): Promise<void>;
+	remove(id: string): Promise<void>;
+
+	/**
+	 * Save session data to the store
+	 */
+	set(id: string, session: Session<S>, timeout: number): Promise<void>;
+
+	/**
+	 * Update expiration time of the session data into the store
+	 */
+	update(id: string, timeout: number): Promise<void>;
+}
+
+interface TemplateEngine<I> {
+
+	/**
+	 * Render provided templates
+	 */
+	render(source: string, imports: I, callback: StringCallback): void;
 }
 
 declare abstract class Broadcaster<D, S> extends EventEmitter {
@@ -246,7 +252,7 @@ declare abstract class Connection<D, S> extends Transform {
 	/**
 	 * HTTP request serialized url
 	 */
-	url: Url;
+	url: URL;
 
 	/**
 	 * Cookies getter
@@ -276,7 +282,7 @@ declare abstract class Connection<D, S> extends Transform {
 	/**
 	 * Log data
 	 */
-	log(format: string | Buffer, tokens?: Tokens): this;
+	log(format: string, tokens?: Tokens): this;
 
 	/**
 	 * Log data
@@ -286,35 +292,7 @@ declare abstract class Connection<D, S> extends Transform {
 	/**
 	 * Log data
 	 */
-	log(format?: string | Buffer, logger?: StringCallback, tokens?: Tokens): this;
-}
-
-declare class ClientConnection extends Transform {
-
-	/**
-	 * Close the connection and set a close status code if needed
-	 */
-	close(callback: Callback): void;
-
-	/**
-	 * Close the connection and set a close status code if needed
-	 */
-	close(code?: number, callback?: Callback): void;
-
-	/**
-	 * Destroy the connection socket
-	 */
-	destroy(): void;
-
-	/**
-	 * Send data to the server
-	 */
-	send<D>(data: D): void;
-
-	/**
-	 * Send data to the server
-	 */
-	send<D, R>(event: string, data: D, callback?: DataCallback<R>): void;
+	log(format?: string, logger?: StringCallback, tokens?: Tokens): this;
 }
 
 declare class Body {
@@ -363,42 +341,70 @@ declare class Client extends EventEmitter {
 	/**
 	 * Make an HTTP DELETE method request
 	 */
-	delete(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	delete(location: string, options: RequestOptions): Request;
 
 	/**
 	 * Make an HTTP HEAD method request
 	 */
-	head(location: string, options: RequestOptions, callback: RequestCallback): Promise<Response>;
+	head(location: string, options: RequestOptions): Promise<Response>;
 
 	/**
 	 * Make an HTTP GET method request
 	 */
-	get(location: string, options: RequestOptions, callback: RequestCallback): Promise<Response>;
+	get(location: string, options: RequestOptions): Promise<Response>;
 
 	/**
 	 * Make an HTTP PATCH method request
 	 */
-	patch(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	patch(location: string, options: RequestOptions): Request;
 
 	/**
 	 * Make an HTTP POST method request
 	 */
-	post(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	post(location: string, options: RequestOptions): Request;
 
 	/**
 	 * Make an HTTP PUT method request
 	 */
-	put(location: string, options: RequestOptions, callback: RequestCallback): Request;
+	put(location: string, options: RequestOptions): Request;
 
 	/**
 	 * Make an HTTP request
 	 */
-	request(method: string, location: string, options: RequestOptions, callback: RequestCallback): Request;
+	request(location: string, options: RequestOptions): Request;
 
 	/**
 	 * Make a WS connection
 	 */
-	ws(location: string, mode: string, options): ClientConnection;
+	ws(location: string, advanced: boolean, options: ClientConnectionOptions): ClientConnection;
+}
+
+declare class ClientConnection extends Transform {
+
+	/**
+	 * Close the connection and set a close status code if needed
+	 */
+	close(callback: Callback): void;
+
+	/**
+	 * Close the connection and set a close status code if needed
+	 */
+	close(code?: number, callback?: Callback): void;
+
+	/**
+	 * Destroy the connection socket
+	 */
+	destroy(): void;
+
+	/**
+	 * Send data to the server
+	 */
+	send<D>(data: D): void;
+
+	/**
+	 * Send data to the server
+	 */
+	send<D, R>(event: string, data: D, callback?: DataCallback<R>): void;
 }
 
 declare class Form extends EventEmitter {}
@@ -498,12 +504,12 @@ declare class HTTPConnection<D, S> extends Connection<D, S> {
 	/**
 	 * Render from the template engine
 	 */
-	render<I>(source: string, imports: I, callback?: Callback): void;
+	render<I>(source: string, imports: I): void;
 
 	/**
 	 * Send preformatted data to the response stream
 	 */
-	send<T>(data: T, callback?: Callback): void;
+	send<T>(data: T): void;
 
 	/**
 	 * Set or get the status code of the response
@@ -667,7 +673,22 @@ declare class Router<D> extends EventEmitter {
 	/**
 	 * Configure router compression options
 	 */
+	compression(enabled: Enabled, config?: RouterCompressionOptions): this;
+
+	/**
+	 * Configure router compression options
+	 */
+	compression(preferred: PreferredCompression, config?: RouterCompressionOptions): this;
+
+	/**
+	 * Configure router compression options
+	 */
 	compression(config: RouterCompressionOptions): this;
+
+	/**
+	 * Set all router options
+	 */
+	config<S>(options: RouterOptions<S>): this;
 
 	/**
 	 * Configure router CORS options
@@ -727,11 +748,6 @@ declare class Router<D> extends EventEmitter {
 	/**
 	 * Configure router logger options
 	 */
-	logger(format: string, config: RouterLoggerOptions): this;
-
-	/**
-	 * Configure router logger options
-	 */
 	logger(config: RouterLoggerOptions): this;
 
 	/**
@@ -782,7 +798,7 @@ declare class Router<D> extends EventEmitter {
 	/**
 	 * Create a new router
 	 */
-	router<S>(location: string, options?: RouterOptions<S>): this;
+	router<S>(location: string): this;
 
 	/**
 	 * Configure router session options
@@ -792,7 +808,12 @@ declare class Router<D> extends EventEmitter {
 	/**
 	 * Configure router static files options
 	 */
-	static(location: string, config: RouterStaticOptions): this;
+	static(enabled: Enabled, config?: RouterStaticOptions): this;
+
+	/**
+	 * Configure router static files options
+	 */
+	static(location: string, config?: RouterStaticOptions): this;
 
 	/**
 	 * Configure router static files options
@@ -830,7 +851,7 @@ declare class Server<D> extends HTTPHost<D> {
 	/**
 	 * Create a new mirror
 	 */
-	mirror<M>(port?: number, options?: MirrorOptions, callback?: MirrorCallback<M>): Mirror<M>;
+	mirror<M>(port?: number, options?: ServerOptions, callback?: MirrorCallback<M>): Mirror<M>;
 
 	/**
 	 * Create a new mirror
@@ -840,7 +861,7 @@ declare class Server<D> extends HTTPHost<D> {
 	/**
 	 * Create a new mirror
 	 */
-	mirror<M>(options: MirrorOptions, callback?: MirrorCallback<M>): Mirror<M>;
+	mirror<M>(options: ServerOptions, callback?: MirrorCallback<M>): Mirror<M>;
 
 	/**
 	 * Create a new mirror
@@ -871,11 +892,6 @@ declare class Session<S> extends Map<string, S> {
 	changed: boolean;
 
 	/**
-	 * Expiration timestamp of the session
-	 */
-	expires: number;
-
-	/**
 	 * Session id
 	 */
 	id: string;
@@ -883,12 +899,22 @@ declare class Session<S> extends Map<string, S> {
 	/**
 	 * Session store
 	 */
-	store: Store;
+	store: Store<S>;
 
 	/**
 	 * Session timeout
 	 */
 	timeout: number;
+
+	/**
+	 * Remove all session entries
+	 */
+	clear(): void;
+
+	/**
+	 * Remove an entry of the session
+	 */
+	delete(key: string): boolean;
 
 	/**
 	 * Remove session from the store
@@ -918,7 +944,7 @@ declare class Session<S> extends Map<string, S> {
 	/**
 	 * Update session expiration time
 	 */
-	update(): void;
+	update(): Promise<void>;
 }
 
 declare class Store<S> implements StoreInterface<S> {
@@ -929,14 +955,19 @@ declare class Store<S> implements StoreInterface<S> {
 	get(id: string): Promise<Session<S>>;
 
 	/**
-	 * Save session data to the store
-	 */
-	set(id: string, session: Session<S>): Promise<void>;
-
-	/**
 	 * Remove session data from the store
 	 */
-	unset(id: string): Promise<void>;
+	remove(id: string): Promise<void>;
+
+	/**
+	 * Save session data to the store
+	 */
+	set(id: string, session: Session<S>, timeout: number): Promise<void>;
+
+	/**
+	 * Update expiration time of the session data into the store
+	 */
+	update(id: string, timeout: number): Promise<void>;
 }
 
 declare class WSConnection<D, S> extends Connection<D, S> {
@@ -978,7 +1009,7 @@ declare class WSHost<D, S> extends Broadcaster<D, S> {
 /**
  * Create and start a new server
  */
-declare function simples<S, D>(port?: number, options?: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
+declare function simples<S, D>(port?: number, options?: ServerOptions, callback?: ServerCallback<D>): Server<D>;
 
 /**
  * Create and start a new server
@@ -988,7 +1019,7 @@ declare function simples<D>(port: number, callback: ServerCallback<D>): Server<D
 /**
  * Create and start a new server
  */
-declare function simples<S, D>(options: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
+declare function simples<S, D>(options: ServerOptions, callback?: ServerCallback<D>): Server<D>;
 
 /**
  * Create and start a new server
@@ -1005,7 +1036,7 @@ declare namespace simples {
 	/**
 	 * Create and start a new server
 	 */
-	function server<S, D>(port?: number, options?: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
+	function server<D>(port?: number, options?: ServerOptions, callback?: ServerCallback<D>): Server<D>;
 
 	/**
 	 * Create and start a new server
@@ -1015,7 +1046,7 @@ declare namespace simples {
 	/**
 	 * Create and start a new server
 	 */
-	function server<S, D>(options: ServerOptions<S>, callback?: ServerCallback<D>): Server<D>;
+	function server<D>(options: ServerOptions, callback?: ServerCallback<D>): Server<D>;
 
 	/**
 	 * Create and start a new server

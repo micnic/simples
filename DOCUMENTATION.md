@@ -134,7 +134,6 @@ The `options` parameter can have the following structure:
 
 ```js
 {
-    config: {},             // Main host configuration like compression, CORS, session and timeout, see host configuration for more info
     port: 80,               // Port, default is 80 for HTTP and 443 for HTTPS, note that this value may be overwritten by the port parameter
     hostname: '0.0.0.0',    // Hostname from which to accept connections, by default will accept from any address
     backlog: 511,           // The maximum length of the queue of pending connections, default is 511, but is determined by the OS
@@ -289,7 +288,7 @@ mirror.destroy();
 
 ### <a name="server-host"/> Virtual Hosting
 
-`.host([name, options])`
+`.host(name)`
 
 name: string
 

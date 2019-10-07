@@ -4,7 +4,7 @@ const tap = require('tap');
 
 const Config = require('simples/lib/utils/config');
 
-tap.test('Config.getEnableOption', (test) => {
+tap.test('Config.getEnableOption()', (test) => {
 
 	const enableFunction = () => true;
 
@@ -16,19 +16,19 @@ tap.test('Config.getEnableOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getObjectOption', (test) => {
+tap.test('Config.getObjectOption()', (test) => {
 
 	const emptyOption = {};
-	const defaultOption = {};
+	const defaultOption = Object;
 
 	test.ok(Config.getObjectOption(emptyOption, defaultOption) === emptyOption);
-	test.ok(Config.getObjectOption(undefined, defaultOption) === defaultOption);
+	test.ok(Config.getObjectOption(undefined, defaultOption) instanceof defaultOption);
 	test.ok(Config.getObjectOption() === null);
 
 	test.end();
 });
 
-tap.test('Config.getSetOption', (test) => {
+tap.test('Config.getSetOption()', (test) => {
 
 	const availableCompressions = new Set(['deflate', 'gzip']);
 	const defaultCompression = 'deflate';
@@ -39,7 +39,7 @@ tap.test('Config.getSetOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getBooleanOption', (test) => {
+tap.test('Config.getBooleanOption()', (test) => {
 
 	test.ok(Config.getBooleanOption() === false);
 	test.ok(Config.getBooleanOption(false) === false);
@@ -48,7 +48,7 @@ tap.test('Config.getBooleanOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getArrayOption', (test) => {
+tap.test('Config.getArrayOption()', (test) => {
 
 	const emptyOption = [];
 	const defaultOption = [];
@@ -59,7 +59,7 @@ tap.test('Config.getArrayOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getStringOption', (test) => {
+tap.test('Config.getStringOption()', (test) => {
 
 	test.ok(Config.getStringOption() === '');
 	test.ok(Config.getStringOption('string') === 'string');
@@ -67,7 +67,7 @@ tap.test('Config.getStringOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getFunctionOption', (test) => {
+tap.test('Config.getFunctionOption()', (test) => {
 
 	const functionOption = () => true;
 
@@ -77,7 +77,7 @@ tap.test('Config.getFunctionOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getNumberOption', (test) => {
+tap.test('Config.getNumberOption()', (test) => {
 
 	test.ok(Config.getNumberOption(undefined, 1) === 1);
 	test.ok(Config.getNumberOption(2, 1) === 2);
@@ -85,7 +85,7 @@ tap.test('Config.getNumberOption', (test) => {
 	test.end();
 });
 
-tap.test('Config.getConfig', (test) => {
+tap.test('Config.getConfig()', (test) => {
 
 	const config = Config.getConfig({
 		array: {
@@ -106,7 +106,7 @@ tap.test('Config.getConfig', (test) => {
 			type: 'number'
 		},
 		object: {
-			default: {},
+			default: Object,
 			type: 'object'
 		},
 		set: {
@@ -139,6 +139,33 @@ tap.test('Config.isEnabled()', (test) => {
 	test.equal(Config.isEnabled(() => false, null), false);
 	test.equal(Config.isEnabled(true, null), true);
 	test.equal(Config.isEnabled(false, null), false);
+
+	test.end();
+});
+
+tap.test('Config.setConfig()', (test) => {
+
+	const schema = {
+		data: {
+			type: Config.types.boolean
+		}
+	};
+
+	const destination = {
+		data: false
+	};
+
+	Config.setConfig(schema, destination);
+
+	test.equal(destination.data, false);
+
+	Config.setConfig(schema, destination, {
+		data: true,
+		inexistent: true
+	});
+
+	test.equal(destination.data, true);
+	test.equal(Object.keys(destination).length, 1);
 
 	test.end();
 });

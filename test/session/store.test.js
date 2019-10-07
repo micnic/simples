@@ -2,164 +2,75 @@
 
 const tap = require('tap');
 
-const Session = require('simples/lib/session/session');
 const Store = require('simples/lib/session/store');
 
-const notImplemented = 'Not implemented';
-const noPromiseResult = 'No promise result';
-const sessionId = 'sessionId';
+tap.test('Memory store', async (test) => {
 
-const fakeSession = new Session('', {});
+	const store = new Store();
 
-const someError = Error('Some error');
+	await store.set('key', 'value', 1000);
 
-tap.test('Store.prototype.constructor()', (test) => {
+	test.equal(await store.get('key'), 'value');
 
-	test.test('Memory store', (t) => {
+	await store.update('key', -1);
 
-		const memoryStore = new Store();
+	test.equal(await store.get('key'), null);
 
-		t.match(memoryStore._options, {
-			get: Function,
-			set: Function,
-			unset: Function
-		});
-		t.end();
-	});
+	await store.set('key', 'value', 1000);
+	await store.remove('key');
+	await store.update('key', 1000);
 
-	test.test('Empty store', (t) => {
-
-		const emptyStore = new Store({});
-
-		t.match(emptyStore._options, {});
-		t.end();
-	});
-
-	test.end();
+	test.equal(await store.get('key'), null);
 });
 
-tap.test('Store.optionsContainer()', (test) => {
+tap.test('Store without configuration', async (test) => {
 
-	test.test('No config', (t) => {
-		t.match(Store.optionsContainer(), {});
-		t.end();
-	});
+	const store = new Store(null);
 
-	test.test('Empty config', (t) => {
-		t.match(Store.optionsContainer({}), {});
-		t.end();
-	});
+	test.equal(Object.keys(store._options).length, 0);
 
-	test.test('Full config', (t) => {
-
-		const fakeGetMethodImplementation = () => {};
-		const fakeSetMethodImplementation = () => {};
-		const fakeUnsetMethodImplementation = () => {};
-
-		t.match(Store.optionsContainer({
-			get: fakeGetMethodImplementation,
-			set: fakeSetMethodImplementation,
-			unset: fakeUnsetMethodImplementation
-		}), {
-			get: fakeGetMethodImplementation,
-			set: fakeSetMethodImplementation,
-			unset: fakeUnsetMethodImplementation
-		});
-		t.end();
-	});
-
-	test.end();
+	try {
+		await store.set('key', 'value', 1000);
+	} catch (error) {
+		test.ok(error instanceof Error);
+	}
 });
 
-tap.test('Store.tryImplementation()', (test) => {
+tap.test('Store with empty configuration', async (test) => {
 
-	test.test('Not implemented', (t) => {
-		Store.tryImplementation(undefined).then(() => {
-			t.fail('This function should not be called');
-		}).catch((error) => {
-			t.ok(error instanceof Error);
-			t.equal(error.message, notImplemented);
-			t.end();
-		});
-	});
+	const store = new Store({});
 
-	test.test('Implemented, throws error', (t) => {
-		Store.tryImplementation(() => {
-			throw someError;
-		}).then(() => {
-			t.fail('This function should not be called');
-		}).catch((error) => {
-			t.equal(error, someError);
-			t.end();
-		});
-	});
+	test.equal(Object.keys(store._options).length, 0);
 
-	test.test('Implemented, no promise result', (t) => {
-		Store.tryImplementation(() => null).then(() => {
-			t.fail('This function should not be called');
-		}).catch((error) => {
-			t.equal(error.message, noPromiseResult);
-			t.end();
-		});
-	});
-
-	test.test('Implemented, normal execution', (t) => {
-		Store.tryImplementation((id) => {
-
-			t.equal(id, 'id');
-
-			return Promise.resolve(id);
-		}, 'id').then((result) => {
-			t.equal(result, 'id');
-			t.end();
-		}).catch(() => {
-			t.fail('Error should not be called');
-		});
-	});
-
-	test.end();
+	try {
+		await store.set('key', 'value', 1000);
+	} catch (error) {
+		test.ok(error instanceof Error);
+	}
 });
 
-tap.test('Store.prototype.get()', (test) => {
-	new Store({
-		get(id) {
-			test.equal(id, sessionId);
+tap.test('Store with invalid configuration', async (test) => {
 
-			return Promise.resolve(fakeSession);
-		}
-	}).get(sessionId).then((session) => {
-		test.equal(session, fakeSession);
-		test.end();
-	}).catch(() => {
-		test.fail('Error should not be called');
+	const store = new Store({
+		get: () => {
+			throw Error('Cannot find value');
+		},
+		set: () => null,
+		remove: () => null,
+		update: () => null
 	});
-});
 
-tap.test('Store.prototype.set()', (test) => {
-	new Store({
-		set(id, session) {
-			test.equal(id, sessionId);
-			test.equal(session, fakeSession);
+	test.equal(Object.keys(store._options).length, 4);
 
-			return Promise.resolve();
-		}
-	}).set(sessionId, fakeSession).then(() => {
-		test.end();
-	}).catch(() => {
-		test.fail('Error should not be called');
-	});
-});
+	try {
+		await store.set('key', 'value', 1000);
+	} catch (error) {
+		test.ok(error instanceof Error);
+	}
 
-tap.test('Store.prototype.unset()', (test) => {
-	new Store({
-		unset(id) {
-			test.equal(id, sessionId);
-
-			return Promise.resolve();
-		}
-	}).unset(sessionId).then(() => {
-		test.end();
-	}).catch(() => {
-		test.fail('Error should not be called');
-	});
+	try {
+		await store.get('key');
+	} catch (error) {
+		test.ok(error instanceof Error);
+	}
 });
