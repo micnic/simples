@@ -1,17 +1,46 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Router · simpleS</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="A Simple Web Framework for Node.js"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Router · simpleS"/><meta property="og:type" content="website"/><meta property="og:url" content="https://simples.js.org/index.html"/><meta property="og:description" content="A Simple Web Framework for Node.js"/><meta property="og:image" content="https://simples.js.org/img/logo.svg"/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/foundation.min.css"/><script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-136434169-1"></script><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Router · simpleS</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="[0]: #router-options"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Router · simpleS"/><meta property="og:type" content="website"/><meta property="og:url" content="https://simples.js.org/"/><meta property="og:description" content="[0]: #router-options"/><meta property="og:image" content="https://simples.js.org/img/logo.svg"/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/foundation.min.css"/><script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-136434169-1"></script><script>
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments); }
               gtag('js', new Date());
               gtag('config', 'UA-136434169-1');
-            </script><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><link rel="stylesheet" href="/css/main.css"/></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-white.svg" alt="simpleS"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/" target="_self">Docs</a></li><li class=""><a href="https://npmjs.org/package/simples" target="_self">npm</a></li><li class=""><a href="https://github.com/micnic/simpleS" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="container docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><i></i></div><h2><i>›</i><span>Reference</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Docs</h3><ul><li class="navListItem"><a class="navItem" href="/docs/">Index</a></li><li class="navListItem"><a class="navItem" href="/docs/start">Get Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Reference</h3><ul><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">General</h4><ul><li class="navListItem"><a class="navItem" href="/docs/server">Server</a></li><li class="navListItem"><a class="navItem" href="/docs/mirror">Mirror</a></li><li class="navListItem"><a class="navItem" href="/docs/store">Store</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">HTTP</h4><ul><li class="navListItem"><a class="navItem" href="/docs/http-host">HTTPHost</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/router">Router</a></li><li class="navListItem"><a class="navItem" href="/docs/http-connection">HTTPConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">WS</h4><ul><li class="navListItem"><a class="navItem" href="/docs/ws-host">WSHost</a></li><li class="navListItem"><a class="navItem" href="/docs/ws-channel">WSChannel</a></li><li class="navListItem"><a class="navItem" href="/docs/ws-connection">WSConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Client</h4><ul><li class="navListItem"><a class="navItem" href="/docs/client">Client</a></li><li class="navListItem"><a class="navItem" href="/docs/client-request">ClientRequest</a></li><li class="navListItem"><a class="navItem" href="/docs/client-connection">ClientConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Info</h4><ul><li class="navListItem"><a class="navItem" href="/docs/logging">Logging</a></li></ul></div></ul></div></div></section></div><script>
+            </script><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-white.svg" alt="simpleS"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/" target="_self">Docs</a></li><li class=""><a href="https://npmjs.org/package/simples" target="_self">npm</a></li><li class=""><a href="https://github.com/micnic/simpleS" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>HTTP</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Docs</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/">Index</a></li><li class="navListItem"><a class="navItem" href="/docs/start">Get Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Reference</h3><ul class=""><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">General</h4><ul><li class="navListItem"><a class="navItem" href="/docs/server">Server</a></li><li class="navListItem"><a class="navItem" href="/docs/mirror">Mirror</a></li><li class="navListItem"><a class="navItem" href="/docs/session">Session</a></li><li class="navListItem"><a class="navItem" href="/docs/store">Store</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">HTTP</h4><ul><li class="navListItem"><a class="navItem" href="/docs/http-host">HTTPHost</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/router">Router</a></li><li class="navListItem"><a class="navItem" href="/docs/http-connection">HTTPConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">WS</h4><ul><li class="navListItem"><a class="navItem" href="/docs/ws-host">WSHost</a></li><li class="navListItem"><a class="navItem" href="/docs/ws-channel">WSChannel</a></li><li class="navListItem"><a class="navItem" href="/docs/ws-connection">WSConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Client</h4><ul><li class="navListItem"><a class="navItem" href="/docs/client">Client</a></li><li class="navListItem"><a class="navItem" href="/docs/client-request">ClientRequest</a></li><li class="navListItem"><a class="navItem" href="/docs/client-connection">ClientConnection</a></li></ul></div><div class="navGroup subNavGroup"><h4 class="navGroupSubcategoryTitle">Info</h4><ul><li class="navListItem"><a class="navItem" href="/docs/logging">Logging</a></li></ul></div></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
               createToggler('#navToggler', '#docsNav', 'docsSliderActive');
               createToggler('#tocToggler', 'body', 'tocActive');
 
-              const headings = document.querySelector('.toc-headings');
+              var headings = document.querySelector('.toc-headings');
               headings && headings.addEventListener('click', function(event) {
-                if (event.target.tagName === 'A') {
-                  document.body.classList.remove('tocActive');
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
                 }
               }, false);
 
@@ -39,7 +68,7 @@
 <span class="hljs-keyword">const</span> router = server.router(<span class="hljs-string">'/path/to/router'</span>);
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="router-instance"></a><a href="#router-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Instance</h2>
-<pre><code class="hljs css language-js">router.router(location[, options])
+<pre><code class="hljs css language-js">router.router(location)
 </code></pre>
 <table>
 <thead>
@@ -47,27 +76,41 @@
 </thead>
 <tbody>
 <tr><td style="text-align:center"><code>location</code></td><td><code>string</code></td><td>N/A, required</td></tr>
-<tr><td style="text-align:center"><code>options</code></td><td><code>simples.RouterOptions</code></td><td><code>null</code></td></tr>
 <tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
 </tbody>
 </table>
 <p><code>location</code> argument specifies the relative path of the router to the parent
 router.</p>
-<p><code>options</code> argument specifies router configuration which will be applied to the
-routes and child routers by default. If it is not defined default router options
-are used. Their structure is explained <a href="#router-options">below</a>.</p>
 <hr>
 <p>Router class is designed for advanced routing hierarchy, it allows the creation
 of chains of routers and routes for splitting any application in smaller,
 controllable parts. Server and HTTPHost classes inherit from the Router class,
 they are the main routers in their contexts. Any option configured in the upper
 level of the routing chain is inherited down to child routers.</p>
-<h2><a class="anchor" aria-hidden="true" id="router-options"></a><a href="#router-options" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Options</h2>
-<p>Router options allows configuring the compression, CORS, logging, sessions,
-static files and connections timeout. These options are applied to the current
-router routes, child routers will inherit this configuration if it is not
-overwritten in their configuration.</p>
-<pre><code class="hljs css language-js">{
+<h2><a class="anchor" aria-hidden="true" id="router-configuration"></a><a href="#router-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Configuration</h2>
+<p>After creation routers can be configured with custom options to fit the
+requirements of the application. Router options allows configuring the
+compression, CORS, logging, sessions, static files and connections timeout.
+These options are applied to the current router routes, child routers will
+inherit this configuration if it is not overwritten in their configuration. The
+<code>.config()</code> method is used for applying all the router options, to apply some
+specific type of options other specialized methods, which are described below,
+can be used.</p>
+<pre><code class="hljs css language-js">.config(config)
+</code></pre>
+<table>
+<thead>
+<tr><th style="text-align:center">Argument</th><th>Type</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:center"><code>config</code></td><td><code>simples.RouterOptions</code></td><td><code>null</code>, required</td></tr>
+<tr><td style="text-align:center"><strong>return</strong></td><td><code>simples.Router</code></td><td></td></tr>
+</tbody>
+</table>
+<p><code>config</code> argument specifies all configuration options of the router, these
+options are separated in compression, cors, logger, session, static and timeout.</p>
+<pre><code class="hljs css language-js">router.config({
+
     <span class="hljs-comment">// Compression options</span>
     compression: {
 
@@ -112,8 +155,8 @@ overwritten in their configuration.</p>
         <span class="hljs-comment">// Log function</span>
         log: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>,
 
-        <span class="hljs-comment">// Tokens function</span>
-        tokens: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-literal">null</span>
+        <span class="hljs-comment">// Tokens container</span>
+        tokens: <span class="hljs-literal">null</span>
     },
 
     <span class="hljs-comment">// Session options</span>
@@ -141,7 +184,8 @@ overwritten in their configuration.</p>
         index: [<span class="hljs-string">'index.html'</span>],
 
         <span class="hljs-comment">// Location of the root directory that will serve the static files</span>
-        location: <span class="hljs-string">''</span>
+        <span class="hljs-comment">// By default the subdirectory ./public is used from the CWD</span>
+        location: <span class="hljs-string">'/{CWD}/public'</span>
     },
 
     <span class="hljs-comment">// Connection keep alive timeout option</span>
@@ -153,10 +197,8 @@ overwritten in their configuration.</p>
         <span class="hljs-comment">// Value for connection keep alive timeout, by default no value is set</span>
         value: <span class="hljs-number">0</span>
     }
-}
+});
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="router-configuration"></a><a href="#router-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Router Configuration</h2>
-<p>Every property of router options has a separated method to be configured.</p>
 <h3><a class="anchor" aria-hidden="true" id="compression"></a><a href="#compression" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Compression</h3>
 <p>Configure router compression options.</p>
 <pre><code class="hljs css language-js">.compression(config)
@@ -414,4 +456,4 @@ as parameter or a string for view rendering (see <code>Connection.render()</code
 data for the view, as a function, the <code>callback</code> should provide an object as
 parameter to be imported in the view. Returns current instance, so calls can be
 chained.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/http-host"><span class="arrow-prev">← </span><span>HTTPHost</span></a><a class="docs-next button" href="/docs/http-connection"><span>HTTPConnection</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#router-instance">Router Instance</a></li><li><a href="#router-options">Router Options</a></li><li><a href="#router-configuration">Router Configuration</a><ul class="toc-headings"><li><a href="#compression">Compression</a></li><li><a href="#cors">CORS</a></li><li><a href="#logger">Logger</a></li><li><a href="#session">Session</a></li><li><a href="#static">Static</a></li><li><a href="#timeout">Timeout</a></li></ul></li><li><a href="#routing">Routing</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-square.svg" alt="simpleS" width="66" height="58"/></a><div><h5>Docs</h5><a href="/docs/en/index">Index</a><a href="/docs/en/start">Get Started</a></div><div><h5>More</h5><a href="https://npmjs.org/package/simples">npm</a><a href="https://github.com/micnic/simpleS">GitHub</a><a class="github-button" href="https://github.com/micnic/simples" data-icon="octicon-star" data-count-href="/micnic/simples/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2012 - 2019 Nicu Micleușanu</section></footer></div></body></html>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/http-host"><span class="arrow-prev">← </span><span>HTTPHost</span></a><a class="docs-next button" href="/docs/http-connection"><span>HTTPConnection</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#router-instance">Router Instance</a></li><li><a href="#router-configuration">Router Configuration</a><ul class="toc-headings"><li><a href="#compression">Compression</a></li><li><a href="#cors">CORS</a></li><li><a href="#logger">Logger</a></li><li><a href="#session">Session</a></li><li><a href="#static">Static</a></li><li><a href="#timeout">Timeout</a></li></ul></li><li><a href="#routing">Routing</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-square.svg" alt="simpleS" width="66" height="58"/></a><div><h5>Docs</h5><a href="/docs/en/index">Index</a><a href="/docs/en/start">Get Started</a></div><div><h5>More</h5><a href="https://npmjs.org/package/simples">npm</a><a href="https://github.com/micnic/simpleS">GitHub</a><a class="github-button" href="https://github.com/micnic/simples" data-icon="octicon-star" data-count-href="/micnic/simples/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2012 - 2019 Nicu Micleușanu</section></footer></div></body></html>
